@@ -1,0 +1,607 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, sans-serif;
+  background-color: rgb(12, 39, 136);
+  color: white;
+  overflow-x: hidden;
+}
+
+/* Header */
+header {
+  position: static;
+  top: 0;
+  width: 100%;
+  padding: 20px 40px;
+  z-index: 1000;
+  background: rgb(12, 39, 136);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+
+  /* NEW: Flexbox container to position items left/right */
+  display: flex;
+  justify-content: space-between; /* Pushes children (logo and button) to opposite ends */
+  align-items: center; /* Vertically centers the logo and button */
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #fff;
+}
+
+/* NEW: Login Button Style */
+.login-button {
+  text-decoration: none; /* Removed underline */
+  color: #fff; /* White font */
+  padding: 8px 16px;
+  border: 1px solid #fff; /* White outline */
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 500;
+  transition: all 0.3s ease; /* Smooth transition for hover effects */
+  cursor: pointer; /* Change cursor to pointer (finger) even when not hovering */
+}
+
+.login-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  cursor: pointer; /* Ensures the finger cursor remains */
+  /* NEW: White glow effect using box-shadow */
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.7),
+    0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+/* --- HERO SECTION LAYOUT (50/50 SPLIT) --- */
+.hero {
+  /* KEY FIX 1: REMOVE THIS LINE. 
+       min-height: 100vh;  <-- REMOVE */
+  padding: 100px 20px 60px;
+  position: relative;
+  background-color: rgb(12, 39, 136);
+  color: white;
+
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  /* KEY FIX 2: CHANGE ALIGNMENT TO CENTER. 
+       This will visually align the content and the image grid better. */
+  align-items: center;
+  text-align: left;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* New: Left Content Column - Ensure it stretches vertically to match the right column's 70vh */
+.hero-content-left {
+  flex: 0 0 50%;
+  padding-right: 40px;
+  /* NEW: Add max-width constraint to prevent excessively long lines */
+  max-width: 550px;
+  /* NEW: This will vertically align the internal content (h1, list, button) */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* New: Right Image Grid Column - FIX: USE FLEX-BASIS FOR 50% */
+.hero-image-grid-right {
+  flex: 0 0 50%; /* KEY FIX: Takes exactly 50% of the parent width */
+
+  /* Grid to create the three image columns */
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  height: 70vh; /* Set a fixed height for the entire image container */
+}
+
+/* --- HERO CONTENT STYLES (Vertical Shrink) --- */
+
+/* H1: Reduce size and margin for vertical space */
+.hero h1 {
+  font-size: clamp(32px, 5vw, 48px); /* Reduced max size from 56px to 48px */
+  text-align: left;
+  margin-bottom: 15px; /* Reduced margin from 20px to 15px */
+}
+
+.hero .highlight {
+  font-style: italic;
+  background: linear-gradient(90deg, #fff, #888);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Features List: Reduce margin and gap */
+.hero-features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px; /* Reduced gap from 8px to 5px */
+  margin: 20px 0; /* Reduced vertical margin from 30px to 20px */
+  max-width: none;
+}
+
+.hero-features li {
+  text-align: left;
+  font-size: 14px; /* Reduced font size from 15px to 14px */
+  opacity: 0.9;
+}
+
+/* NEW: Keyframes for a subtle pulse animation */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02); /* Slight scale up */
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.8); /* Stronger glow at peak pulse */
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* CTA Button: FINAL Consolidated Styles for Attention & Centering */
+.hero .cta-button {
+  margin-top: 5px;
+  display: inline-block;
+
+  /* KEY CHANGE: High Contrast for Attention */
+  background: #fff; /* Solid White background */
+  color: rgb(12, 39, 136); /* Dark Blue text */
+  border: none;
+
+  /* Centering and Sizing Fixes */
+  padding: 16px 30px;
+  text-align: center;
+
+  transition: all 0.3s ease;
+  cursor: pointer;
+  font-weight: 600;
+
+  /* NEW: Apply the pulse animation */
+  animation: pulse 2s infinite ease-in-out;
+}
+
+.hero .cta-button:hover {
+  /* Remove the continuous animation on hover, but keep the glow */
+  animation: none;
+  /* NEW: Add the white glowing box-shadow for visual interest */
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.7),
+    0 0 20px rgba(255, 255, 255, 0.5);
+  transform: scale(1.02);
+}
+
+/* --- SCROLLING IMAGE GRID STYLES --- */
+.image-column {
+  height: 100%; /* Fill the height of the parent grid */
+  overflow-y: hidden; /* Hide scrollbar for auto-scroll effect */
+  border-radius: 8px;
+  /* Removed scrollbar styling and overflow-y: scroll as we're using animation */
+}
+
+/* NEW: Container for the animating content */
+.scrolling-content {
+  animation: scrollUp 25s linear infinite; /* Animation applied here */
+  height: 200%;
+}
+
+/* NEW: The Animation Keyframes (to scroll bottom-up) */
+@keyframes scrollUp {
+  0% {
+    /* Start position (Show the bottom half first for a seamless loop start) */
+    transform: translateY(-50%);
+  }
+  100% {
+    /* End position (Scroll up one full set) */
+    transform: translateY(0);
+  }
+}
+
+/* Column Speeds */
+.column-1 .scrolling-content {
+  animation-duration: 30s;
+}
+.column-2 .scrolling-content {
+  animation-duration: 20s;
+}
+.column-3 .scrolling-content {
+  animation-duration: 25s;
+}
+
+/* New: Placeholder for images within columns */
+.img-placeholder {
+  width: 100%;
+  height: 250px; /* Example height for each image */
+  background-color: #2a2a2a;
+  margin-bottom: 15px; /* Space between images in the column */
+  border-radius: 6px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #999;
+  font-size: 14px;
+  border: 1px solid #444;
+}
+
+/* --- GLOBAL CTA BUTTON STYLES --- */
+.cta-button {
+  display: inline-block;
+  padding: 18px 40px;
+  background: rgb(12, 39, 136);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  border-radius: 50px;
+  margin-top: 30px;
+  transition: all 0.3s ease;
+}
+
+.cta-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 10px 40px rgba(255, 255, 255, 0.3);
+}
+
+/* --- LOGO SCROLL SECTION --- */
+.logo-scroll {
+  overflow: hidden;
+  padding: 60px 0;
+  background: #fff;
+}
+
+.logo-scroll h2 {
+  text-align: center;
+  font-size: 20px;
+  letter-spacing: 2px;
+  margin-bottom: 40px;
+  text-transform: uppercase;
+  color: #000;
+}
+
+.logo-track {
+  display: flex;
+  gap: 40px;
+  animation: scroll 30s linear infinite;
+}
+
+@keyframes scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.logo-item {
+  min-width: 150px;
+  height: 60px;
+  background: #1a1a1a;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+/* --- FEATURES SECTION --- */
+.features {
+  padding: 100px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: rgb(12, 39, 136);
+}
+
+.features h2 {
+  font-size: clamp(28px, 5vw, 48px);
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.features h2 .highlight {
+  font-style: italic;
+  color: #888;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 40px;
+}
+
+.feature-card h3 {
+  font-size: 22px;
+  margin-bottom: 12px;
+}
+
+.feature-card p {
+  color: #888;
+  line-height: 1.6;
+}
+
+/* --- PRICING SECTION --- */
+.pricing {
+  padding: 100px 40px;
+}
+
+.pricing-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.pricing-card {
+  background: #fff;
+  color: #000;
+  border: 1px solid #333;
+  border-radius: 16px;
+  padding: 0;
+  transition: transform 0.3s ease;
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  min-height: 450px;
+}
+
+.pricing-card:hover {
+  transform: translateY(-10px);
+  border-color: #fff;
+}
+
+.card-content {
+  flex: 1;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.card-image {
+  flex: 1;
+  background-color: #0d0d0d;
+  border-radius: 0 16px 16px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.card-image p{
+  color: #fff;
+}
+
+.pricing-card.card-reverse {
+  flex-direction: row-reverse;
+}
+
+.pricing-card.card-reverse .card-image {
+  border-radius: 16px 0 0 16px;
+}
+
+/* Site Badge */
+.site-badge {
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  width: 120px;
+  height: 120px;
+  background-color: #fff;
+  border-radius: 50%;
+  color: #000;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* animation: rotateText 10s linear infinite; */
+  white-space: nowrap;
+}
+
+/* Pricing Card Text Styles */
+.card-content h3 {
+  font-size: 28px;
+  margin-bottom: 20px;
+}
+
+.pricing-card h4 {
+  font-size: 18px;
+  color: #000;
+  margin-bottom: 30px;
+}
+
+.pricing-card ul {
+  list-style: none;
+  margin-bottom: 30px;
+}
+
+.pricing-card li {
+  padding: 10px 0;
+  border-bottom: 1px solid #333;
+  color: #000;
+}
+
+/* --- PROCESS SECTION --- */
+.process {
+  padding: 100px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: rgb(12, 39, 136);
+}
+
+.process h2 {
+  text-align: center;
+  font-size: clamp(28px, 5vw, 48px);
+  margin-bottom: 60px;
+}
+
+.process-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 40px;
+}
+
+.step {
+  text-align: center;
+}
+
+.step-icon {
+  width: 80px;
+  height: 80px;
+  background: #1a1a1a;
+  border-radius: 50%;
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+}
+
+.step h3 {
+  font-size: 24px;
+  margin-bottom: 12px;
+}
+
+.step p {
+  color: #888;
+  line-height: 1.6;
+}
+
+/* --- TESTIMONIALS --- */
+.testimonials {
+  padding: 100px 40px;
+  background: #fff;
+}
+
+.testimonials h2 {
+  text-align: center;
+  font-size: clamp(28px, 5vw, 48px);
+  margin-bottom: 60px;
+  color: #000;
+}
+
+.testimonial-grid {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+}
+
+.testimonial {
+  background: #1a1a1a;
+  padding: 30px;
+  border-radius: 12px;
+}
+
+.testimonial-title {
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.testimonial-text {
+  color: #aaa;
+  line-height: 1.6;
+  margin-bottom: 15px;
+}
+
+.testimonial-author {
+  color: #666;
+  font-size: 14px;
+}
+
+/* --- FAQ SECTION --- */
+.faq {
+  padding: 100px 40px;
+  max-width: 900px;
+  margin: 0 auto;
+  background-color: rgb(12, 39, 136);
+}
+
+.faq h2 {
+  text-align: center;
+  font-size: clamp(28px, 5vw, 48px);
+  margin-bottom: 60px;
+}
+
+.faq-item {
+  border-bottom: 1px solid #333;
+  padding: 25px 0;
+}
+
+.faq-question {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.faq-answer {
+  color: #888;
+  line-height: 1.6;
+}
+
+/* --- FOOTER --- */
+footer {
+  text-align: center;
+  padding: 60px 40px;
+  background: #fff;
+  border-top: 1px solid #333;
+}
+
+footer h2 {
+  font-size: 32px;
+  margin-bottom: 20px;
+  color: #000;
+}
+
+footer p {
+  color: #888;
+  margin-top: 40px;
+}
+
+/* --- RESPONSIVE STYLES (Mobile) --- */
+@media (max-width: 768px) {
+  /* 1. HIDE THE IMAGE SECTION */
+  .hero-image-grid-right {
+    display: none;
+  }
+
+  /* 2. ADJUST THE MAIN HERO LAYOUT */
+  .hero {
+    flex-direction: column;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* 3. RE-EXPAND THE CONTENT SECTION */
+  .hero-content-left {
+    flex: 0 0 100%; /* Take full width on mobile */
+    max-width: 100%;
+    padding-right: 0;
+  }
+
+  /* 4. CENTER THE TEXT/HEADINGS */
+  .hero h1 {
+    text-align: center;
+    font-size: clamp(36px, 10vw, 56px);
+  }
+
+  .hero-features {
+    align-items: center;
+  }
+
+  .hero-features li {
+    text-align: center;
+  }
+}

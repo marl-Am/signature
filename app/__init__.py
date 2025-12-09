@@ -1,5 +1,5 @@
 # app/__init__.py
-from flask import Flask
+from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from dotenv import load_dotenv
@@ -25,9 +25,9 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     # Initialize extensions with app
-    db.init_app(app)
-    login_manager.init_app(app)
-    login_manager.login_view = "auth.login"
+    # db.init_app(app)
+    # login_manager.init_app(app)
+    # login_manager.login_view = "auth.login"
 
     # Register blueprints (I'll do these later)
     # from app.routes.auth import auth_bp
@@ -36,10 +36,6 @@ def create_app():
     # Simple test route
     @app.route("/")
     def index():
-        return """
-        <h1>MySignature - Email Signature Generator</h1>
-        <p>Architecture design project - Portfolio demonstration</p>
-        <p>Status: Development phase - Hello World working! ✓</p>
-        """
+        return render_template("index.html")
 
     return app
