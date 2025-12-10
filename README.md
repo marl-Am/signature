@@ -37,7 +37,7 @@ A web-based signature generator that creates customized, trackable signatures wi
 
 ## Project Structure
 ```
-mysignature/
+signature/
 ├── app/                 # Main application code
 │   ├── models/         # Database models
 │   ├── routes/         # API endpoints (Blueprints)

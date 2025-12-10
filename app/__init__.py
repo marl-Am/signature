@@ -25,13 +25,28 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     # Initialize extensions with app
-    # db.init_app(app)
-    # login_manager.init_app(app)
-    # login_manager.login_view = "auth.login"
+    db.init_app(app)
+    login_manager.init_app(app)
+    login_manager.login_view = "auth.login"
 
-    # Register blueprints (I'll do these later)
-    # from app.routes.auth import auth_bp
-    # app.register_blueprint(auth_bp)
+    # ===== ADD THIS SECTION - THE FIX =====
+    # User loader callback for Flask-Login
+    # User loader callback (currently returns None)
+
+
+    @login_manager.user_loader
+    def load_user(user_id: str):
+        """Flask-Login user loader callback"""
+        from app.models.user import User  # Import here to avoid circular imports
+
+        return User.query.get(int(user_id))
+
+    # ===== END OF FIX =====
+
+    # Register blueprints
+    from app.routes.auth import auth_bp
+
+    app.register_blueprint(auth_bp)
 
     # Simple test route
     @app.route("/")

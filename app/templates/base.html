@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      {% block title %}Signature - Professional Email Signatures{% endblock %}
+    </title>
+
+    <!-- Favicon -->
+    <link
+      rel="icon"
+      type="image/x-icon"
+      href="{{ url_for('static', filename='favicon.ico') }}" />
+
+    <!-- Tailwind CSS CDN (Production: use build process) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Alpine.js for interactivity -->
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- Custom Tailwind Configuration -->
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: 'rgb(12, 39, 136)', // Your brand blue
+              'primary-dark': 'rgb(8, 26, 91)',
+              'primary-light': 'rgb(20, 60, 180)',
+            },
+            fontFamily: {
+              sans: [
+                '-apple-system',
+                'BlinkMacSystemFont',
+                'Segoe UI',
+                'Roboto',
+                'Oxygen',
+                'Ubuntu',
+                'Cantarell',
+                'sans-serif',
+              ],
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- Custom CSS for animations/overrides -->
+    <style>
+      /* Smooth scroll behavior */
+      html {
+        scroll-behavior: smooth;
+      }
+
+      /* Custom animations */
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .animate-fadeIn {
+        animation: fadeIn 0.6s ease-out;
+      }
+
+      /* Prevent FOUC (Flash of Unstyled Content) */
+      [x-cloak] {
+        display: none !important;
+      }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+  </head>
+
+  <body class="bg-primary text-white font-sans antialiased">
+    <!-- Navigation Header -->
+    <header
+      class="fixed top-0 left-0 right-0 z-50 bg-primary/90 backdrop-blur-md border-b border-white/10"
+      x-data="{ mobileMenuOpen: false }">
+      <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <!-- Logo -->
+          <a
+            href="/"
+            class="text-2xl font-bold tracking-wider hover:opacity-80 transition-opacity">
+            SIGNATURE.
+          </a>
+
+          <!-- Desktop Navigation -->
+          <div class="hidden md:flex items-center space-x-8">
+            {% if current_user.is_authenticated %}
+            <!-- Logged-in user menu -->
+            <a
+              href="/dashboard"
+              class="text-white/90 hover:text-white transition-colors">
+              Dashboard
+            </a>
+            <a
+              href="/signatures/create"
+              class="text-white/90 hover:text-white transition-colors">
+              Create Signature
+            </a>
+            <a
+              href="/subscription/plans"
+              class="text-white/90 hover:text-white transition-colors">
+              Pricing
+            </a>
+
+            <!-- User Dropdown (Alpine.js) -->
+            <div x-data="{ open: false }" class="relative">
+              <button
+                @click="open = !open"
+                class="flex items-center space-x-2 text-white/90 hover:text-white transition-colors">
+                <span>{{ current_user.email }}</span>
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </button>
+
+              <!-- Dropdown menu -->
+              <div
+                x-show="open"
+                @click.away="open = false"
+                x-cloak
+                class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-2 text-gray-800">
+                <a href="/dashboard" class="block px-4 py-2 hover:bg-gray-100"
+                  >Dashboard</a
+                >
+                <a
+                  href="/subscription/manage"
+                  class="block px-4 py-2 hover:bg-gray-100"
+                  >Subscription</a
+                >
+                <div class="border-t border-gray-200 my-2"></div>
+                <a
+                  href="{{ url_for('auth.logout') }}"
+                  class="block px-4 py-2 hover:bg-gray-100 text-red-600"
+                  >Logout</a
+                >
+              </div>
+            </div>
+            {% else %}
+            <!-- Logged-out user menu -->
+            <a
+              href="/#features"
+              class="text-white/90 hover:text-white transition-colors">
+              Features
+            </a>
+            <a
+              href="/#pricing"
+              class="text-white/90 hover:text-white transition-colors">
+              Pricing
+            </a>
+            <a
+              href="{{ url_for('auth.login') }}"
+              class="text-white/90 hover:text-white transition-colors">
+              Login
+            </a>
+            <a
+              href="{{ url_for('auth.register') }}"
+              class="px-6 py-2 bg-white text-primary rounded-lg font-semibold hover:bg-white/90 hover:shadow-lg hover:shadow-white/20 transition-all">
+              Sign Up Free
+            </a>
+            {% endif %}
+          </div>
+
+          <!-- Mobile Menu Button -->
+          <button
+            @click="mobileMenuOpen = !mobileMenuOpen"
+            class="md:hidden text-white p-2"
+            aria-label="Toggle mobile menu">
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+          </button>
+        </div>
+      </nav>
+
+      <!-- Mobile Menu (Alpine.js) -->
+      <div
+        x-show="mobileMenuOpen"
+        @click.away="mobileMenuOpen = false"
+        x-cloak
+        class="md:hidden bg-primary-dark border-t border-white/10">
+        <div class="px-4 py-4 space-y-3">
+          {% if current_user.is_authenticated %}
+          <a href="/dashboard" class="block py-2 text-white/90 hover:text-white"
+            >Dashboard</a
+          >
+          <a
+            href="/signatures/create"
+            class="block py-2 text-white/90 hover:text-white"
+            >Create Signature</a
+          >
+          <a
+            href="/subscription/plans"
+            class="block py-2 text-white/90 hover:text-white"
+            >Pricing</a
+          >
+          <a
+            href="/subscription/manage"
+            class="block py-2 text-white/90 hover:text-white"
+            >Subscription</a
+          >
+          <div class="border-t border-white/10 my-2"></div>
+          <a
+            href="{{ url_for('auth.logout') }}"
+            class="block py-2 text-red-400 hover:text-red-300"
+            >Logout</a
+          >
+          {% else %}
+          <a href="/#features" class="block py-2 text-white/90 hover:text-white"
+            >Features</a
+          >
+          <a href="/#pricing" class="block py-2 text-white/90 hover:text-white"
+            >Pricing</a
+          >
+          <a
+            href="{{ url_for('auth.login') }}"
+            class="block py-2 text-white/90 hover:text-white"
+            >Login</a
+          >
+          <a
+            href="{{ url_for('auth.register') }}"
+            class="block py-2 bg-white text-primary rounded-lg text-center font-semibold mt-4">
+            Sign Up Free
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </header>
+
+    <!-- Flash Messages (for success/error notifications) -->
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %}
+    <div class="fixed top-20 right-4 z-50 space-y-2 max-w-md">
+      {% for category, message in messages %}
+      <div
+        x-data="{ show: true }"
+        x-show="show"
+        x-init="setTimeout(() => show = false, 5000)"
+        class="px-6 py-4 rounded-lg shadow-lg {% if category == 'error' %}bg-red-500{% else %}bg-green-500{% endif %} text-white animate-fadeIn">
+        <div class="flex items-center justify-between">
+          <span>{{ message }}</span>
+          <button
+            @click="show = false"
+            class="ml-4 text-white/80 hover:text-white"
+            aria-label="Close dialog">
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %} {% endwith %}
+
+    <!-- Main Content Area -->
+    <main class="pt-16">
+      {% block content %}
+      <!-- Page-specific content goes here -->
+      {% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white text-gray-800 border-t border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <!-- Brand Column -->
+          <div>
+            <h3 class="text-2xl font-bold tracking-wider text-primary mb-4">
+              SIGNATURE.
+            </h3>
+            <p class="text-gray-600">
+              Professional email signatures that drive results.
+            </p>
+          </div>
+
+          <!-- Product Links -->
+          <div>
+            <h4 class="font-semibold text-gray-900 mb-4">Product</h4>
+            <ul class="space-y-2">
+              <li>
+                <a
+                  href="/#features"
+                  class="text-gray-600 hover:text-primary transition-colors"
+                  >Features</a
+                >
+              </li>
+              <li>
+                <a
+                  href="/#pricing"
+                  class="text-gray-600 hover:text-primary transition-colors"
+                  >Pricing</a
+                >
+              </li>
+              <li>
+                <a
+                  href="/signatures/create"
+                  class="text-gray-600 hover:text-primary transition-colors"
+                  >Create Signature</a
+                >
+              </li>
+            </ul>
+          </div>
+
+          <!-- Company Links -->
+          <div>
+            <h4 class="font-semibold text-gray-900 mb-4">Company</h4>
+            <ul class="space-y-2">
+              <li>
+                <a
+                  href="/about"
+                  class="text-gray-600 hover:text-primary transition-colors"
+                  >About</a
+                >
+              </li>
+              <li>
+                <a
+                  href="/contact"
+                  class="text-gray-600 hover:text-primary transition-colors"
+                  >Contact</a
+                >
+              </li>
+              <li>
+                <a
+                  href="/privacy"
+                  class="text-gray-600 hover:text-primary transition-colors"
+                  >Privacy Policy</a
+                >
+              </li>
+            </ul>
+          </div>
+
+          <!-- Social Links -->
+          <div>
+            <h4 class="font-semibold text-gray-900 mb-4">Connect</h4>
+            <div class="flex space-x-4">
+              <a
+                href="#"
+                class="text-gray-600 hover:text-primary transition-colors">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path
+                    d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z" />
+                </svg>
+              </a>
+              <a
+                href="#"
+                class="text-gray-600 hover:text-primary transition-colors">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path
+                    d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
+                </svg>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="border-t border-gray-200 mt-8 pt-8 text-center text-gray-600">
+          <p>&copy; 2025 SIGNATURE. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>

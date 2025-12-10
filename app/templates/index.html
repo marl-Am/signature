@@ -1,265 +1,339 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Signature</title>
+{% extends "base.html" %}
 
-    <link
-      rel="icon"
-      type="image/x-icon"
-      href="{{ url_for('static', filename='favicon.ico') }}" />
+{% block title %}Signature - Professional Email Signatures with Analytics{% endblock %}
 
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='css/style.css') }}" />
-  </head>
-  <body>
-    <header>
-      <div class="logo">SIGNATURE.</div>
-      <a href="#login" class="login-button">Login</a>
-    </header>
+{% block extra_css %}
+<style>
+  /* Custom animations for landing page */
+  @keyframes scrollUp {
+    0% { transform: translateY(-50%); }
+    100% { transform: translateY(0); }
+  }
 
-    <section class="hero">
-      <div class="hero-content-left">
-        <h1>
-          BEAUTIFUL & <span class="highlight">HIGH CONVERTING</span><br />
-          WEBSITES FOR YOUR BUSINESS
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { 
+      transform: scale(1.02);
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+    }
+  }
+
+  @keyframes scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  .scrolling-content {
+    animation: scrollUp 25s linear infinite;
+  }
+
+  .column-1 .scrolling-content { animation-duration: 30s; }
+  .column-2 .scrolling-content { animation-duration: 20s; }
+  .column-3 .scrolling-content { animation-duration: 25s; }
+
+  .logo-track {
+    animation: scroll 30s linear infinite;
+  }
+
+  .cta-pulse {
+    animation: pulse 2s infinite ease-in-out;
+  }
+
+  .cta-pulse:hover {
+    animation: none;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="min-h-screen bg-primary pt-24 pb-16 px-4">
+  <div class="max-w-7xl mx-auto">
+    <div class="flex flex-col lg:flex-row items-center justify-between gap-12">
+      <!-- Left Content -->
+      <div class="flex-1 max-w-xl">
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6">
+          BEAUTIFUL & <span class="italic bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">HIGH CONVERTING</span><br />
+          EMAIL SIGNATURES
         </h1>
 
-        <ul class="hero-features">
-          <li>✓ Guaranteed Conversion Rate Increase</li>
-          <li>✓ 100% Custom Design</li>
-          <li>✓ Unlimited Revisions</li>
-          <li>✓ Mobile & Desktop Optimized</li>
+        <ul class="space-y-3 mb-8">
+          <li class="text-white/90 text-lg">✓ Track Every Email Open</li>
+          <li class="text-white/90 text-lg">✓ Analytics Dashboard</li>
+          <li class="text-white/90 text-lg">✓ Mobile & Desktop Optimized</li>
+          <li class="text-white/90 text-lg">✓ Works with All Email Clients</li>
         </ul>
 
-        <a href="#contact" class="cta-button">Signup</a>
+        <a 
+          href="{{ url_for('auth.register') }}" 
+          class="inline-block px-8 py-4 bg-white text-primary rounded-lg font-semibold text-lg hover:shadow-xl hover:shadow-white/20 hover:scale-105 transition-all cta-pulse">
+          Start Free Trial
+        </a>
       </div>
 
-      <div class="hero-image-grid-right">
-        <div class="image-column column-1">
-          <div class="scrolling-content">
-            <div class="img-placeholder">Image 1A</div>
-            <div class="img-placeholder">Image 1B</div>
-            <div class="img-placeholder">Image 1C</div>
-            <div class="img-placeholder">Image 1D</div>
-            <div class="img-placeholder">Image 1A</div>
-            <div class="img-placeholder">Image 1B</div>
-            <div class="img-placeholder">Image 1C</div>
-            <div class="img-placeholder">Image 1D</div>
+      <!-- Right Image Grid (Hidden on Mobile) -->
+      <div class="hidden lg:grid grid-cols-3 gap-4 flex-1 h-[70vh] overflow-hidden">
+        <!-- Column 1 -->
+        <div class="overflow-hidden rounded-lg">
+          <div class="scrolling-content space-y-4">
+            <div class="w-full h-64 bg-gray-800 rounded-lg flex items-center justify-center text-gray-400">
+              Preview 1A
+            </div>
+            <div class="w-full h-64 bg-gray-800 rounded-lg flex items-center justify-center text-gray-400">
+              Preview 1B
+            </div>
+            <div class="w-full h-64 bg-gray-800 rounded-lg flex items-center justify-center text-gray-400">
+              Preview 1C
+            </div>
+            <div class="w-full h-64 bg-gray-800 rounded-lg flex items-center justify-center text-gray-400">
+              Preview 1D
+            </div>
+            <!-- Duplicates for seamless scroll -->
+            <div class="w-full h-64 bg-gray-800 rounded-lg flex items-center justify-center text-gray-400">
+              Preview 1A
+            </div>
+            <div class="w-full h-64 bg-gray-800 rounded-lg flex items-center justify-center text-gray-400">
+              Preview 1B
+            </div>
           </div>
         </div>
 
-        <div class="image-column column-2">
-          <div class="scrolling-content">
-            <div class="img-placeholder">Image 1A</div>
-            <div class="img-placeholder">Image 1B</div>
-            <div class="img-placeholder">Image 1C</div>
-            <div class="img-placeholder">Image 1D</div>
-            <div class="img-placeholder">Image 1A</div>
-            <div class="img-placeholder">Image 1B</div>
-            <div class="img-placeholder">Image 1C</div>
-            <div class="img-placeholder">Image 1D</div>
+        <!-- Column 2 -->
+        <div class="overflow-hidden rounded-lg column-2">
+          <div class="scrolling-content space-y-4">
+            <div class="w-full h-64 bg-gray-800 rounded-lg flex items-center justify-center text-gray-400">
+              Preview 2A
+            </div>
+            <div class="w-full h-64 bg-gray-800 rounded-lg flex items-center justify-center text-gray-400">
+              Preview 2B
+            </div>
+            <div class="w-full h-64 bg-gray-800 rounded-lg flex items-center justify-center text-gray-400">
+              Preview 2C
+            </div>
+            <div class="w-full h-64 bg-gray-800 rounded-lg flex items-center justify-center text-gray-400">
+              Preview 2D
+            </div>
+            <div class="w-full h-64 bg-gray-800 rounded-lg flex items-center justify-center text-gray-400">
+              Preview 2A
+            </div>
+            <div class="w-full h-64 bg-gray-800 rounded-lg flex items-center justify-center text-gray-400">
+              Preview 2B
+            </div>
           </div>
         </div>
 
-        <div class="image-column column-3">
-          <div class="scrolling-content">
-            <div class="img-placeholder">Image 1A</div>
-            <div class="img-placeholder">Image 1B</div>
-            <div class="img-placeholder">Image 1C</div>
-            <div class="img-placeholder">Image 1D</div>
-            <div class="img-placeholder">Image 1A</div>
-            <div class="img-placeholder">Image 1B</div>
-            <div class="img-placeholder">Image 1C</div>
-            <div class="img-placeholder">Image 1D</div>
+        <!-- Column 3 -->
+        <div class="overflow-hidden rounded-lg column-3">
+          <div class="scrolling-content space-y-4">
+            <div class="w-full h-64 bg-gray-800 rounded-lg flex items-center justify-center text-gray-400">
+              Preview 3A
+            </div>
+            <div class="w-full h-64 bg-gray-800 rounded-lg flex items-center justify-center text-gray-400">
+              Preview 3B
+            </div>
+            <div class="w-full h-64 bg-gray-800 rounded-lg flex items-center justify-center text-gray-400">
+              Preview 3C
+            </div>
+            <div class="w-full h-64 bg-gray-800 rounded-lg flex items-center justify-center text-gray-400">
+              Preview 3D
+            </div>
+            <div class="w-full h-64 bg-gray-800 rounded-lg flex items-center justify-center text-gray-400">
+              Preview 3A
+            </div>
+            <div class="w-full h-64 bg-gray-800 rounded-lg flex items-center justify-center text-gray-400">
+              Preview 3B
+            </div>
           </div>
         </div>
       </div>
-    </section>
+    </div>
+  </div>
+</section>
 
-    <section class="logo-scroll">
-      <h2>TRUSTED BY 50+ BRANDS</h2>
-      <div class="logo-track">
-        <div class="logo-item">Brand 1</div>
-        <div class="logo-item">Brand 2</div>
-        <div class="logo-item">Brand 3</div>
-        <div class="logo-item">Brand 4</div>
-        <div class="logo-item">Brand 5</div>
-        <div class="logo-item">Brand 6</div>
-        <!-- Duplicate for seamless scroll -->
-        <div class="logo-item">Brand 1</div>
-        <div class="logo-item">Brand 2</div>
-        <div class="logo-item">Brand 3</div>
-        <div class="logo-item">Brand 4</div>
-        <div class="logo-item">Brand 5</div>
-        <div class="logo-item">Brand 6</div>
+<!-- Trusted By Section -->
+<section class="bg-white py-16 overflow-hidden">
+  <h2 class="text-center text-2xl font-bold text-gray-800 mb-8 tracking-wide">TRUSTED BY 50+ BRANDS</h2>
+  <div class="flex gap-8 logo-track">
+    <div class="min-w-[200px] h-16 bg-gray-800 rounded-lg flex items-center justify-center text-white font-semibold">Brand 1</div>
+    <div class="min-w-[200px] h-16 bg-gray-800 rounded-lg flex items-center justify-center text-white font-semibold">Brand 2</div>
+    <div class="min-w-[200px] h-16 bg-gray-800 rounded-lg flex items-center justify-center text-white font-semibold">Brand 3</div>
+    <div class="min-w-[200px] h-16 bg-gray-800 rounded-lg flex items-center justify-center text-white font-semibold">Brand 4</div>
+    <div class="min-w-[200px] h-16 bg-gray-800 rounded-lg flex items-center justify-center text-white font-semibold">Brand 5</div>
+    <div class="min-w-[200px] h-16 bg-gray-800 rounded-lg flex items-center justify-center text-white font-semibold">Brand 6</div>
+    <!-- Duplicates for seamless scroll -->
+    <div class="min-w-[200px] h-16 bg-gray-800 rounded-lg flex items-center justify-center text-white font-semibold">Brand 1</div>
+    <div class="min-w-[200px] h-16 bg-gray-800 rounded-lg flex items-center justify-center text-white font-semibold">Brand 2</div>
+    <div class="min-w-[200px] h-16 bg-gray-800 rounded-lg flex items-center justify-center text-white font-semibold">Brand 3</div>
+  </div>
+</section>
+
+<!-- Features Section -->
+<section id="features" class="bg-primary py-20 px-4">
+  <div class="max-w-6xl mx-auto">
+    <h2 class="text-4xl font-bold text-center mb-16">
+      Why You'll Love <span class="italic text-gray-400">YOUR SIGNATURE</span>
+    </h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/20 transition-all">
+        <div class="text-4xl mb-4">⚡</div>
+        <h3 class="text-xl font-bold mb-3">Rapid Setup</h3>
+        <p class="text-white/80">Create your signature in under 5 minutes. No coding required.</p>
       </div>
-    </section>
 
-    <section class="features">
-      <h2>Why You'll Love <span class="highlight">YOUR BRAND</span></h2>
-      <div class="feature-grid">
-        <div class="feature-card">
-          <h3>⚡ Rapid Turnaround</h3>
-          <p>Get a landing page in just 1 week or a full site in 4 weeks.</p>
-        </div>
-        <div class="feature-card">
-          <h3>🚀 Quick Onboarding</h3>
-          <p>Just deposit, sign the contract, and send your assets.</p>
-        </div>
-        <div class="feature-card">
-          <h3>🔄 Unlimited Tweaks</h3>
-          <p>We revise until it's perfect for you.</p>
-        </div>
-        <div class="feature-card">
-          <h3>📱 Mobile + Desktop</h3>
-          <p>Ensuring the site looks perfect on all devices.</p>
-        </div>
+      <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/20 transition-all">
+        <div class="text-4xl mb-4">📊</div>
+        <h3 class="text-xl font-bold mb-3">Track Analytics</h3>
+        <p class="text-white/80">See who opens your emails and clicks your links in real-time.</p>
       </div>
-    </section>
 
-    <section class="pricing">
-      <div class="pricing-container">
-        <div class="pricing-card">
-          <div class="site-badge">Name of Site</div>
-
-          <div class="card-content">
-            <h3>Full Website</h3>
-            <h4>Higher CVR Guaranteed</h4>
-            <ul>
-              <li>Homepage Design</li>
-              <li>Product Page</li>
-              <li>Collection Page</li>
-              <li>Mobile & Desktop</li>
-              <li>5 Additional Pages</li>
-            </ul>
-            <a href="#contact" class="cta-button">Schedule a Call</a>
-          </div>
-
-          <div class="card-image">
-            <p>[Image Placeholder]</p>
-          </div>
-        </div>
-
-        <div class="pricing-card card-reverse">
-          <div class="site-badge">Name of Site</div>
-
-          <div class="card-image">
-            <p>[Image Placeholder]</p>
-          </div>
-
-          <div class="card-content">
-            <h3>Landing Page</h3>
-            <h4>Higher CVR Guaranteed</h4>
-            <ul>
-              <li>Single Page Design</li>
-              <li>Mobile & Desktop</li>
-              <li>High-Converting Layout</li>
-              <li>Unlimited Revisions</li>
-            </ul>
-            <a href="#contact" class="cta-button">Schedule a Call</a>
-          </div>
-        </div>
+      <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/20 transition-all">
+        <div class="text-4xl mb-4">🔄</div>
+        <h3 class="text-xl font-bold mb-3">Update Instantly</h3>
+        <p class="text-white/80">Change your signature once, updates everywhere automatically.</p>
       </div>
-    </section>
 
-    <section class="process">
-      <h2>Simple 3 Step Process</h2>
-      <div class="process-steps">
-        <div class="step">
-          <div class="step-icon">📞</div>
-          <h3>Call</h3>
-          <p>
-            30 min. call to get to know your brand and vision. When the scope is
-            finalized, we have a fast onboarding process.
-          </p>
-        </div>
-        <div class="step">
-          <div class="step-icon">🎨</div>
-          <h3>Design</h3>
-          <p>
-            Full site re-design mockup mobile, desktop, and unlimited revisions.
-          </p>
-        </div>
-        <div class="step">
-          <div class="step-icon">💻</div>
-          <h3>Development</h3>
-          <p>
-            After approval, your developer will code it! If you don't have one,
-            we can recommend options.
-          </p>
-        </div>
+      <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/20 transition-all">
+        <div class="text-4xl mb-4">📱</div>
+        <h3 class="text-xl font-bold mb-3">Mobile Ready</h3>
+        <p class="text-white/80">Perfect display on all devices and email clients.</p>
       </div>
-    </section>
+    </div>
+  </div>
+</section>
 
-    <section class="testimonials">
-      <h2>Hear It From Our Clients</h2>
-      <div class="testimonial-grid">
-        <div class="testimonial">
-          <div class="testimonial-title">Top-Tier Design & Service!</div>
-          <div class="testimonial-text">
-            "The team is top tier! If you are looking for the best CRO and
-            brand-aware designer for your store this is it. Their service,
-            execution speed and attention to detail is excellent."
-          </div>
-          <div class="testimonial-author">- Client Name, Company</div>
-        </div>
-        <div class="testimonial">
-          <div class="testimonial-title">Highly Recommended!</div>
-          <div class="testimonial-text">
-            "Made our landing pages extremely quickly including edits and
-            improved our conversion rate by almost two fold. Highly
-            recommended!"
-          </div>
-          <div class="testimonial-author">- Client Name, Company</div>
-        </div>
-        <div class="testimonial">
-          <div class="testimonial-title">CRO That Delivers Results!</div>
-          <div class="testimonial-text">
-            "Designed a CRO based sales page for us that beat out our control
-            and became our top performing page. Great eye for design!"
-          </div>
-          <div class="testimonial-author">- Client Name, Company</div>
-        </div>
-      </div>
-    </section>
+<!-- Pricing Section -->
+<section id="pricing" class="bg-white py-20 px-4">
+  <div class="max-w-6xl mx-auto">
+    <h2 class="text-4xl font-bold text-center mb-16 text-gray-800">Simple Pricing</h2>
 
-    <section class="faq">
-      <h2>FAQs</h2>
-      <div class="faq-item">
-        <div class="faq-question">Do you include development?</div>
-        <div class="faq-answer">
-          No, we do not offer development. Most brands have someone in-house to
-          code our designs. However, we have a list of expert developers you can
-          work with if needed.
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <!-- Free Plan -->
+      <div class="bg-gray-50 border-2 border-gray-200 rounded-2xl p-8 hover:border-primary transition-all">
+        <div class="text-center mb-6">
+          <h3 class="text-2xl font-bold text-gray-800 mb-2">Free</h3>
+          <div class="text-5xl font-bold text-primary mb-2">$0</div>
+          <p class="text-gray-600">Forever free</p>
         </div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-question">
-          How long does it take to design a full site?
-        </div>
-        <div class="faq-answer">
-          A full site redesign is completed in about 2-3 weeks. This timeline
-          could be longer depending on how many revision rounds are needed.
-        </div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-question">
-          What's the primary mode of communication?
-        </div>
-        <div class="faq-answer">
-          We utilize Slack for communication, ensuring quick and efficient
-          responses.
-        </div>
-      </div>
-    </section>
 
-    <footer id="contact">
-      <h2>SCHEDULE A CALL</h2>
-      <a href="mailto:hello@yourbrand.com" class="cta-button">Let's Talk</a>
-      <p>© SIGNATURE 2025</p>
-    </footer>
-  </body>
-</html>
+        <ul class="space-y-4 mb-8">
+          <li class="flex items-start text-gray-700">
+            <svg class="w-6 h-6 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            1 Email Signature
+          </li>
+          <li class="flex items-start text-gray-700">
+            <svg class="w-6 h-6 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            Basic Analytics
+          </li>
+          <li class="flex items-start text-gray-400">
+            <svg class="w-6 h-6 text-gray-300 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            Watermark on signature
+          </li>
+        </ul>
+
+        <a href="/register" class="block text-center py-3 px-6 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+          Get Started
+        </a>
+      </div>
+
+      <!-- Pro Plan -->
+      <div class="bg-primary border-2 border-primary rounded-2xl p-8 relative hover:shadow-2xl transition-all">
+        <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-white text-primary px-4 py-1 rounded-full text-sm font-bold">
+          MOST POPULAR
+        </div>
+
+        <div class="text-center mb-6">
+          <h3 class="text-2xl font-bold text-white mb-2">Pro</h3>
+          <div class="text-5xl font-bold text-white mb-2">$9</div>
+          <p class="text-white/80">per month</p>
+        </div>
+
+        <ul class="space-y-4 mb-8">
+          <li class="flex items-start text-white">
+            <svg class="w-6 h-6 text-green-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            Unlimited Signatures
+          </li>
+          <li class="flex items-start text-white">
+            <svg class="w-6 h-6 text-green-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            Advanced Analytics
+          </li>
+          <li class="flex items-start text-white">
+            <svg class="w-6 h-6 text-green-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            No Watermark
+          </li>
+          <li class="flex items-start text-white">
+            <svg class="w-6 h-6 text-green-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            Priority Support
+          </li>
+        </ul>
+
+        <a href="/register" class="block text-center py-3 px-6 bg-white text-primary rounded-lg font-semibold hover:bg-white/90 hover:shadow-lg transition-all">
+          Start Free Trial
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Testimonials Section -->
+<section class="bg-primary py-20 px-4">
+  <div class="max-w-6xl mx-auto">
+    <h2 class="text-4xl font-bold text-center mb-16">Hear It From Our Clients</h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+        <div class="text-xl font-bold mb-3">Game Changer! 🚀</div>
+        <p class="text-white/80 mb-4">
+          "Seeing who opens my emails has completely changed how I follow up with clients. The analytics are incredible!"
+        </p>
+        <p class="text-white/60 text-sm">- Sarah K., Sales Manager</p>
+      </div>
+
+      <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+        <div class="text-xl font-bold mb-3">Super Easy Setup ⚡</div>
+        <p class="text-white/80 mb-4">
+          "I had my professional signature live in under 3 minutes. No technical skills needed!"
+        </p>
+        <p class="text-white/60 text-sm">- Mike T., Entrepreneur</p>
+      </div>
+
+      <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+        <div class="text-xl font-bold mb-3">Worth Every Penny 💰</div>
+        <p class="text-white/80 mb-4">
+          "The tracking alone is worth the price. I know exactly when prospects engage with my emails."
+        </p>
+        <p class="text-white/60 text-sm">- Jenny L., Consultant</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA Section -->
+<section class="bg-white py-20 px-4">
+  <div class="max-w-4xl mx-auto text-center">
+    <h2 class="text-4xl font-bold text-gray-800 mb-6">Ready to Level Up Your Email Game?</h2>
+    <p class="text-xl text-gray-600 mb-8">
+      Join thousands of professionals using Signature to track and optimize their email communications.
+    </p>
+    <a 
+      href="/register" 
+      class="inline-block px-10 py-4 bg-primary text-white rounded-lg font-semibold text-lg hover:bg-primary-dark hover:shadow-xl transition-all">
+      Start Free Trial - No Credit Card Required
+    </a>
+  </div>
+</section>
+{% endblock %}
