@@ -112,7 +112,6 @@ class User(UserMixin, db.Model):
         if not password or len(password) < 8:
             raise ValueError("Password must be at least 8 characters long")
 
-        # Werkzeug uses bcrypt with salt rounds = 12 by default
         self.password_hash = generate_password_hash(password, method="scrypt")
 
     def check_password(self, password: str) -> bool:
