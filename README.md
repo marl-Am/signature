@@ -119,13 +119,7 @@ This project demonstrates:
 - **Full-stack capability:** Backend, frontend, database, and infrastructure
 - **Product thinking:** Technical features aligned with business value (retention mechanism)
 
-## Contact
-
-[My Name]  
-[My Email]  
-[My LinkedIn]  
-[My Portfolio Site]
 
 ## License
 
-This is a portfolio demonstration project. Not intended for commercial use at this.
+This is a portfolio demonstration project. Not intended for commercial use at this time.
