@@ -1,7 +1,5 @@
 # Signature - System Architecture
 
-(Copy the detailed architecture document we created earlier - the one explaining how everything works)
-
 This document is living documentation and will be updated as the project progresses.
 
 ## Current Implementation Status
