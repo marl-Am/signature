@@ -11,11 +11,26 @@ Security Features Implemented:
 
 from app import db
 from flask_login import UserMixin
-from werkzeug.security import generate_password_hash, check_password_hash
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError, InvalidHashError
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 import secrets
 
+# OWASP Recommended minimum configuration for Argon2id:
+# Memory: 19 MiB -> 19456 KiB (argon2-cffi uses KiB)
+# Iterations (time_cost): 2
+# Parallelism: 1
+ARGON2_MEMORY_COST_KIB: int = 19456
+ARGON2_TIME_COST: int = 2
+ARGON2_PARALLELISM: int = 1
+
+ph = PasswordHasher(
+    time_cost=ARGON2_TIME_COST,
+    memory_cost=ARGON2_MEMORY_COST_KIB,
+    parallelism=ARGON2_PARALLELISM,
+    type=PasswordHasher.Type.ID,  # Explicitly use Argon2id
+)
 
 class User(UserMixin, db.Model):
     """
@@ -101,22 +116,25 @@ class User(UserMixin, db.Model):
 
     def set_password(self, password: str) -> None:
         """
-        Hash and store password using Werkzeug's bcrypt implementation
+        Hash and store password using OWASP-recommended Argon2id.
 
-        Security: Uses bcrypt with automatic salt generation
+        Security: Uses Argon2id with memory, time, and parallelism costs.
         OWASP A04: Cryptographic Failures - Never store plaintext passwords
 
         Args:
             password: Plain text password to hash
         """
-        if not password or len(password) < 8:
-            raise ValueError("Password must be at least 8 characters long")
+        if not password or len(password) < 12: # Increased minimum length for better security
+            raise ValueError("Password must be at least 12 characters long")
 
-        self.password_hash = generate_password_hash(password, method="scrypt")
+        # The ph.hash() method automatically handles salt generation.
+        self.password_hash = ph.hash(password)
 
     def check_password(self, password: str) -> bool:
         """
-        Verify password against stored hash
+        Verify password against stored hash using Argon2id.
+
+        Also checks if the password needs re-hashing due to updated cost parameters.
 
         Args:
             password: Plain text password to verify
@@ -124,7 +142,26 @@ class User(UserMixin, db.Model):
         Returns:
             True if password matches, False otherwise
         """
-        return check_password_hash(self.password_hash, password)
+        try:
+            ph.verify(self.password_hash, password)
+
+            # Security Check: Re-hash if cost parameters have been updated (e.g., increased memory cost)
+            if ph.check_needs_rehash(self.password_hash):
+                # NOTE: This is where you should trigger a save if you re-hash
+                # For simplicity here, we re-hash immediately. In a request context, 
+                # you might defer the commit until the request is successful.
+                self.password_hash = ph.hash(password)
+                db.session.add(self) # Add user object to session
+                # No commit here; assume it happens later in the request or adjust logic if needed.
+
+            return True
+        except (VerifyMismatchError, InvalidHashError):
+            # VerifyMismatchError: Password does not match
+            # InvalidHashError: Stored hash is malformed or invalid
+            return False
+        except Exception:
+            # Catch other potential errors (e.g., internal library error)
+            return False
 
     # ========================================
     # A07: ACCOUNT LOCKOUT (Authentication Failures)
@@ -141,7 +178,7 @@ class User(UserMixin, db.Model):
             return False
 
         # Check if lockout period has expired
-        if datetime.now(timezone.utc)() > self.locked_until:
+        if datetime.now(timezone.utc) > self.locked_until:
             # Auto-unlock account
             self.locked_until = None
             self.failed_login_attempts = 0
@@ -164,7 +201,7 @@ class User(UserMixin, db.Model):
         LOCKOUT_DURATION_MINUTES = 15
 
         if self.failed_login_attempts >= MAX_ATTEMPTS:
-            self.locked_until = datetime.now(timezone.utc)() + timedelta(
+            self.locked_until = datetime.now(timezone.utc) + timedelta(
                 minutes=LOCKOUT_DURATION_MINUTES
             )
 
@@ -179,7 +216,7 @@ class User(UserMixin, db.Model):
         """
         self.failed_login_attempts = 0
         self.locked_until = None
-        self.last_login_at = datetime.now(timezone.utc)()
+        self.last_login_at = datetime.now(timezone.utc)
         self.last_login_ip = ip_address
         db.session.commit()
 
@@ -229,7 +266,7 @@ class User(UserMixin, db.Model):
             URL-safe reset token
         """
         self.password_reset_token = secrets.token_urlsafe(32)
-        self.password_reset_expires = datetime.now(timezone.utc)() + timedelta(hours=1)
+        self.password_reset_expires = datetime.now(timezone.utc) + timedelta(hours=1)
         db.session.commit()
         return self.password_reset_token
 
@@ -248,7 +285,7 @@ class User(UserMixin, db.Model):
         if (
             self.password_reset_token != token
             or self.password_reset_expires is None
-            or datetime.now(timezone.utc)() > self.password_reset_expires
+            or datetime.now(timezone.utc) > self.password_reset_expires
         ):
             return False
 
