@@ -263,7 +263,7 @@
         x-data="{ show: true }"
         x-show="show"
         x-init="setTimeout(() => show = false, 5000)"
-        class="px-6 py-4 rounded-lg shadow-lg {% if category == 'error' %}bg-red-500{% else %}bg-green-500{% endif %} text-white animate-fadeIn">
+        class="px-6 py-4 rounded-lg shadow-lg {% if category in ['error', 'danger'] %}bg-red-500{% elif category == 'warning' %}bg-yellow-500{% else %}bg-green-500{% endif %} text-white animate-fadeIn">
         <div class="flex items-center justify-between">
           <span>{{ message }}</span>
           <button

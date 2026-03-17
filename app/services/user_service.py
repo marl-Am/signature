@@ -24,7 +24,7 @@ class UserService:
     """
 
     # Password requirements (A07: Authentication Failures)
-    MIN_PASSWORD_LENGTH = 8
+    MIN_PASSWORD_LENGTH = 12
     PASSWORD_PATTERN = re.compile(
         r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
     )

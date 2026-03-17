@@ -25,7 +25,7 @@ def register() -> Union[str, Response]:
     """
     # If user is already logged in, redirect to dashboard
     if current_user.is_authenticated:
-        return redirect(url_for("dashboard.index"))
+        return redirect(url_for("index"))
 
     if request.method == "POST":
         # A07: Extract and validate form data (simple presence check here)
@@ -45,7 +45,7 @@ def register() -> Union[str, Response]:
             # TODO: Consider not logging the user in immediately; require email verification first (A07)
             login_user(user)
             flash("Registration successful! You are now logged in. Please check your email for verification.", "success")
-            return redirect(url_for("dashboard.index"))
+            return redirect(url_for("index"))
         else:
             # Registration failed due to validation or duplicate email
             flash(f"Registration failed: {error_message}", "danger")
@@ -65,7 +65,7 @@ def login() -> Union[str, Response]:
     """
     # If user is already logged in, redirect to dashboard
     if current_user.is_authenticated:
-        return redirect(url_for("dashboard.index"))
+        return redirect(url_for("index"))
 
     if request.method == "POST":
         # A07: Extract credentials
@@ -85,14 +85,13 @@ def login() -> Union[str, Response]:
             flash("Login successful!", "success")
             # Redirect to the page the user tried to access, or dashboard
             next_page: str = request.args.get("next")
-            return redirect(next_page or url_for("dashboard.index"))
+            return redirect(next_page or url_for("index"))
         else:
             # Login failed (A07/A09: The service layer handles failed attempts, lockout, and logging)
             # Use generic message to prevent user enumeration (A07)
             flash("Invalid email or password.", "danger")
             # Redirect back to login form (Do not expose whether email exists)
             return render_template("auth/login.html", email=email)
-
 
     # GET request: show login form
     return render_template("auth/login.html")
@@ -118,14 +117,14 @@ def forgot_password() -> Union[str, Response]:
     """
     # If user is already logged in, redirect to dashboard
     if current_user.is_authenticated:
-        return redirect(url_for("dashboard.index"))
+        return redirect(url_for("index"))
 
     if request.method == "POST":
         email: str = request.form.get("email", "").strip()
 
         # Call the password reset initiation service method
         success, message = UserService.initiate_password_reset(email=email)
-        
+
         # A07: Always flash the same generic message to prevent user enumeration (security through obscurity)
         flash(message, "info")
         return redirect(url_for("auth.login"))

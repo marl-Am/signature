@@ -11,7 +11,7 @@ Security Features Implemented:
 
 from app import db
 from flask_login import UserMixin
-from argon2 import PasswordHasher
+from argon2 import PasswordHasher, Type
 from argon2.exceptions import VerifyMismatchError, InvalidHashError
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -29,7 +29,7 @@ ph = PasswordHasher(
     time_cost=ARGON2_TIME_COST,
     memory_cost=ARGON2_MEMORY_COST_KIB,
     parallelism=ARGON2_PARALLELISM,
-    type=PasswordHasher.Type.ID,  # Explicitly use Argon2id
+    type=Type.ID,  # Explicitly use Argon2id
 )
 
 class User(UserMixin, db.Model):
