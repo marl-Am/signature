@@ -71,6 +71,10 @@
 
               <!-- Right: actions -->
               <div class="flex items-center gap-2 flex-shrink-0">
+                <a href="{{ url_for('signatures.preview', signature_id=sig.id) }}"
+                  class="px-3 py-1.5 text-xs border border-gray-300 text-gray-600 rounded-lg font-semibold hover:bg-gray-100 transition-all">
+                  Preview
+                </a>
                 <button @click="showHtml = !showHtml"
                   class="px-3 py-1.5 text-xs border border-primary text-primary rounded-lg font-semibold hover:bg-primary hover:text-white transition-all"
                   :class="showHtml ? 'bg-primary text-white' : ''">

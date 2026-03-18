@@ -1,11 +1,65 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
-</head>
-<body>
-  
-</body>
-</html>
+{% extends "base.html" %}
+{% block title %}Preview: {{ signature.name }} – Signature{% endblock %}
+
+{% block content %}
+<section class="min-h-screen bg-gradient-to-br from-primary via-primary-dark to-primary flex flex-col items-center justify-center py-20 px-4">
+
+  <div class="w-full max-w-2xl">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-xl font-bold text-white">{{ signature.name }}</h1>
+        <p class="text-white/60 text-sm">Signature preview</p>
+      </div>
+      <a href="{{ url_for('dashboard.index') }}"
+         class="text-white/70 hover:text-white text-sm transition-colors">
+        ← Back to Dashboard
+      </a>
+    </div>
+
+    <!-- Simulated email window -->
+    <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+
+      <!-- Email chrome bar -->
+      <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 space-y-2">
+        <div class="text-sm text-gray-500">
+          <span class="font-semibold text-gray-700">From:</span>
+          {{ signature.full_name }}
+          {% if signature.company %} — {{ signature.company }}{% endif %}
+        </div>
+        <div class="text-sm text-gray-500">
+          <span class="font-semibold text-gray-700">To:</span> colleague@company.com
+        </div>
+        <div class="text-sm text-gray-500">
+          <span class="font-semibold text-gray-700">Subject:</span> Following up on our meeting
+        </div>
+      </div>
+
+      <!-- Email body -->
+      <div class="px-6 py-6">
+        <p class="text-gray-600 text-sm mb-6">
+          Hi there,<br><br>
+          It was great connecting with you. Please find my details below.
+        </p>
+
+        <!-- Divider mimicking email signature separator -->
+        <div class="border-t border-gray-200 pt-5">
+          {{ signature.html_content | safe }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Copy HTML button -->
+    <div class="mt-6 text-center" x-data="{ copied: false }">
+      <button
+        @click="navigator.clipboard.writeText(`{{ signature.html_content | replace('`', '') | replace('\n', '') }}`).then(() => { copied = true; setTimeout(() => copied = false, 2500); })"
+        class="px-6 py-2 border-2 border-white text-white rounded-lg font-semibold text-sm hover:bg-white hover:text-primary transition-all">
+        <span x-show="!copied">Copy HTML</span>
+        <span x-show="copied" x-cloak>✓ Copied!</span>
+      </button>
+    </div>
+
+  </div>
+</section>
+{% endblock %}

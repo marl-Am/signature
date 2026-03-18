@@ -83,6 +83,14 @@ def create() -> Union[str, Response]:
     return render_template("signatures/create.html")
 
 
+@signatures_bp.route("/<int:signature_id>/preview")
+@login_required
+def preview(signature_id: int) -> Union[str, Response]:
+    """Render the saved signature HTML in isolation."""
+    signature = SignatureService.get_signature_by_id(signature_id)
+    return render_template("signatures/preview.html", signature=signature)
+
+
 @signatures_bp.route("/<int:signature_id>/delete", methods=["POST"])
 @login_required
 def delete(signature_id: int) -> Response:
