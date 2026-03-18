@@ -108,11 +108,9 @@
               class="text-white/90 hover:text-white transition-colors">
               Create Signature
             </a>
-            <a
-              href="/subscription/plans"
-              class="text-white/90 hover:text-white transition-colors">
-              Pricing
-            </a>
+            <a href="{{ url_for('pricing') }}" class="block py-2 text-white/90 hover:text-white"
+              >Pricing</a
+      >
 
             <!-- User Dropdown (Alpine.js) -->
             <div x-data="{ open: false }" class="relative">
@@ -162,11 +160,9 @@
               class="text-white/90 hover:text-white transition-colors">
               Features
             </a>
-            <a
-              href="/#pricing"
-              class="text-white/90 hover:text-white transition-colors">
-              Pricing
-            </a>
+            <a href="{{ url_for('pricing') }}" class="block py-2 text-white/90 hover:text-white"
+              >Pricing</a
+      >
             <a
               href="{{ url_for('auth.login') }}"
               class="text-white/90 hover:text-white transition-colors">
@@ -216,11 +212,9 @@
             class="block py-2 text-white/90 hover:text-white"
             >Create Signature</a
           >
-          <a
-            href="/subscription/plans"
-            class="block py-2 text-white/90 hover:text-white"
-            >Pricing</a
-          >
+          <a href="{{ url_for('pricing') }}" class="block py-2 text-white/90 hover:text-white"
+              >Pricing</a
+      >
           <a
             href="/subscription/manage"
             class="block py-2 text-white/90 hover:text-white"
@@ -236,9 +230,9 @@
           <a href="/#features" class="block py-2 text-white/90 hover:text-white"
             >Features</a
           >
-          <a href="/#pricing" class="block py-2 text-white/90 hover:text-white"
-            >Pricing</a
-          >
+          <a href="{{ url_for('pricing') }}" class="block py-2 text-white/90 hover:text-white"
+              >Pricing</a
+      >
           <a
             href="{{ url_for('auth.login') }}"
             class="block py-2 text-white/90 hover:text-white"
@@ -322,7 +316,7 @@
               </li>
               <li>
                 <a
-                  href="/#pricing"
+                  href="{{ url_for('pricing') }}"
                   class="text-gray-600 hover:text-primary transition-colors"
                   >Pricing</a
                 >
@@ -391,7 +385,7 @@
 
         <div
           class="border-t border-gray-200 mt-8 pt-8 text-center text-gray-600">
-          <p>&copy; 2025 SIGNATURE. All rights reserved.</p>
+          <p>&copy; 2026 SIGNATURE. All rights reserved.</p>
         </div>
       </div>
     </footer>

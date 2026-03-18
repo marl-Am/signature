@@ -95,8 +95,20 @@ class SignatureService:
         tracking_code = secrets.token_urlsafe(16)
 
         # TODO: Generate actual HTML content with tracking injected
-        # For now, placeholder HTML
-        html_content = f"<p>Signature for {full_name}</p>"
+        html_content: str = SignatureService._generate_html_content(
+            full_name=full_name,
+            job_title=job_title,
+            company=company,
+            department=department,
+            phone=phone,
+            website=website,
+            linkedin_url=linkedin_url,
+            twitter_url=twitter_url,
+            facebook_url=facebook_url,
+            instagram_url=instagram_url,
+            logo_url=logo_url,
+            tracking_code=tracking_code,
+        )
 
         signature = Signature(
             user_id=current_user.id,  # A01: Always set user_id
@@ -165,7 +177,22 @@ class SignatureService:
 
         signature.updated_at = datetime.utcnow()
 
-        # TODO: Regenerate HTML content with new data
+        # Regenerate HTML content with new data
+
+        signature.html_content = SignatureService._generate_html_content(
+            full_name=signature.full_name,
+            job_title=signature.job_title,
+            company=signature.company,
+            department=signature.department,
+            phone=signature.phone,
+            website=signature.website,
+            linkedin_url=signature.linkedin_url,
+            twitter_url=signature.twitter_url,
+            facebook_url=signature.facebook_url,
+            instagram_url=signature.instagram_url,
+            logo_url=signature.logo_url,
+            tracking_code=signature.tracking_code,
+        )
 
         db.session.commit()
 
@@ -262,3 +289,160 @@ class SignatureService:
             "last_opened_at": signature.last_opened_at,
             "created_at": signature.created_at,
         }
+
+    @staticmethod
+    def _generate_html_content(
+        full_name: str,
+        job_title: str | None,
+        company: str | None,
+        department: str | None,
+        phone: str | None,
+        website: str | None,
+        linkedin_url: str | None,
+        twitter_url: str | None,
+        facebook_url: str | None,
+        instagram_url: str | None,
+        logo_url: str | None,
+        tracking_code: str,
+    ) -> str:
+        """
+        Generate email-client-compatible HTML for the signature.
+        Uses inline styles and table layout for maximum email client support.
+        """
+        brand: str = "rgb(12, 39, 136)"
+
+        # --- Name row ---
+        name_html: str = (
+            f'<div style="font-size:17px;font-weight:bold;color:#111111;margin-bottom:3px;">'
+            f"{full_name}"
+            f"</div>"
+        )
+
+        # --- Title / Company row ---
+        title_parts: list[str] = [p for p in [job_title, company] if p]
+        title_html: str = ""
+        if title_parts:
+            title_html = (
+                f'<div style="font-size:13px;color:{brand};margin-bottom:2px;">'
+                + " &middot; ".join(title_parts)
+                + "</div>"
+            )
+
+        # --- Department row ---
+        dept_html: str = ""
+        if department:
+            dept_html = (
+                f'<div style="font-size:12px;color:#777777;margin-bottom:2px;">'
+                f"{department}"
+                f"</div>"
+            )
+
+        # --- Divider ---
+        divider_html: str = (
+            '<div style="border-top:1px solid #e0e0e0;margin:8px 0;"></div>'
+        )
+
+        # --- Contact row ---
+        contact_parts: list[str] = []
+        formatted_phone: str | None = SignatureService._format_phone(phone)
+        if formatted_phone:
+            contact_parts.append(
+                f'<a href="tel:{formatted_phone}" style="color:#555555;text-decoration:none;font-size:12px;">'
+                f"{formatted_phone}</a>"
+            )
+        if website:
+            display: str = (
+                website.replace("https://", "").replace("http://", "").rstrip("/")
+            )
+            contact_parts.append(
+                f'<a href="{website}" style="color:{brand};text-decoration:none;font-size:12px;">'
+                f"{display}</a>"
+            )
+        contact_html: str = ""
+        if contact_parts:
+            contact_html = (
+                '<div style="margin-bottom:6px;">'
+                + ' <span style="color:#cccccc;">|</span> '.join(contact_parts)
+                + "</div>"
+            )
+
+        # --- Social links row ---
+        social_parts: list[str] = []
+        social_map: list[tuple[str | None, str, str]] = [
+            (linkedin_url, "LinkedIn", "in"),
+            (twitter_url, "Twitter/X", "𝕏"),
+            (facebook_url, "Facebook", "f"),
+            (instagram_url, "Instagram", "IG"),
+        ]
+        for url, label, badge in social_map:
+            if url:
+                social_parts.append(
+                    f'<a href="{url}" title="{label}" '
+                    f'style="display:inline-block;background:{brand};color:#ffffff;'
+                    f"font-size:11px;font-weight:bold;text-decoration:none;"
+                    f'padding:3px 7px;border-radius:4px;margin-right:4px;">'
+                    f"{badge}</a>"
+                )
+        social_html: str = ""
+        if social_parts:
+            social_html = (
+                '<div style="margin-top:4px;">' + "".join(social_parts) + "</div>"
+            )
+
+        # --- Logo column ---
+        logo_html: str = ""
+        if logo_url:
+            logo_html = (
+                f'<td style="padding-right:16px;vertical-align:top;">'
+                f'<img src="{logo_url}" alt="Logo" width="64" height="64" '
+                f'style="border-radius:6px;display:block;" />'
+                f"</td>"
+            )
+
+        # --- Left border accent (only when no logo) ---
+        border_style: str = (
+            f"border-left:3px solid {brand};padding-left:14px;" if not logo_url else ""
+        )
+
+        # --- Tracking pixel ---
+        pixel_html: str = (
+            f'<img src="/track/pixel/{tracking_code}.gif" '
+            f'width="1" height="1" alt="" style="display:none;" />'
+        )
+
+        # --- Assemble ---
+        content_td: str = (
+            f'<td style="vertical-align:top;{border_style}">'
+            + name_html
+            + title_html
+            + dept_html
+            + divider_html
+            + contact_html
+            + social_html
+            + "</td>"
+        )
+
+        html: str = (
+            '<table cellpadding="0" cellspacing="0" border="0" '
+            'style="font-family:Arial,Helvetica,sans-serif;max-width:520px;">'
+            "<tr>" + logo_html + content_td + "</tr>"
+            "</table>" + pixel_html
+        )
+
+        return html
+
+    @staticmethod
+    def _format_phone(phone: str | None) -> str | None:
+        """
+        Normalize a phone number to +1 XXX XXX XXXX format.
+        Handles 10-digit (US) and 11-digit (1 + US) inputs.
+        Falls back to the raw string for anything else.
+        """
+        if not phone:
+            return None
+        digits: str = "".join(ch for ch in phone if ch.isdigit())
+        if len(digits) == 11 and digits[0] == "1":
+            return f"+1 {digits[1:4]} {digits[4:7]} {digits[7:]}"
+        if len(digits) == 10:
+            return f"+1 {digits[0:3]} {digits[3:6]} {digits[6:]}"
+        return phone

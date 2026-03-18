@@ -1,11 +1,122 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
-</head>
-<body>
-  
-</body>
-</html>
+{% extends "base.html" %}
+{% block title %}Dashboard – Signature{% endblock %}
+
+{% block content %}
+<section class="min-h-screen bg-gray-50 py-12 px-4">
+  <div class="max-w-5xl mx-auto">
+
+    <!-- Header -->
+    <div class="mb-10 flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-800">Welcome back, {{ current_user.name }}</h1>
+        <p class="text-gray-500 mt-1">Manage your email signatures below.</p>
+      </div>
+      <a href="{{ url_for('signatures.create') }}"
+         class="px-5 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary-dark transition-all text-sm">
+        + New Signature
+      </a>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
+      <div class="bg-white rounded-2xl shadow p-6 flex flex-col gap-1">
+        <span class="text-sm text-gray-500 font-medium">Signatures</span>
+        <span class="text-4xl font-bold text-primary">{{ signatures|length }}</span>
+      </div>
+      <div class="bg-white rounded-2xl shadow p-6 flex flex-col gap-1">
+        <span class="text-sm text-gray-500 font-medium">Total Opens</span>
+        <span class="text-4xl font-bold text-primary">{{ total_opens }}</span>
+      </div>
+      <div class="bg-white rounded-2xl shadow p-6 flex flex-col gap-1">
+        <span class="text-sm text-gray-500 font-medium">Link Clicks</span>
+        <span class="text-4xl font-bold text-primary">{{ total_clicks }}</span>
+      </div>
+    </div>
+
+    <!-- Signatures List -->
+    <div class="bg-white rounded-2xl shadow p-8">
+      <h2 class="text-xl font-bold text-gray-800 mb-6">Your Signatures</h2>
+
+      {% if signatures %}
+        <div class="space-y-4">
+          {% for sig in signatures %}
+
+          <!-- Single Alpine scope wraps BOTH the card and the expandable panel -->
+          <div x-data="{ showHtml: false, copied: false }">
+
+            <!-- Card row -->
+            <div class="flex items-center justify-between border border-gray-100 rounded-xl p-5 hover:border-primary transition-all"
+                 :class="showHtml ? 'rounded-b-none border-b-0' : ''">
+
+              <!-- Left: info -->
+              <div class="flex-1 min-w-0 mr-4">
+                <div class="flex items-center gap-3 mb-1">
+                  <span class="font-semibold text-gray-800">{{ sig.name }}</span>
+                  {% if sig.is_active %}
+                    <span class="text-xs bg-green-100 text-green-700 font-semibold px-2 py-0.5 rounded-full">Active</span>
+                  {% else %}
+                    <span class="text-xs bg-gray-100 text-gray-500 font-semibold px-2 py-0.5 rounded-full">Inactive</span>
+                  {% endif %}
+                </div>
+                <p class="text-sm text-gray-500">
+                  {{ sig.full_name }}
+                  {% if sig.job_title %} &middot; {{ sig.job_title }}{% endif %}
+                  {% if sig.company %} &middot; {{ sig.company }}{% endif %}
+                </p>
+                <p class="text-xs text-gray-400 mt-1">
+                  {{ sig.total_opens }} opens &nbsp;&middot;&nbsp; {{ sig.total_clicks }} clicks
+                  &nbsp;&middot;&nbsp; Created {{ sig.created_at.strftime('%b %d, %Y') }}
+                </p>
+              </div>
+
+              <!-- Right: actions -->
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <button @click="showHtml = !showHtml"
+                  class="px-3 py-1.5 text-xs border border-primary text-primary rounded-lg font-semibold hover:bg-primary hover:text-white transition-all"
+                  :class="showHtml ? 'bg-primary text-white' : ''">
+                  &lt;/&gt; HTML
+                </button>
+                <form method="POST" action="{{ url_for('signatures.delete', signature_id=sig.id) }}"
+                      onsubmit="return confirm('Delete {{ sig.name }}? This cannot be undone.');">
+                  <button type="submit"
+                    class="px-3 py-1.5 text-xs border border-red-300 text-red-500 rounded-lg font-semibold hover:bg-red-500 hover:text-white transition-all">
+                    Delete
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <!-- Expandable HTML panel — same Alpine scope as the card above -->
+            <div x-show="showHtml" x-cloak
+                 class="border border-t-0 border-gray-100 rounded-b-xl bg-gray-50 p-4">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold text-gray-500 uppercase tracking-widest">Signature HTML</span>
+                <button
+                  @click="navigator.clipboard.writeText(`{{ sig.html_content | replace('`', '') | replace('\n', '') }}`).then(() => { copied = true; setTimeout(() => copied = false, 2500); })"
+                  class="text-xs px-3 py-1 bg-primary text-white rounded-lg font-semibold hover:bg-primary-dark transition-all">
+                  <span x-show="!copied">Copy HTML</span>
+                  <span x-show="copied" x-cloak>✓ Copied!</span>
+                </button>
+              </div>
+              <pre class="text-xs text-gray-600 bg-white border border-gray-200 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-all">{{ sig.html_content }}</pre>
+            </div>
+
+          </div>
+          {% endfor %}
+        </div>
+
+      {% else %}
+        <div class="text-center py-16 text-gray-400">
+          <p class="text-lg font-medium mb-2">No signatures yet</p>
+          <p class="text-sm mb-6">Create your first signature to get started.</p>
+          <a href="{{ url_for('signatures.create') }}"
+             class="inline-block px-6 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary-dark transition-all text-sm">
+            Create Your First Signature
+          </a>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
+</section>
+{% endblock %}
