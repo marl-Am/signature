@@ -42,6 +42,7 @@ instance/
 # Extra txt
 extra.txt
 
-HANDOFF.MD
-HANDOFF_2.MD
-HANDOFF_3.MD
+CLAUDE.md
+
+HANDOFF/
+HANDOFF

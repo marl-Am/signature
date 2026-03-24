@@ -17,6 +17,10 @@ class Config:
     REMEMBER_COOKIE_HTTPONLY: bool = True  # JS cannot read the cookie
     REMEMBER_COOKIE_SAMESITE: str = "Lax"  # CSRF mitigation
 
+    # Email — SendGrid (A02: loaded from env, never hardcoded)
+    SENDGRID_API_KEY: str = os.getenv("SENDGRID_API_KEY", "")
+    SENDGRID_FROM_EMAIL: str = os.getenv("SENDGRID_FROM_EMAIL", "no-reply@example.com")
+
 
 class DevelopmentConfig(Config):
     """Development configuration"""
