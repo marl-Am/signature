@@ -91,10 +91,8 @@ class SignatureService:
         Returns:
             Newly created Signature object
         """
-        # Generate unique tracking code
         tracking_code = secrets.token_urlsafe(16)
 
-        # TODO: Generate actual HTML content with tracking injected
         html_content: str = SignatureService._generate_html_content(
             full_name=full_name,
             job_title=job_title,
@@ -151,10 +149,8 @@ class SignatureService:
         Raises:
             404 error if signature not found or not owned by user
         """
-        # Get signature with ownership check
         signature = SignatureService.get_signature_by_id(signature_id)
 
-        # Update allowed fields
         allowed_fields = [
             "name",
             "full_name",
@@ -176,8 +172,6 @@ class SignatureService:
                 setattr(signature, field, value)
 
         signature.updated_at = datetime.utcnow()
-
-        # Regenerate HTML content with new data
 
         signature.html_content = SignatureService._generate_html_content(
             full_name=signature.full_name,
@@ -214,7 +208,6 @@ class SignatureService:
         Raises:
             404 error if signature not found or not owned by user
         """
-        # Get signature with ownership check
         signature = SignatureService.get_signature_by_id(signature_id)
 
         db.session.delete(signature)
@@ -307,7 +300,13 @@ class SignatureService:
     ) -> str:
         """
         Generate email-client-compatible HTML for the signature.
-        Uses inline styles and table layout for maximum email client support.
+
+        Click tracking: social and website links go through
+        /track/click/<tracking_code>/<platform> so every click increments
+        the counter before the recipient reaches the real destination.
+
+        A10 (SSRF): the redirect endpoint reads the destination from the
+        database, so the tracking URL itself never carries the real URL.
         """
         brand: str = "rgb(12, 39, 136)"
 
@@ -343,6 +342,8 @@ class SignatureService:
         )
 
         # --- Contact row ---
+        # Phone: no tracking needed (tel: links do not load images or hit servers)
+        # Website: routed through click tracker so the open is counted
         contact_parts: list[str] = []
         formatted_phone: str | None = SignatureService._format_phone(phone)
         if formatted_phone:
@@ -354,8 +355,9 @@ class SignatureService:
             display: str = (
                 website.replace("https://", "").replace("http://", "").rstrip("/")
             )
+            tracked_website: str = f"/track/click/{tracking_code}/website"
             contact_parts.append(
-                f'<a href="{website}" style="color:{brand};text-decoration:none;font-size:12px;">'
+                f'<a href="{tracked_website}" style="color:{brand};text-decoration:none;font-size:12px;">'
                 f"{display}</a>"
             )
         contact_html: str = ""
@@ -367,17 +369,20 @@ class SignatureService:
             )
 
         # --- Social links row ---
+        # href points to the click-tracking redirect, not the raw URL.
+        # The platform segment matches the keys in tracking._PLATFORM_FIELD.
         social_parts: list[str] = []
-        social_map: list[tuple[str | None, str, str]] = [
-            (linkedin_url, "LinkedIn", "in"),
-            (twitter_url, "Twitter/X", "𝕏"),
-            (facebook_url, "Facebook", "f"),
-            (instagram_url, "Instagram", "IG"),
+        social_map: list[tuple[str | None, str, str, str]] = [
+            (linkedin_url, "LinkedIn", "in", "linkedin"),
+            (twitter_url, "Twitter/X", "𝕏", "twitter"),
+            (facebook_url, "Facebook", "f", "facebook"),
+            (instagram_url, "Instagram", "IG", "instagram"),
         ]
-        for url, label, badge in social_map:
+        for url, label, badge, platform in social_map:
             if url:
+                tracked: str = f"/track/click/{tracking_code}/{platform}"
                 social_parts.append(
-                    f'<a href="{url}" title="{label}" '
+                    f'<a href="{tracked}" title="{label}" '
                     f'style="display:inline-block;background:{brand};color:#ffffff;'
                     f"font-size:11px;font-weight:bold;text-decoration:none;"
                     f'padding:3px 7px;border-radius:4px;margin-right:4px;">'

@@ -75,6 +75,10 @@
                   class="px-3 py-1.5 text-xs border border-gray-300 text-gray-600 rounded-lg font-semibold hover:bg-gray-100 transition-all">
                   Preview
                 </a>
+                <a href="{{ url_for('signatures.edit', signature_id=sig.id) }}"
+                  class="inline-flex items-center px-3 py-1.5 text-sm font-semibold text-primary border-2 border-primary rounded-lg hover:bg-primary hover:text-white transition-all">
+                  Edit
+                </a>
                 <button @click="showHtml = !showHtml"
                   class="px-3 py-1.5 text-xs border border-primary text-primary rounded-lg font-semibold hover:bg-primary hover:text-white transition-all"
                   :class="showHtml ? 'bg-primary text-white' : ''">

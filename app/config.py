@@ -14,12 +14,18 @@ class Config:
 
     # A07: Remember-me cookie settings
     REMEMBER_COOKIE_DURATION: timedelta = timedelta(days=30)
-    REMEMBER_COOKIE_HTTPONLY: bool = True  # JS cannot read the cookie
-    REMEMBER_COOKIE_SAMESITE: str = "Lax"  # CSRF mitigation
+    REMEMBER_COOKIE_HTTPONLY: bool = True
+    REMEMBER_COOKIE_SAMESITE: str = "Lax"
 
     # Email — SendGrid (A02: loaded from env, never hardcoded)
     SENDGRID_API_KEY: str = os.getenv("SENDGRID_API_KEY", "")
     SENDGRID_FROM_EMAIL: str = os.getenv("SENDGRID_FROM_EMAIL", "no-reply@example.com")
+
+    # Stripe (A02: loaded from env, never hardcoded)
+    STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "")
+    STRIPE_PUBLISHABLE_KEY: str = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
+    STRIPE_WEBHOOK_SECRET: str = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+    STRIPE_PRO_PRICE_ID: str = os.getenv("STRIPE_PRO_PRICE_ID", "")
 
 
 class DevelopmentConfig(Config):
@@ -27,8 +33,8 @@ class DevelopmentConfig(Config):
 
     DEBUG: bool = True
     SQLALCHEMY_DATABASE_URI: str = os.getenv("DATABASE_URL", "sqlite:///dev.db")
-    SQLALCHEMY_ECHO: bool = True  # Log SQL queries
-    REMEMBER_COOKIE_SECURE: bool = False  # HTTP is fine in dev
+    SQLALCHEMY_ECHO: bool = True
+    REMEMBER_COOKIE_SECURE: bool = False
 
 
 class ProductionConfig(Config):
@@ -36,7 +42,7 @@ class ProductionConfig(Config):
 
     DEBUG: bool = False
     SQLALCHEMY_DATABASE_URI: str = os.getenv("DATABASE_URL", "")
-    REMEMBER_COOKIE_SECURE: bool = True  # HTTPS only in prod
+    REMEMBER_COOKIE_SECURE: bool = True
 
 
 class TestingConfig(Config):

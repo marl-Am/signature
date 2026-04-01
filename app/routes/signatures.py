@@ -45,7 +45,6 @@ def create() -> Union[str, Response]:
         department: str | None = request.form.get("department", "").strip() or None
         phone: str | None = request.form.get("phone", "").strip() or None
 
-        # Normalize all URL fields — prepend https:// if scheme is missing
         website: str | None = _normalize_url(request.form.get("website", ""))
         linkedin_url: str | None = _normalize_url(request.form.get("linkedin_url", ""))
         twitter_url: str | None = _normalize_url(request.form.get("twitter_url", ""))
@@ -81,6 +80,69 @@ def create() -> Union[str, Response]:
             return render_template("signatures/create.html", form_data=request.form)
 
     return render_template("signatures/create.html")
+
+
+@signatures_bp.route("/<int:signature_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit(signature_id: int) -> Union[str, Response]:
+    """Edit an existing signature — ownership enforced by the service (A01)."""
+
+    # Ownership check happens inside get_signature_by_id → 404 if not owner
+    signature = SignatureService.get_signature_by_id(signature_id)
+
+    if request.method == "POST":
+        name: str = request.form.get("name", "").strip()
+        full_name: str = request.form.get("full_name", "").strip()
+
+        if not name or not full_name:
+            flash("Signature label and full name are required.", "danger")
+            return render_template(
+                "signatures/edit.html",
+                signature=signature,
+                form_data=request.form,
+            )
+
+        job_title: str | None = request.form.get("job_title", "").strip() or None
+        company: str | None = request.form.get("company", "").strip() or None
+        department: str | None = request.form.get("department", "").strip() or None
+        phone: str | None = request.form.get("phone", "").strip() or None
+
+        website: str | None = _normalize_url(request.form.get("website", ""))
+        linkedin_url: str | None = _normalize_url(request.form.get("linkedin_url", ""))
+        twitter_url: str | None = _normalize_url(request.form.get("twitter_url", ""))
+        facebook_url: str | None = _normalize_url(request.form.get("facebook_url", ""))
+        instagram_url: str | None = _normalize_url(
+            request.form.get("instagram_url", "")
+        )
+        logo_url: str | None = _normalize_url(request.form.get("logo_url", ""))
+
+        try:
+            updated = SignatureService.update_signature(
+                signature_id,
+                name=name,
+                full_name=full_name,
+                job_title=job_title,
+                company=company,
+                department=department,
+                phone=phone,
+                website=website,
+                linkedin_url=linkedin_url,
+                twitter_url=twitter_url,
+                facebook_url=facebook_url,
+                instagram_url=instagram_url,
+                logo_url=logo_url,
+            )
+            flash(f'Signature "{updated.name}" updated successfully!', "success")
+            return redirect(url_for("dashboard.index"))
+        except Exception:
+            flash("An error occurred while saving. Please try again.", "danger")
+            return render_template(
+                "signatures/edit.html",
+                signature=signature,
+                form_data=request.form,
+            )
+
+    return render_template("signatures/edit.html", signature=signature)
 
 
 @signatures_bp.route("/<int:signature_id>/preview")
