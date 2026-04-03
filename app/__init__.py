@@ -44,12 +44,14 @@ def create_app() -> Flask:
     from app.routes.signatures import signatures_bp
     from app.routes.tracking import tracking_bp
     from app.routes.billing import billing_bp
+    from app.routes.subscription import subscription_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(signatures_bp)
     app.register_blueprint(tracking_bp)
     app.register_blueprint(billing_bp)
+    app.register_blueprint(subscription_bp)
 
     @app.route("/")
     def index():

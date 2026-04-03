@@ -26,6 +26,7 @@ class Config:
     STRIPE_PUBLISHABLE_KEY: str = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
     STRIPE_WEBHOOK_SECRET: str = os.getenv("STRIPE_WEBHOOK_SECRET", "")
     STRIPE_PRO_PRICE_ID: str = os.getenv("STRIPE_PRO_PRICE_ID", "")
+    STRIPE_PRO_PRICE_ID_YEARLY = os.environ.get("STRIPE_PRO_PRICE_ID_YEARLY")
 
 
 class DevelopmentConfig(Config):

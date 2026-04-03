@@ -42,9 +42,14 @@ class Signature(db.Model):
     name = db.Column(
         db.String(100), nullable=False
     )  # User-friendly name like "Work Signature"
-    is_active = db.Column(
-        db.Boolean, default=True, nullable=False
-    )  # Can be disabled without deletion
+
+    # User-controlled toggle (can be disabled without deletion)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+
+    # System-controlled lock — set True on subscription downgrade for signatures
+    # beyond the free tier limit (1). Set back to False on re-upgrade.
+    # Kept separate from is_active so user intent is never overwritten by billing logic.
+    locked = db.Column(db.Boolean, default=False, nullable=False)
 
     # ========================================
     # SIGNATURE CONTENT
@@ -98,9 +103,6 @@ class Signature(db.Model):
     # Back reference to User (A01: Access Control)
     user = db.relationship("User", back_populates="signatures")
 
-    # TODO: Add when analytics model is created
-    # analytics = db.relationship('Analytics', back_populates='signature', lazy='dynamic')
-
     # ========================================
     # UTILITY METHODS
     # ========================================
@@ -121,6 +123,7 @@ class Signature(db.Model):
             "user_id": self.user_id,
             "name": self.name,
             "is_active": self.is_active,
+            "locked": self.locked,
             "full_name": self.full_name,
             "job_title": self.job_title,
             "company": self.company,

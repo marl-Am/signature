@@ -11,10 +11,28 @@
         <h1 class="text-3xl font-bold text-gray-800">Welcome back, {{ current_user.name }}</h1>
         <p class="text-gray-500 mt-1">Manage your email signatures below.</p>
       </div>
-      <a href="{{ url_for('signatures.create') }}"
-         class="px-5 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary-dark transition-all text-sm">
-        + New Signature
-      </a>
+
+      {% if current_user.subscription_tier == 'pro' %}
+        <a href="{{ url_for('signatures.create') }}"
+           class="px-5 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary-dark transition-all text-sm">
+          + New Signature
+        </a>
+      {% else %}
+        {# Free tier: only show Create if they haven't hit the limit #}
+        {% set unlocked_count = signatures | selectattr('locked', 'equalto', false) | list | length %}
+        {% if unlocked_count < 1 %}
+          <a href="{{ url_for('signatures.create') }}"
+             class="px-5 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary-dark transition-all text-sm">
+            + New Signature
+          </a>
+        {% else %}
+          <a href="{{ url_for('billing.upgrade') }}"
+             class="px-5 py-2 bg-white border-2 border-primary text-primary rounded-lg font-semibold
+                    hover:bg-primary hover:text-white transition-all text-sm">
+            Upgrade for More
+          </a>
+        {% endif %}
+      {% endif %}
     </div>
 
     <!-- Quick Stats -->
@@ -33,6 +51,28 @@
       </div>
     </div>
 
+    <!-- Locked signatures banner (shown only when at least one is locked) -->
+    {% set locked_sigs = signatures | selectattr('locked', 'equalto', true) | list %}
+    {% if locked_sigs %}
+    <div class="mb-6 bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <svg class="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+        <p class="text-sm text-amber-800 font-medium">
+          {{ locked_sigs|length }} signature{{ 's are' if locked_sigs|length > 1 else ' is' }}
+          locked because your Pro plan ended. Upgrade to restore access.
+        </p>
+      </div>
+      <a href="{{ url_for('billing.upgrade') }}"
+         class="flex-shrink-0 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg
+                hover:bg-primary-dark transition-all">
+        Upgrade to Pro
+      </a>
+    </div>
+    {% endif %}
+
     <!-- Signatures List -->
     <div class="bg-white rounded-2xl shadow p-8">
       <h2 class="text-xl font-bold text-gray-800 mb-6">Your Signatures</h2>
@@ -41,7 +81,57 @@
         <div class="space-y-4">
           {% for sig in signatures %}
 
-          <!-- Single Alpine scope wraps BOTH the card and the expandable panel -->
+          {% if sig.locked %}
+          <!-- ================================================ -->
+          <!-- LOCKED CARD                                       -->
+          <!-- ================================================ -->
+          <div class="relative border border-gray-200 rounded-xl p-5 bg-gray-50 opacity-60">
+
+            <!-- Lock overlay badge -->
+            <div class="absolute top-3 right-3">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-200 text-gray-500 text-xs font-semibold">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+                Locked
+              </span>
+            </div>
+
+            <!-- Info -->
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex-1 min-w-0 pr-20">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-semibold text-gray-500">{{ sig.name }}</span>
+                </div>
+                <p class="text-sm text-gray-400">
+                  {{ sig.full_name }}
+                  {% if sig.job_title %} &middot; {{ sig.job_title }}{% endif %}
+                  {% if sig.company %} &middot; {{ sig.company }}{% endif %}
+                </p>
+                <p class="text-xs text-gray-400 mt-1">
+                  {{ sig.total_opens }} opens &nbsp;&middot;&nbsp; {{ sig.total_clicks }} clicks
+                  &nbsp;&middot;&nbsp; Created {{ sig.created_at.strftime('%b %d, %Y') }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Upgrade CTA inside locked card -->
+            <div class="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
+              <p class="text-xs text-gray-400">Upgrade to Pro to edit and use this signature.</p>
+              <a href="{{ url_for('billing.upgrade') }}"
+                 class="px-4 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg
+                        hover:bg-primary-dark transition-all">
+                Unlock with Pro
+              </a>
+            </div>
+
+          </div>
+
+          {% else %}
+          <!-- ================================================ -->
+          <!-- ACTIVE CARD                                       -->
+          <!-- ================================================ -->
           <div x-data="{ showHtml: false, copied: false }">
 
             <!-- Card row -->
@@ -94,7 +184,7 @@
               </div>
             </div>
 
-            <!-- Expandable HTML panel — same Alpine scope as the card above -->
+            <!-- Expandable HTML panel -->
             <div x-show="showHtml" x-cloak
                  class="border border-t-0 border-gray-100 rounded-b-xl bg-gray-50 p-4">
               <div class="flex items-center justify-between mb-2">
@@ -110,6 +200,8 @@
             </div>
 
           </div>
+          {% endif %}
+
           {% endfor %}
         </div>
 

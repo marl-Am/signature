@@ -47,6 +47,7 @@ from datetime import datetime
 
 from app import db
 from app.models.user import User
+from app.models.signature import Signature
 
 logger = logging.getLogger(__name__)
 
@@ -67,28 +68,26 @@ def _stripe_client() -> None:
 @billing_bp.route("/upgrade")
 @login_required
 def upgrade() -> Response:
-    """
-    Create a Stripe Checkout Session and redirect the user to Stripe.
-
-    If the user is already on Pro, send them to the dashboard instead.
-    """
     if current_user.subscription_tier == "pro":
         flash("You are already on the Pro plan.", "info")
         return redirect(url_for("dashboard.index"))
 
-    price_id: str = current_app.config["STRIPE_PRO_PRICE_ID"]
+    interval: str = request.args.get("interval", "monthly")
+    if interval == "yearly":
+        price_id: str = current_app.config.get("STRIPE_PRO_PRICE_ID_YEARLY", "")
+    else:
+        price_id: str = current_app.config.get("STRIPE_PRO_PRICE_ID", "")
+
     if not price_id:
-        logger.error("STRIPE_PRO_PRICE_ID is not configured.")
+        logger.error("Stripe price ID not configured for interval: %s", interval)
         flash("Billing is not configured yet. Please try again later.", "danger")
         return redirect(url_for("pricing"))
 
     _stripe_client()
 
-    # Build the session params
     session_params: dict = {
         "mode": "subscription",
         "line_items": [{"price": price_id, "quantity": 1}],
-        # client_reference_id lets us identify the user in the webhook (A01)
         "client_reference_id": str(current_user.id),
         "success_url": url_for("billing.success", _external=True)
         + "?session_id={CHECKOUT_SESSION_ID}",
@@ -96,8 +95,6 @@ def upgrade() -> Response:
         "allow_promotion_codes": True,
     }
 
-    # Re-use an existing Stripe customer if we have one, so the user's
-    # billing history is consolidated in one Stripe record.
     if current_user.stripe_customer_id:
         session_params["customer"] = current_user.stripe_customer_id
     else:
@@ -178,11 +175,9 @@ def webhook() -> Union[Response, tuple[Response, int]]:
         _stripe_client()
         event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
     except ValueError:
-        # Payload could not be parsed
         logger.warning("Stripe webhook: invalid payload received.")
         return make_response("Invalid payload.", 400), 400
     except stripe.SignatureVerificationError:
-        # Signature mismatch — reject immediately
         logger.warning("Stripe webhook: signature verification failed.")
         return make_response("Invalid signature.", 400), 400
 
@@ -209,6 +204,13 @@ def webhook() -> Union[Response, tuple[Response, int]]:
 
 
 def _handle_checkout_completed(session) -> None:
+    """
+    Upgrade user to Pro and unlock all their signatures.
+
+    Called when a Stripe Checkout Session completes successfully.
+    Unlocking all signatures here covers the re-subscribe case where a
+    user previously had signatures locked on downgrade.
+    """
     user_id_str: str | None = getattr(session, "client_reference_id", None)
     if not user_id_str or not str(user_id_str).isdigit():
         logger.error(
@@ -227,11 +229,23 @@ def _handle_checkout_completed(session) -> None:
     user.subscription_tier = "pro"
     user.subscription_ends_at = None
 
+    # Unlock all signatures — covers the re-subscribe path (A01: only this
+    # user's signatures are touched, identified by user.id not caller input)
+    Signature.query.filter_by(user_id=user.id).update({"locked": False})
+
     db.session.commit()
-    logger.info("User %s upgraded to Pro.", user.id)
+    logger.info("User %s upgraded to Pro; all signatures unlocked.", user.id)
 
 
 def _handle_subscription_deleted(subscription) -> None:
+    """
+    Downgrade user to Free and lock all signatures beyond the free tier limit.
+
+    The oldest signature (by created_at) is kept unlocked so the user
+    retains at least one working signature on the Free plan. All others
+    are locked — they remain in the database and are unlocked if the user
+    re-subscribes.
+    """
     stripe_customer_id: str | None = getattr(subscription, "customer", None)
     if not stripe_customer_id:
         logger.error("customer.subscription.deleted: missing customer id.")
@@ -255,8 +269,25 @@ def _handle_subscription_deleted(subscription) -> None:
     if period_end:
         user.subscription_ends_at = datetime.utcfromtimestamp(period_end)
 
+    # Lock all signatures beyond the first one (ordered oldest-first so the
+    # user keeps their original/primary signature active).
+    # A01: filter strictly by user.id — never touches another user's data.
+    user_sigs = (
+        Signature.query.filter_by(user_id=user.id)
+        .order_by(Signature.created_at.asc())
+        .all()
+    )
+    for index, sig in enumerate(user_sigs):
+        sig.locked = index > 0  # keep index 0 (oldest) unlocked
+
+    locked_count: int = max(0, len(user_sigs) - 1)
+
     db.session.commit()
-    logger.info("User %s downgraded to Free.", user.id)
+    logger.info(
+        "User %s downgraded to Free. %d signature(s) locked.",
+        user.id,
+        locked_count,
+    )
 
 
 def _handle_subscription_updated(subscription) -> None:
@@ -280,6 +311,15 @@ def _handle_subscription_updated(subscription) -> None:
         "unpaid": "expired",
     }
     user.subscription_status = status_map.get(stripe_status, user.subscription_status)
+
+    cancel_at_period_end: bool = bool(
+        getattr(subscription, "cancel_at_period_end", False)
+    )
+    if cancel_at_period_end:
+        user.subscription_status = "cancelled"
+        period_end_ts: int | None = getattr(subscription, "cancel_at", None)
+        if period_end_ts:
+            user.subscription_ends_at = datetime.utcfromtimestamp(period_end_ts)
 
     db.session.commit()
     logger.info("User %s subscription updated to %s.", user.id, stripe_status)

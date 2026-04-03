@@ -169,10 +169,10 @@
             </li>
           </ul>
 
-          <a href="{{ url_for('billing.upgrade') }}"
-             class="block text-center py-3 px-6 bg-white text-primary rounded-lg font-semibold hover:bg-white/90 hover:shadow-lg transition-all">
-            Upgrade to Pro
-          </a>
+          <a :href="yearly ? '{{ url_for('billing.upgrade') }}?interval=yearly' : '{{ url_for('billing.upgrade') }}'"
+          class="block text-center py-3 px-6 bg-white text-primary rounded-lg font-semibold hover:bg-white/90 hover:shadow-lg transition-all">
+          Upgrade to Pro
+        </a>
         </div>
 
       </div>

@@ -286,14 +286,20 @@ class User(UserMixin, db.Model):
         """
         Check if user can create a new signature based on subscription tier.
 
-        Free tier: 1 signature. Pro tier: unlimited.
+        Free tier: 1 unlocked signature. Pro tier: unlimited.
+        Locked signatures (system-imposed on downgrade) do not count against
+        the free tier limit — only unlocked signatures are considered.
 
         Returns:
             True if user can create a signature, False otherwise.
         """
+        
         if self.subscription_tier == "pro":
             return True
-        return self.signatures.count() < 1
+
+        # Count only unlocked signatures — locked ones don't consume the free slot
+        unlocked_count: int = self.signatures.filter_by(locked=False).count()
+        return unlocked_count < 1
 
     # ========================================
     # UTILITY METHODS
