@@ -16,6 +16,9 @@
     facebookUrl:  '{{ form_data.facebook_url if form_data else '' }}',
     instagramUrl: '{{ form_data.instagram_url if form_data else '' }}',
     logoUrl:      '{{ form_data.logo_url if form_data else '' }}',
+    accentColor:  '{{ form_data.accent_color if form_data else "#0c2788" }}',
+    layout:       '{{ form_data.layout if form_data else "classic" }}',
+    fontFamily:   '{{ form_data.font_family if form_data else "Arial, Helvetica, sans-serif" }}',
     copied: false,
 
     get formattedPhone() {
@@ -28,22 +31,22 @@
     },
 
     get previewHtml() {
-      const brand = 'rgb(12, 39, 136)';
+      const brand = this.accentColor || '#0c2788';
+      const font  = this.fontFamily  || 'Arial, Helvetica, sans-serif';
 
       const namePart = this.fullName
         ? `<div style='font-size:17px;font-weight:bold;color:#111;margin-bottom:3px;'>${this.fullName}</div>`
         : `<div style='font-size:17px;font-weight:bold;color:#ccc;margin-bottom:3px;'>Your Name</div>`;
 
       const titleParts = [this.jobTitle, this.company].filter(Boolean);
-      const titlePart = titleParts.length
+      const titlePart  = titleParts.length
         ? `<div style='font-size:13px;color:${brand};margin-bottom:2px;'>${titleParts.join(' · ')}</div>`
         : '';
-
       const deptPart = this.department
         ? `<div style='font-size:12px;color:#777;margin-bottom:2px;'>${this.department}</div>`
         : '';
 
-      const divider = '<div style=\'border-top:1px solid #e0e0e0;margin:8px 0;\'></div>';
+      const divider = `<div style='border-top:1px solid #e0e0e0;margin:8px 0;'></div>`;
 
       const contactParts = [];
       if (this.formattedPhone) contactParts.push(`<span style='color:#555;font-size:12px;'>${this.formattedPhone}</span>`);
@@ -56,28 +59,31 @@
         : '';
 
       const socials = [
-        [this.linkedinUrl, 'in'],
-        [this.twitterUrl,  '𝕏'],
-        [this.facebookUrl, 'f'],
-        [this.instagramUrl,'IG'],
+        [this.linkedinUrl,'in'],[this.twitterUrl,'𝕏'],
+        [this.facebookUrl,'f'],[this.instagramUrl,'IG'],
       ];
-      const socialBadges = socials
-        .filter(([url]) => url)
-        .map(([url, b]) =>
-          `<a href='${url}' style='display:inline-block;background:${brand};color:#fff;font-size:11px;font-weight:bold;text-decoration:none;padding:3px 7px;border-radius:4px;margin-right:4px;'>${b}</a>`
-        ).join('');
-      const socialPart = socialBadges
-        ? `<div style='margin-top:4px;'>${socialBadges}</div>`
-        : '';
+      const socialBadges = socials.filter(([u]) => u)
+        .map(([u,b]) => `<a href='${u}' style='display:inline-block;background:${brand};color:#fff;font-size:11px;font-weight:bold;text-decoration:none;padding:3px 7px;border-radius:4px;margin-right:4px;'>${b}</a>`)
+        .join('');
+      const socialPart = socialBadges ? `<div style='margin-top:4px;'>${socialBadges}</div>` : '';
 
       const logoPart = this.logoUrl
         ? `<td style='padding-right:16px;vertical-align:top;'><img src='${this.logoUrl}' width='64' height='64' style='border-radius:6px;display:block;' /></td>`
         : '';
 
-      const borderStyle = this.logoUrl ? '' : `border-left:3px solid ${brand};padding-left:14px;`;
-      const contentTd = `<td style='vertical-align:top;${borderStyle}'>${namePart}${titlePart}${deptPart}${divider}${contactPart}${socialPart}</td>`;
+      let contentTd = '';
+      if (this.layout === 'modern') {
+        const headerBg = `<div style='background:${brand};padding:10px 14px;border-radius:6px 6px 0 0;'><div style='font-size:17px;font-weight:bold;color:#fff;margin-bottom:3px;'>${this.fullName || 'Your Name'}</div>${titleParts.length ? `<div style='font-size:13px;color:rgba(255,255,255,0.8);'>${titleParts.join(' · ')}</div>` : ''}</div>`;
+        const subBg    = `<div style='background:#f9f9f9;padding:10px 14px;border-radius:0 0 6px 6px;border:1px solid #e0e0e0;border-top:none;'>${deptPart}${contactPart}${socialPart}</div>`;
+        contentTd = `<td style='vertical-align:top;'>${headerBg}${subBg}</td>`;
+      } else if (this.layout === 'minimal') {
+        contentTd = `<td style='vertical-align:top;padding:4px 0;'>${namePart}${titlePart}${deptPart}${contactPart}${socialPart}</td>`;
+      } else {
+        const border = this.logoUrl ? '' : `border-left:3px solid ${brand};padding-left:14px;`;
+        contentTd = `<td style='vertical-align:top;${border}'>${namePart}${titlePart}${deptPart}${divider}${contactPart}${socialPart}</td>`;
+      }
 
-      return `<table cellpadding='0' cellspacing='0' border='0' style='font-family:Arial,Helvetica,sans-serif;'><tr>${logoPart}${contentTd}</tr></table>`;
+      return `<table cellpadding='0' cellspacing='0' border='0' style='font-family:${font};max-width:520px;'><tr>${logoPart}${contentTd}</tr></table>`;
     },
 
     copyHtml() {
@@ -234,6 +240,79 @@
               placeholder="https://yoursite.com/logo.png"
               class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary outline-none transition-all text-gray-800 text-sm" />
             <p class="text-xs text-gray-400 mt-1">Paste a direct image URL. 64×64px recommended.</p>
+          </div>
+
+          <!-- Divider -->
+          <div class="border-t border-gray-100 pt-2">
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Design</p>
+          </div>
+
+          <!-- Layout -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Layout</label>
+            <div class="grid grid-cols-3 gap-3">
+              <label class="cursor-pointer">
+                <input type="radio" name="layout" value="classic" x-model="layout" class="sr-only" />
+                <div :class="layout === 'classic' ? 'border-primary bg-primary/5' : 'border-gray-200'"
+                     class="border-2 rounded-lg p-3 text-center transition-all">
+                  <div class="w-full h-8 flex items-center mb-1">
+                    <div class="w-1 h-full bg-gray-400 rounded mr-2 flex-shrink-0"></div>
+                    <div class="space-y-1 flex-1">
+                      <div class="h-2 bg-gray-300 rounded w-3/4"></div>
+                      <div class="h-1.5 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                  </div>
+                  <span class="text-xs font-semibold text-gray-600">Classic</span>
+                </div>
+              </label>
+              <label class="cursor-pointer">
+                <input type="radio" name="layout" value="modern" x-model="layout" class="sr-only" />
+                <div :class="layout === 'modern' ? 'border-primary bg-primary/5' : 'border-gray-200'"
+                     class="border-2 rounded-lg p-3 text-center transition-all">
+                  <div class="w-full h-8 mb-1 space-y-1">
+                    <div class="h-3 bg-gray-400 rounded w-full"></div>
+                    <div class="h-1.5 bg-gray-200 rounded w-3/4"></div>
+                    <div class="h-1.5 bg-gray-200 rounded w-1/2"></div>
+                  </div>
+                  <span class="text-xs font-semibold text-gray-600">Modern</span>
+                </div>
+              </label>
+              <label class="cursor-pointer">
+                <input type="radio" name="layout" value="minimal" x-model="layout" class="sr-only" />
+                <div :class="layout === 'minimal' ? 'border-primary bg-primary/5' : 'border-gray-200'"
+                     class="border-2 rounded-lg p-3 text-center transition-all">
+                  <div class="w-full h-8 flex items-center mb-1 pl-1">
+                    <div class="space-y-1 flex-1">
+                      <div class="h-2 bg-gray-300 rounded w-3/4"></div>
+                      <div class="h-1.5 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                  </div>
+                  <span class="text-xs font-semibold text-gray-600">Minimal</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Accent Color + Font -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">Accent Color</label>
+              <div class="flex items-center gap-3">
+                <input type="color" name="accent_color" x-model="accentColor"
+                       class="w-10 h-10 rounded-lg border-2 border-gray-200 cursor-pointer p-0.5" />
+                <span class="text-sm text-gray-500 font-mono" x-text="accentColor"></span>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">Font</label>
+              <select name="font_family" x-model="fontFamily"
+                      class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary outline-none transition-all text-gray-800 text-sm">
+                <option value="Arial, Helvetica, sans-serif">Arial</option>
+                <option value="Georgia, 'Times New Roman', serif">Georgia</option>
+                <option value="Verdana, Geneva, sans-serif">Verdana</option>
+                <option value="'Trebuchet MS', Tahoma, sans-serif">Trebuchet MS</option>
+              </select>
+            </div>
           </div>
 
           <!-- Submit -->

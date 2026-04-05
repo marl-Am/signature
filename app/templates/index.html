@@ -64,11 +64,18 @@
           <li class="text-white/90 text-lg">✓ Works with All Email Clients</li>
         </ul>
 
-        <a 
-          href="{{ url_for('auth.register') }}" 
-          class="inline-block px-8 py-4 bg-white text-primary rounded-lg font-semibold text-lg hover:shadow-xl hover:shadow-white/20 hover:scale-105 transition-all cta-pulse">
-          Start Free Trial
-        </a>
+        {# NEW #}
+{% if current_user.is_authenticated %}
+  <a href="{{ url_for('dashboard.index') }}"
+     class="inline-block px-8 py-4 bg-white text-primary rounded-lg font-semibold text-lg hover:shadow-xl hover:shadow-white/20 hover:scale-105 transition-all cta-pulse">
+    Go to Dashboard
+  </a>
+{% else %}
+  <a href="{{ url_for('auth.register') }}"
+     class="inline-block px-8 py-4 bg-white text-primary rounded-lg font-semibold text-lg hover:shadow-xl hover:shadow-white/20 hover:scale-105 transition-all cta-pulse">
+    Start Free Trial
+  </a>
+{% endif %}
       </div>
 
       <!-- Right Image Grid (Hidden on Mobile) -->
@@ -237,9 +244,16 @@
           </li>
         </ul>
 
-        <a href="/register" class="block text-center py-3 px-6 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
-          Get Started
-        </a>
+        {# NEW #}
+{% if current_user.is_authenticated %}
+  <a href="{{ url_for('dashboard.index') }}" class="block text-center py-3 px-6 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+    Go to Dashboard
+  </a>
+{% else %}
+  <a href="{{ url_for('auth.register') }}" class="block text-center py-3 px-6 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+    Get Started
+  </a>
+{% endif %}
       </div>
 
       <!-- Pro Plan -->
@@ -281,9 +295,20 @@
           </li>
         </ul>
 
-        <a href="/register" class="block text-center py-3 px-6 bg-white text-primary rounded-lg font-semibold hover:bg-white/90 hover:shadow-lg transition-all">
-          Start Free Trial
-        </a>
+        {# NEW #}
+{% if current_user.is_authenticated and current_user.subscription_tier == 'pro' %}
+  <a href="{{ url_for('subscription.manage') }}" class="block text-center py-3 px-6 bg-white text-primary rounded-lg font-semibold hover:bg-white/90 hover:shadow-lg transition-all">
+    Manage Your Plan
+  </a>
+{% elif current_user.is_authenticated %}
+  <a href="{{ url_for('billing.upgrade') }}" class="block text-center py-3 px-6 bg-white text-primary rounded-lg font-semibold hover:bg-white/90 hover:shadow-lg transition-all">
+    Upgrade to Pro
+  </a>
+{% else %}
+  <a href="{{ url_for('auth.register') }}" class="block text-center py-3 px-6 bg-white text-primary rounded-lg font-semibold hover:bg-white/90 hover:shadow-lg transition-all">
+    Start Free Trial
+  </a>
+{% endif %}
       </div>
     </div>
   </div>
@@ -329,11 +354,18 @@
     <p class="text-xl text-gray-600 mb-8">
       Join thousands of professionals using Signature to track and optimize their email communications.
     </p>
-    <a 
-      href="/register" 
-      class="inline-block px-10 py-4 bg-primary text-white rounded-lg font-semibold text-lg hover:bg-primary-dark hover:shadow-xl transition-all">
-      Start Free Trial - No Credit Card Required
-    </a>
+    {# NEW #}
+{% if current_user.is_authenticated %}
+  <a href="{{ url_for('dashboard.index') }}"
+     class="inline-block px-10 py-4 bg-primary text-white rounded-lg font-semibold text-lg hover:bg-primary-dark hover:shadow-xl transition-all">
+    Go to Dashboard
+  </a>
+{% else %}
+  <a href="{{ url_for('auth.register') }}"
+     class="inline-block px-10 py-4 bg-primary text-white rounded-lg font-semibold text-lg hover:bg-primary-dark hover:shadow-xl transition-all">
+    Start Free Trial - No Credit Card Required
+  </a>
+{% endif %}
   </div>
 </section>
 {% endblock %}

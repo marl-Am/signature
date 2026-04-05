@@ -73,6 +73,11 @@ class Signature(db.Model):
     # Logo/Image
     logo_url = db.Column(db.String(500), nullable=True)  # S3 URL to uploaded logo
 
+    # Design options
+    accent_color = db.Column(db.String(7), nullable=False, default="#0c2788")
+    layout       = db.Column(db.String(20), nullable=False, default="classic")
+    font_family  = db.Column(db.String(50), nullable=False, default="Arial, Helvetica, sans-serif")
+
     # Generated HTML (the actual signature code)
     html_content = db.Column(
         db.Text, nullable=False

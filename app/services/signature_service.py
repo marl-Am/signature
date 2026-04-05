@@ -5,6 +5,7 @@ Signature service - Business logic for signature operations
 Security: A01 - All queries filtered by user_id to prevent unauthorized access
 """
 
+
 from app import db
 from app.models.signature import Signature
 from flask_login import current_user
@@ -68,6 +69,9 @@ class SignatureService:
         facebook_url: Optional[str] = None,
         instagram_url: Optional[str] = None,
         logo_url: Optional[str] = None,
+        accent_color: str = "#0c2788",
+        layout: str = "classic",
+        font_family: str = "Arial, Helvetica, sans-serif",
     ) -> Signature:
         """
         Create a new signature for current user
@@ -106,6 +110,9 @@ class SignatureService:
             instagram_url=instagram_url,
             logo_url=logo_url,
             tracking_code=tracking_code,
+            accent_color=accent_color,
+            layout=layout,
+            font_family=font_family,
         )
 
         signature = Signature(
@@ -123,6 +130,9 @@ class SignatureService:
             instagram_url=instagram_url,
             logo_url=logo_url,
             tracking_code=tracking_code,
+            accent_color=accent_color,
+            layout=layout,
+            font_family=font_family,
             html_content=html_content,
             is_active=True,
         )
@@ -165,6 +175,9 @@ class SignatureService:
             "instagram_url",
             "logo_url",
             "is_active",
+            "accent_color",
+            "layout",
+            "font_family",  # ← add these
         ]
 
         for field, value in kwargs.items():
@@ -186,6 +199,9 @@ class SignatureService:
             instagram_url=signature.instagram_url,
             logo_url=signature.logo_url,
             tracking_code=signature.tracking_code,
+            accent_color=signature.accent_color,
+            layout=signature.layout,
+            font_family=signature.font_family,
         )
 
         db.session.commit()
@@ -297,43 +313,37 @@ class SignatureService:
         instagram_url: str | None,
         logo_url: str | None,
         tracking_code: str,
+        accent_color: str = "#0c2788",
+        layout: str = "classic",
+        font_family: str = "Arial, Helvetica, sans-serif",
     ) -> str:
         """
         Generate email-client-compatible HTML for the signature.
-
-        Click tracking: social and website links go through
-        /track/click/<tracking_code>/<platform> so every click increments
-        the counter before the recipient reaches the real destination.
-
-        A10 (SSRF): the redirect endpoint reads the destination from the
-        database, so the tracking URL itself never carries the real URL.
+        Supports three layouts: classic, modern, minimal.
         """
-        brand: str = "rgb(12, 39, 136)"
 
-        # --- Name row ---
+        # --- Name ---
         name_html: str = (
             f'<div style="font-size:17px;font-weight:bold;color:#111111;margin-bottom:3px;">'
-            f"{full_name}"
-            f"</div>"
+            f"{full_name}</div>"
         )
 
-        # --- Title / Company row ---
+        # --- Title / Company ---
         title_parts: list[str] = [p for p in [job_title, company] if p]
         title_html: str = ""
         if title_parts:
             title_html = (
-                f'<div style="font-size:13px;color:{brand};margin-bottom:2px;">'
+                f'<div style="font-size:13px;color:{accent_color};margin-bottom:2px;">'
                 + " &middot; ".join(title_parts)
                 + "</div>"
             )
 
-        # --- Department row ---
+        # --- Department ---
         dept_html: str = ""
         if department:
             dept_html = (
                 f'<div style="font-size:12px;color:#777777;margin-bottom:2px;">'
-                f"{department}"
-                f"</div>"
+                f"{department}</div>"
             )
 
         # --- Divider ---
@@ -341,9 +351,7 @@ class SignatureService:
             '<div style="border-top:1px solid #e0e0e0;margin:8px 0;"></div>'
         )
 
-        # --- Contact row ---
-        # Phone: no tracking needed (tel: links do not load images or hit servers)
-        # Website: routed through click tracker so the open is counted
+        # --- Contact ---
         contact_parts: list[str] = []
         formatted_phone: str | None = SignatureService._format_phone(phone)
         if formatted_phone:
@@ -352,12 +360,10 @@ class SignatureService:
                 f"{formatted_phone}</a>"
             )
         if website:
-            display: str = (
-                website.replace("https://", "").replace("http://", "").rstrip("/")
-            )
+            display: str = website.replace("https://", "").replace("http://", "").rstrip("/")
             tracked_website: str = f"/track/click/{tracking_code}/website"
             contact_parts.append(
-                f'<a href="{tracked_website}" style="color:{brand};text-decoration:none;font-size:12px;">'
+                f'<a href="{tracked_website}" style="color:{accent_color};text-decoration:none;font-size:12px;">'
                 f"{display}</a>"
             )
         contact_html: str = ""
@@ -368,46 +374,36 @@ class SignatureService:
                 + "</div>"
             )
 
-        # --- Social links row ---
-        # href points to the click-tracking redirect, not the raw URL.
-        # The platform segment matches the keys in tracking._PLATFORM_FIELD.
+        # --- Social links ---
         social_parts: list[str] = []
         social_map: list[tuple[str | None, str, str, str]] = [
-            (linkedin_url, "LinkedIn", "in", "linkedin"),
-            (twitter_url, "Twitter/X", "𝕏", "twitter"),
-            (facebook_url, "Facebook", "f", "facebook"),
-            (instagram_url, "Instagram", "IG", "instagram"),
+            (linkedin_url,  "LinkedIn",   "in", "linkedin"),
+            (twitter_url,   "Twitter/X",  "𝕏",  "twitter"),
+            (facebook_url,  "Facebook",   "f",  "facebook"),
+            (instagram_url, "Instagram",  "IG", "instagram"),
         ]
         for url, label, badge, platform in social_map:
             if url:
                 tracked: str = f"/track/click/{tracking_code}/{platform}"
                 social_parts.append(
                     f'<a href="{tracked}" title="{label}" '
-                    f'style="display:inline-block;background:{brand};color:#ffffff;'
+                    f'style="display:inline-block;background:{accent_color};color:#ffffff;'
                     f"font-size:11px;font-weight:bold;text-decoration:none;"
                     f'padding:3px 7px;border-radius:4px;margin-right:4px;">'
                     f"{badge}</a>"
                 )
         social_html: str = ""
         if social_parts:
-            social_html = (
-                '<div style="margin-top:4px;">' + "".join(social_parts) + "</div>"
-            )
+            social_html = '<div style="margin-top:4px;">' + "".join(social_parts) + "</div>"
 
-        # --- Logo column ---
+        # --- Logo ---
         logo_html: str = ""
         if logo_url:
             logo_html = (
                 f'<td style="padding-right:16px;vertical-align:top;">'
                 f'<img src="{logo_url}" alt="Logo" width="64" height="64" '
-                f'style="border-radius:6px;display:block;" />'
-                f"</td>"
+                f'style="border-radius:6px;display:block;" /></td>'
             )
-
-        # --- Left border accent (only when no logo) ---
-        border_style: str = (
-            f"border-left:3px solid {brand};padding-left:14px;" if not logo_url else ""
-        )
 
         # --- Tracking pixel ---
         pixel_html: str = (
@@ -415,27 +411,68 @@ class SignatureService:
             f'width="1" height="1" alt="" style="display:none;" />'
         )
 
-        # --- Assemble ---
-        content_td: str = (
-            f'<td style="vertical-align:top;{border_style}">'
-            + name_html
-            + title_html
-            + dept_html
-            + divider_html
-            + contact_html
-            + social_html
-            + "</td>"
+        # --- Layout: build content_td differently per layout ---
+        body_html: str = (
+            name_html + title_html + dept_html
+            + divider_html + contact_html + social_html
         )
 
+        if layout == "modern":
+            # Colored header band containing name + title, white body below
+            header_html: str = (
+                f'<div style="background:{accent_color};padding:10px 14px;border-radius:6px 6px 0 0;">'
+                f'<div style="font-size:17px;font-weight:bold;color:#ffffff;margin-bottom:3px;">{full_name}</div>'
+            )
+            if title_parts:
+                header_html += (
+                    f'<div style="font-size:13px;color:rgba(255,255,255,0.8);">'
+                    + " &middot; ".join(title_parts)
+                    + "</div>"
+                )
+            header_html += "</div>"
+            sub_html: str = (
+                f'<div style="background:#f9f9f9;padding:10px 14px;border-radius:0 0 6px 6px;'
+                f'border:1px solid #e0e0e0;border-top:none;">'
+                + (dept_html if department else "")
+                + contact_html
+                + social_html
+                + "</div>"
+            )
+            content_td = (
+                f'<td style="vertical-align:top;">'
+                + header_html + sub_html
+                + "</td>"
+            )
+
+        elif layout == "minimal":
+            # Clean, no border, generous spacing
+            content_td = (
+                f'<td style="vertical-align:top;padding:4px 0;">'
+                + name_html + title_html + dept_html
+                + contact_html + social_html
+                + "</td>"
+            )
+
+        else:
+            # classic — left accent border (original behaviour)
+            border_style: str = (
+                f"border-left:3px solid {accent_color};padding-left:14px;" if not logo_url else ""
+            )
+            content_td = (
+                f'<td style="vertical-align:top;{border_style}">'
+                + body_html
+                + "</td>"
+            )
+
         html: str = (
-            '<table cellpadding="0" cellspacing="0" border="0" '
-            'style="font-family:Arial,Helvetica,sans-serif;max-width:520px;">'
+            f'<table cellpadding="0" cellspacing="0" border="0" '
+            f'style="font-family:{font_family};max-width:520px;">'
             "<tr>" + logo_html + content_td + "</tr>"
             "</table>" + pixel_html
         )
 
         return html
-
+    
     @staticmethod
     def _format_phone(phone: str | None) -> str | None:
         """

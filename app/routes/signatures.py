@@ -72,6 +72,13 @@ def create() -> Union[str, Response]:
                 facebook_url=facebook_url,
                 instagram_url=instagram_url,
                 logo_url=logo_url,
+                accent_color=request.form.get("accent_color", "#0c2788").strip()
+                or "#0c2788",
+                layout=request.form.get("layout", "classic").strip() or "classic",
+                font_family=request.form.get(
+                    "font_family", "Arial, Helvetica, sans-serif"
+                ).strip()
+                or "Arial, Helvetica, sans-serif",
             )
             flash(f'Signature "{signature.name}" created successfully!', "success")
             return redirect(url_for("dashboard.index"))
@@ -131,6 +138,13 @@ def edit(signature_id: int) -> Union[str, Response]:
                 facebook_url=facebook_url,
                 instagram_url=instagram_url,
                 logo_url=logo_url,
+                accent_color=request.form.get("accent_color", "#0c2788").strip()
+                or "#0c2788",
+                layout=request.form.get("layout", "classic").strip() or "classic",
+                font_family=request.form.get(
+                    "font_family", "Arial, Helvetica, sans-serif"
+                ).strip()
+                or "Arial, Helvetica, sans-serif",
             )
             flash(f'Signature "{updated.name}" updated successfully!', "success")
             return redirect(url_for("dashboard.index"))
