@@ -1,73 +1,87 @@
-{% extends "base.html" %}
-{% block title %}Dashboard – Signature{% endblock %}
-
+{% extends "base.html" %} {% block title %}Dashboard – Signature{% endblock %}
 {% block content %}
 <section class="min-h-screen bg-gray-50 py-12 px-4">
   <div class="max-w-5xl mx-auto">
-
     <!-- Header -->
     <div class="mb-10 flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold text-gray-800">Welcome back, {{ current_user.name }}</h1>
+        <h1 class="text-3xl font-bold text-gray-800">
+          Welcome back, {{ current_user.name }}
+        </h1>
         <p class="text-gray-500 mt-1">Manage your email signatures below.</p>
       </div>
 
       {% if current_user.subscription_tier == 'pro' %}
-        <a href="{{ url_for('signatures.create') }}"
-           class="px-5 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary-dark transition-all text-sm">
-          + New Signature
-        </a>
+      <a
+        href="{{ url_for('signatures.create') }}"
+        class="px-5 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary-dark transition-all text-sm">
+        + New Signature
+      </a>
+      {% else %} {# Free tier: only show Create if they haven't hit the limit #}
+      {% set unlocked_count = signatures | selectattr('locked', 'equalto',
+      false) | list | length %} {% if unlocked_count < 1 %}
+      <a
+        href="{{ url_for('signatures.create') }}"
+        class="px-5 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary-dark transition-all text-sm">
+        + New Signature
+      </a>
       {% else %}
-        {# Free tier: only show Create if they haven't hit the limit #}
-        {% set unlocked_count = signatures | selectattr('locked', 'equalto', false) | list | length %}
-        {% if unlocked_count < 1 %}
-          <a href="{{ url_for('signatures.create') }}"
-             class="px-5 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary-dark transition-all text-sm">
-            + New Signature
-          </a>
-        {% else %}
-          <a href="{{ url_for('billing.upgrade') }}"
-             class="px-5 py-2 bg-white border-2 border-primary text-primary rounded-lg font-semibold
-                    hover:bg-primary hover:text-white transition-all text-sm">
-            Upgrade for More
-          </a>
-        {% endif %}
-      {% endif %}
+      <a
+        href="{{ url_for('billing.upgrade') }}"
+        class="px-5 py-2 bg-white border-2 border-primary text-primary rounded-lg font-semibold hover:bg-primary hover:text-white transition-all text-sm">
+        Upgrade for More
+      </a>
+      {% endif %} {% endif %}
     </div>
 
     <!-- Quick Stats -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
       <div class="bg-white rounded-2xl shadow p-6 flex flex-col gap-1">
         <span class="text-sm text-gray-500 font-medium">Signatures</span>
-        <span class="text-4xl font-bold text-primary">{{ signatures|length }}</span>
+        <span class="text-4xl font-bold text-primary"
+          >{{ signatures|length }}</span
+        >
       </div>
-      <div class="bg-white rounded-2xl shadow p-6 flex flex-col gap-1">
+      <a
+        href="{{ url_for('analytics.index') }}"
+        class="bg-white rounded-2xl shadow p-6 flex flex-col gap-1 hover:border-2 hover:border-primary transition-all">
         <span class="text-sm text-gray-500 font-medium">Total Opens</span>
         <span class="text-4xl font-bold text-primary">{{ total_opens }}</span>
-      </div>
-      <div class="bg-white rounded-2xl shadow p-6 flex flex-col gap-1">
+      </a>
+      <a
+        href="{{ url_for('analytics.index') }}"
+        class="bg-white rounded-2xl shadow p-6 flex flex-col gap-1 hover:border-2 hover:border-primary transition-all">
         <span class="text-sm text-gray-500 font-medium">Link Clicks</span>
         <span class="text-4xl font-bold text-primary">{{ total_clicks }}</span>
-      </div>
+      </a>
     </div>
 
     <!-- Locked signatures banner (shown only when at least one is locked) -->
-    {% set locked_sigs = signatures | selectattr('locked', 'equalto', true) | list %}
-    {% if locked_sigs %}
-    <div class="mb-6 bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 flex items-center justify-between gap-4">
+    {% set locked_sigs = signatures | selectattr('locked', 'equalto', true) |
+    list %} {% if locked_sigs %}
+    <div
+      class="mb-6 bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 flex items-center justify-between gap-4">
       <div class="flex items-center gap-3">
-        <svg class="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        <svg
+          class="w-5 h-5 text-amber-500 flex-shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
         </svg>
         <p class="text-sm text-amber-800 font-medium">
-          {{ locked_sigs|length }} signature{{ 's are' if locked_sigs|length > 1 else ' is' }}
-          locked because your Pro plan ended. Upgrade to restore access.
+          {{ locked_sigs|length }} signature{{ 's are' if locked_sigs|length > 1
+          else ' is' }} locked because your Pro plan ended. Upgrade to restore
+          access.
         </p>
       </div>
-      <a href="{{ url_for('billing.upgrade') }}"
-         class="flex-shrink-0 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg
-                hover:bg-primary-dark transition-all">
+      <a
+        href="{{ url_for('billing.upgrade') }}"
+        class="flex-shrink-0 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-dark transition-all">
         Upgrade to Pro
       </a>
     </div>
@@ -78,145 +92,173 @@
       <h2 class="text-xl font-bold text-gray-800 mb-6">Your Signatures</h2>
 
       {% if signatures %}
-        <div class="space-y-4">
-          {% for sig in signatures %}
+      <div class="space-y-4">
+        {% for sig in signatures %} {% if sig.locked %}
+        <!-- ================================================ -->
+        <!-- LOCKED CARD                                       -->
+        <!-- ================================================ -->
+        <div
+          class="relative border border-gray-200 rounded-xl p-5 bg-gray-50 opacity-60">
+          <!-- Lock overlay badge -->
+          <div class="absolute top-3 right-3">
+            <span
+              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-200 text-gray-500 text-xs font-semibold">
+              <svg
+                class="w-3.5 h-3.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              Locked
+            </span>
+          </div>
 
-          {% if sig.locked %}
-          <!-- ================================================ -->
-          <!-- LOCKED CARD                                       -->
-          <!-- ================================================ -->
-          <div class="relative border border-gray-200 rounded-xl p-5 bg-gray-50 opacity-60">
-
-            <!-- Lock overlay badge -->
-            <div class="absolute top-3 right-3">
-              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-200 text-gray-500 text-xs font-semibold">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                </svg>
-                Locked
-              </span>
-            </div>
-
-            <!-- Info -->
-            <div class="flex items-start justify-between gap-4">
-              <div class="flex-1 min-w-0 pr-20">
-                <div class="flex items-center gap-2 mb-1">
-                  <span class="font-semibold text-gray-500">{{ sig.name }}</span>
-                </div>
-                <p class="text-sm text-gray-400">
-                  {{ sig.full_name }}
-                  {% if sig.job_title %} &middot; {{ sig.job_title }}{% endif %}
-                  {% if sig.company %} &middot; {{ sig.company }}{% endif %}
-                </p>
-                <p class="text-xs text-gray-400 mt-1">
-                  {{ sig.total_opens }} opens &nbsp;&middot;&nbsp; {{ sig.total_clicks }} clicks
-                  &nbsp;&middot;&nbsp; Created {{ sig.created_at.strftime('%b %d, %Y') }}
-                </p>
+          <!-- Info -->
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1 min-w-0 pr-20">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="font-semibold text-gray-500">{{ sig.name }}</span>
               </div>
+              <p class="text-sm text-gray-400">
+                {{ sig.full_name }} {% if sig.job_title %} &middot; {{
+                sig.job_title }}{% endif %} {% if sig.company %} &middot; {{
+                sig.company }}{% endif %}
+              </p>
+              <p class="text-xs text-gray-400 mt-1">
+                {{ sig.total_opens }} opens &nbsp;&middot;&nbsp; {{
+                sig.total_clicks }} clicks &nbsp;&middot;&nbsp; Created {{
+                sig.created_at.strftime('%b %d, %Y') }}
+              </p>
             </div>
+          </div>
 
-            <!-- Upgrade CTA inside locked card -->
-            <div class="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
-              <p class="text-xs text-gray-400">Upgrade to Pro to edit and use this signature.</p>
-              <a href="{{ url_for('billing.upgrade') }}"
-                 class="px-4 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg
-                        hover:bg-primary-dark transition-all">
-                Unlock with Pro
+          <!-- Upgrade CTA inside locked card -->
+          <div
+            class="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
+            <p class="text-xs text-gray-400">
+              Upgrade to Pro to edit and use this signature.
+            </p>
+            <a
+              href="{{ url_for('billing.upgrade') }}"
+              class="px-4 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-dark transition-all">
+              Unlock with Pro
+            </a>
+          </div>
+        </div>
+
+        {% else %}
+        <!-- ================================================ -->
+        <!-- ACTIVE CARD                                       -->
+        <!-- ================================================ -->
+        <div x-data="{ showHtml: false, copied: false }">
+          <!-- Card row -->
+          <div
+            class="flex items-center justify-between border border-gray-100 rounded-xl p-5 hover:border-primary transition-all"
+            :class="showHtml ? 'rounded-b-none border-b-0' : ''">
+            <!-- Left: info -->
+            <div class="flex-1 min-w-0 mr-4">
+              <div class="flex items-center gap-3 mb-1">
+                <span class="font-semibold text-gray-800">{{ sig.name }}</span>
+                {% if sig.is_active %}
+                <span
+                  class="text-xs bg-green-100 text-green-700 font-semibold px-2 py-0.5 rounded-full"
+                  >Active</span
+                >
+                {% else %}
+                <span
+                  class="text-xs bg-gray-100 text-gray-500 font-semibold px-2 py-0.5 rounded-full"
+                  >Inactive</span
+                >
+                {% endif %}
+              </div>
+              <p class="text-sm text-gray-500">
+                {{ sig.full_name }} {% if sig.job_title %} &middot; {{
+                sig.job_title }}{% endif %} {% if sig.company %} &middot; {{
+                sig.company }}{% endif %}
+              </p>
+              <a
+                href="{{ url_for('analytics.index') }}"
+                class="text-xs text-gray-400 mt-1 hover:text-primary transition-colors inline-block">
+                {{ sig.total_opens }} opens &nbsp;&middot;&nbsp; {{
+                sig.total_clicks }} clicks &nbsp;&middot;&nbsp; Created {{
+                sig.created_at.strftime('%b %d, %Y') }}
               </a>
             </div>
 
-          </div>
-
-          {% else %}
-          <!-- ================================================ -->
-          <!-- ACTIVE CARD                                       -->
-          <!-- ================================================ -->
-          <div x-data="{ showHtml: false, copied: false }">
-
-            <!-- Card row -->
-            <div class="flex items-center justify-between border border-gray-100 rounded-xl p-5 hover:border-primary transition-all"
-                 :class="showHtml ? 'rounded-b-none border-b-0' : ''">
-
-              <!-- Left: info -->
-              <div class="flex-1 min-w-0 mr-4">
-                <div class="flex items-center gap-3 mb-1">
-                  <span class="font-semibold text-gray-800">{{ sig.name }}</span>
-                  {% if sig.is_active %}
-                    <span class="text-xs bg-green-100 text-green-700 font-semibold px-2 py-0.5 rounded-full">Active</span>
-                  {% else %}
-                    <span class="text-xs bg-gray-100 text-gray-500 font-semibold px-2 py-0.5 rounded-full">Inactive</span>
-                  {% endif %}
-                </div>
-                <p class="text-sm text-gray-500">
-                  {{ sig.full_name }}
-                  {% if sig.job_title %} &middot; {{ sig.job_title }}{% endif %}
-                  {% if sig.company %} &middot; {{ sig.company }}{% endif %}
-                </p>
-                <p class="text-xs text-gray-400 mt-1">
-                  {{ sig.total_opens }} opens &nbsp;&middot;&nbsp; {{ sig.total_clicks }} clicks
-                  &nbsp;&middot;&nbsp; Created {{ sig.created_at.strftime('%b %d, %Y') }}
-                </p>
-              </div>
-
-              <!-- Right: actions -->
-              <div class="flex items-center gap-2 flex-shrink-0">
-                <a href="{{ url_for('signatures.preview', signature_id=sig.id) }}"
-                  class="px-3 py-1.5 text-xs border border-gray-300 text-gray-600 rounded-lg font-semibold hover:bg-gray-100 transition-all">
-                  Preview
-                </a>
-                <a href="{{ url_for('signatures.edit', signature_id=sig.id) }}"
-                  class="inline-flex items-center px-3 py-1.5 text-sm font-semibold text-primary border-2 border-primary rounded-lg hover:bg-primary hover:text-white transition-all">
-                  Edit
-                </a>
-                <button @click="showHtml = !showHtml"
-                  class="px-3 py-1.5 text-xs border border-primary text-primary rounded-lg font-semibold hover:bg-primary hover:text-white transition-all"
-                  :class="showHtml ? 'bg-primary text-white' : ''">
-                  &lt;/&gt; HTML
-                </button>
-                <form method="POST" action="{{ url_for('signatures.delete', signature_id=sig.id) }}"
-                      onsubmit="return confirm('Delete {{ sig.name }}? This cannot be undone.');">
-                  <button type="submit"
-                    class="px-3 py-1.5 text-xs border border-red-300 text-red-500 rounded-lg font-semibold hover:bg-red-500 hover:text-white transition-all">
-                    Delete
-                  </button>
-                </form>
-              </div>
-            </div>
-
-            <!-- Expandable HTML panel -->
-            <div x-show="showHtml" x-cloak
-                 class="border border-t-0 border-gray-100 rounded-b-xl bg-gray-50 p-4">
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-semibold text-gray-500 uppercase tracking-widest">Signature HTML</span>
+            <!-- Right: actions -->
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <a
+                href="{{ url_for('signatures.preview', signature_id=sig.id) }}"
+                class="px-3 py-1.5 text-xs border border-gray-300 text-gray-600 rounded-lg font-semibold hover:bg-gray-100 transition-all">
+                Preview
+              </a>
+              <a
+                href="{{ url_for('signatures.edit', signature_id=sig.id) }}"
+                class="inline-flex items-center px-3 py-1.5 text-sm font-semibold text-primary border-2 border-primary rounded-lg hover:bg-primary hover:text-white transition-all">
+                Edit
+              </a>
+              <button
+                @click="showHtml = !showHtml"
+                class="px-3 py-1.5 text-xs border border-primary text-primary rounded-lg font-semibold hover:bg-primary hover:text-white transition-all"
+                :class="showHtml ? 'bg-primary text-white' : ''">
+                &lt;/&gt; HTML
+              </button>
+              <form
+                method="POST"
+                action="{{ url_for('signatures.delete', signature_id=sig.id) }}"
+                onsubmit="return confirm('Delete {{ sig.name }}? This cannot be undone.');">
                 <button
-                  @click="navigator.clipboard.writeText(`{{ sig.html_content | replace('`', '') | replace('\n', '') }}`).then(() => { copied = true; setTimeout(() => copied = false, 2500); })"
-                  class="text-xs px-3 py-1 bg-primary text-white rounded-lg font-semibold hover:bg-primary-dark transition-all">
-                  <span x-show="!copied">Copy HTML</span>
-                  <span x-show="copied" x-cloak>✓ Copied!</span>
+                  type="submit"
+                  class="px-3 py-1.5 text-xs border border-red-300 text-red-500 rounded-lg font-semibold hover:bg-red-500 hover:text-white transition-all">
+                  Delete
                 </button>
-              </div>
-              <pre class="text-xs text-gray-600 bg-white border border-gray-200 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-all">{{ sig.html_content }}</pre>
+              </form>
             </div>
-
           </div>
-          {% endif %}
 
-          {% endfor %}
+          <!-- Expandable HTML panel -->
+          <div
+            x-show="showHtml"
+            x-cloak
+            class="border border-t-0 border-gray-100 rounded-b-xl bg-gray-50 p-4">
+            <div class="flex items-center justify-between mb-2">
+              <span
+                class="text-xs font-semibold text-gray-500 uppercase tracking-widest"
+                >Signature HTML</span
+              >
+              <button
+                @click="navigator.clipboard.writeText(`{{ sig.html_content | replace('`', '') | replace('\n', '') }}`).then(() => { copied = true; setTimeout(() => copied = false, 2500); })"
+                class="text-xs px-3 py-1 bg-primary text-white rounded-lg font-semibold hover:bg-primary-dark transition-all">
+                <span x-show="!copied">Copy HTML</span>
+                <span x-show="copied" x-cloak>✓ Copied!</span>
+              </button>
+            </div>
+            <pre
+              class="text-xs text-gray-600 bg-white border border-gray-200 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-all">
+{{ sig.html_content }}</pre
+            >
+          </div>
         </div>
+        {% endif %} {% endfor %}
+      </div>
 
       {% else %}
-        <div class="text-center py-16 text-gray-400">
-          <p class="text-lg font-medium mb-2">No signatures yet</p>
-          <p class="text-sm mb-6">Create your first signature to get started.</p>
-          <a href="{{ url_for('signatures.create') }}"
-             class="inline-block px-6 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary-dark transition-all text-sm">
-            Create Your First Signature
-          </a>
-        </div>
+      <div class="text-center py-16 text-gray-400">
+        <p class="text-lg font-medium mb-2">No signatures yet</p>
+        <p class="text-sm mb-6">Create your first signature to get started.</p>
+        <a
+          href="{{ url_for('signatures.create') }}"
+          class="inline-block px-6 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary-dark transition-all text-sm">
+          Create Your First Signature
+        </a>
+      </div>
       {% endif %}
     </div>
-
   </div>
 </section>
 {% endblock %}

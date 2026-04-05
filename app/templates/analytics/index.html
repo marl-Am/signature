@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Analytics – Signature{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+
+  <!-- Page header -->
+  <div class="bg-primary border-b border-white/10 px-4 py-6">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-white">Analytics</h1>
+        <p class="text-white/60 text-sm mt-1">Track opens and clicks across all your signatures.</p>
+      </div>
+      <a href="{{ url_for('dashboard.index') }}"
+         class="text-white/70 hover:text-white text-sm transition-colors">
+        ← Back to Dashboard
+      </a>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 py-10 space-y-10">
+
+    <!-- Summary cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+      <div class="bg-white rounded-2xl shadow p-6">
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Total Opens</p>
+        <p class="text-3xl font-bold text-gray-800">{{ summary.total_opens }}</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-6">
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Total Clicks</p>
+        <p class="text-3xl font-bold text-gray-800">{{ summary.total_clicks }}</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-6">
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Click-Through Rate</p>
+        <p class="text-3xl font-bold text-gray-800">{{ summary.overall_ctr }}%</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-6">
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Top Platform</p>
+        <p class="text-3xl font-bold text-gray-800 capitalize">
+          {{ summary.top_platform or '—' }}
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Daily chart — last 30 days -->
+    <div class="bg-white rounded-2xl shadow p-8">
+      <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-6">
+        Last 30 Days
+      </h2>
+      <canvas id="dailyChart" height="100"></canvas>
+    </div>
+
+    <!-- Per-signature table -->
+    <div class="bg-white rounded-2xl shadow p-8">
+      <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-6">
+        By Signature
+      </h2>
+
+      {% if summary.per_signature %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left">
+          <thead>
+            <tr class="border-b border-gray-100 text-xs font-semibold text-gray-400 uppercase tracking-widest">
+              <th class="pb-3 pr-6">Signature</th>
+              <th class="pb-3 pr-6 text-right">Opens</th>
+              <th class="pb-3 pr-6 text-right">Clicks</th>
+              <th class="pb-3 pr-6 text-right">CTR</th>
+              <th class="pb-3 text-right">Last Opened</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50">
+            {% for sig in summary.per_signature %}
+            <tr class="hover:bg-gray-50 transition-colors">
+              <td class="py-4 pr-6">
+                <p class="font-semibold text-gray-800">{{ sig.name }}</p>
+                <p class="text-xs text-gray-400">{{ sig.full_name }}</p>
+              </td>
+              <td class="py-4 pr-6 text-right font-mono text-gray-700">{{ sig.total_opens }}</td>
+              <td class="py-4 pr-6 text-right font-mono text-gray-700">{{ sig.total_clicks }}</td>
+              <td class="py-4 pr-6 text-right">
+                <span class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold
+                  {% if sig.ctr >= 10 %}bg-green-100 text-green-700
+                  {% elif sig.ctr >= 3 %}bg-yellow-100 text-yellow-700
+                  {% else %}bg-gray-100 text-gray-500{% endif %}">
+                  {{ sig.ctr }}%
+                </span>
+              </td>
+              <td class="py-4 text-right text-gray-400 text-xs">
+                {% if sig.last_opened_at %}
+                  {{ sig.last_opened_at.strftime('%b %d, %Y') }}
+                {% else %}
+                  Never
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-gray-400 text-sm text-center py-8">
+        No signature data yet. Start using your signatures in emails to see analytics here.
+      </p>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+  const labels = {{ summary.daily_last_30 | map(attribute='date') | list | tojson }};
+  const opensData = {{ summary.daily_last_30 | map(attribute='opens') | list | tojson }};
+  const clicksData = {{ summary.daily_last_30 | map(attribute='clicks') | list | tojson }};
+
+  new Chart(document.getElementById('dailyChart'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Opens',
+          data: opensData,
+          backgroundColor: 'rgba(12, 39, 136, 0.15)',
+          borderColor: 'rgba(12, 39, 136, 0.8)',
+          borderWidth: 1,
+          borderRadius: 4,
+        },
+        {
+          label: 'Clicks',
+          data: clicksData,
+          backgroundColor: 'rgba(12, 39, 136, 0.5)',
+          borderColor: 'rgba(12, 39, 136, 1)',
+          borderWidth: 1,
+          borderRadius: 4,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'top' },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            maxTicksLimit: 10,
+            font: { size: 11 },
+          },
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { stepSize: 1 },
+          grid: { color: 'rgba(0,0,0,0.05)' },
+        },
+      },
+    },
+  });
+</script>
+{% endblock %}

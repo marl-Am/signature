@@ -9,8 +9,7 @@ Security Features Implemented:
 """
 
 from app import db
-from datetime import datetime
-from typing import Optional
+from datetime import datetime, timezone
 
 
 class Signature(db.Model):
@@ -97,16 +96,27 @@ class Signature(db.Model):
     # ========================================
     # TIMESTAMPS
     # ========================================
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(
+        db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
+    )
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
     )
 
     # ========================================
     # RELATIONSHIPS
     # ========================================
     # Back reference to User (A01: Access Control)
-    user = db.relationship("User", back_populates="signatures")
+    user   = db.relationship("User", back_populates="signatures")
+    opens  = db.relationship(
+        "SignatureOpen", back_populates="signature", cascade="all, delete-orphan"
+    )
+    clicks = db.relationship(
+        "SignatureClick", back_populates="signature", cascade="all, delete-orphan"
+    )
 
     # ========================================
     # UTILITY METHODS
@@ -175,8 +185,7 @@ class Signature(db.Model):
         A09: Logging - This action should also be logged
         """
         self.total_opens += 1
-        self.last_opened_at = datetime.utcnow()
-        db.session.commit()
+        self.last_opened_at = datetime.now(timezone.utc)
 
     def increment_clicks(self) -> None:
         """
@@ -185,7 +194,6 @@ class Signature(db.Model):
         A09: Logging - This action should also be logged
         """
         self.total_clicks += 1
-        db.session.commit()
 
 
 # ========================================

@@ -14,11 +14,13 @@ Security notes:
 """
 
 import logging
+from datetime import datetime, timezone
 from typing import Union
 
-from flask import Blueprint, make_response, redirect, url_for, Response
+from flask import Blueprint, make_response, redirect, request, url_for, Response
 from app import db
 from app.models.signature import Signature
+from app.models.analytics import SignatureOpen, SignatureClick
 
 logger = logging.getLogger(__name__)
 
@@ -60,14 +62,22 @@ def pixel(tracking_code: str) -> Response:
 
     if signature is not None:
         try:
+            ua: str | None = request.headers.get("User-Agent")
             signature.increment_opens()
+            db.session.add(
+                SignatureOpen(
+                    signature_id=signature.id,
+                    opened_at=datetime.now(timezone.utc),
+                    user_agent=ua,
+                )
+            )
+            db.session.commit()
             logger.debug(
                 "Open recorded — signature_id=%s total_opens=%s",
                 signature.id,
                 signature.total_opens,
             )
         except Exception:
-            # Never let a DB error break the image response.
             db.session.rollback()
             logger.exception(
                 "Failed to record open for tracking_code=%s", tracking_code
@@ -126,7 +136,17 @@ def click(tracking_code: str, platform: str) -> Union[Response, tuple[str, int]]
         return redirect(url_for("index"))
 
     try:
+        ua: str | None = request.headers.get("User-Agent")
         signature.increment_clicks()
+        db.session.add(
+            SignatureClick(
+                signature_id=signature.id,
+                platform=platform,
+                clicked_at=datetime.now(timezone.utc),
+                user_agent=ua,
+            )
+        )
+        db.session.commit()
         logger.debug(
             "Click recorded — signature_id=%s platform=%s total_clicks=%s",
             signature.id,

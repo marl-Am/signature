@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -108,9 +108,20 @@
               class="text-white/90 hover:text-white transition-colors">
               Create Signature
             </a>
-            <a href="{{ url_for('pricing') }}" class="block py-2 text-white/90 hover:text-white"
+
+            <!-- DESKTOP NAV: Analytics link added -->
+            <a
+              href="{{ url_for('analytics.index') }}"
+              class="text-white/90 hover:text-white transition-colors">
+              Analytics
+            </a>
+            <!-- END DESKTOP NAV: Analytics link -->
+
+            <a
+              href="{{ url_for('pricing') }}"
+              class="block py-2 text-white/90 hover:text-white"
               >Pricing</a
-      >
+            >
 
             <!-- User Dropdown (Alpine.js) -->
             <div x-data="{ open: false }" class="relative">
@@ -140,6 +151,13 @@
                 <a href="/dashboard" class="block px-4 py-2 hover:bg-gray-100"
                   >Dashboard</a
                 >
+                <!-- DESKTOP NAV DROPDOWN: Analytics link added -->
+                <a
+                  href="{{ url_for('analytics.index') }}"
+                  class="block px-4 py-2 hover:bg-gray-100"
+                  >Analytics</a
+                >
+                <!-- END DESKTOP NAV DROPDOWN: Analytics link -->
                 <a
                   href="/subscription/manage"
                   class="block px-4 py-2 hover:bg-gray-100"
@@ -160,9 +178,11 @@
               class="text-white/90 hover:text-white transition-colors">
               Features
             </a>
-            <a href="{{ url_for('pricing') }}" class="block py-2 text-white/90 hover:text-white"
+            <a
+              href="{{ url_for('pricing') }}"
+              class="block py-2 text-white/90 hover:text-white"
               >Pricing</a
-      >
+            >
             <a
               href="{{ url_for('auth.login') }}"
               class="text-white/90 hover:text-white transition-colors">
@@ -212,9 +232,20 @@
             class="block py-2 text-white/90 hover:text-white"
             >Create Signature</a
           >
-          <a href="{{ url_for('pricing') }}" class="block py-2 text-white/90 hover:text-white"
-              >Pricing</a
-      >
+
+          <!-- MOBILE MENU: Analytics link added -->
+          <a
+            href="{{ url_for('analytics.index') }}"
+            class="block py-2 text-white/90 hover:text-white"
+            >Analytics</a
+          >
+          <!-- END MOBILE MENU: Analytics link -->
+
+          <a
+            href="{{ url_for('pricing') }}"
+            class="block py-2 text-white/90 hover:text-white"
+            >Pricing</a
+          >
           <a
             href="/subscription/manage"
             class="block py-2 text-white/90 hover:text-white"
@@ -230,9 +261,11 @@
           <a href="/#features" class="block py-2 text-white/90 hover:text-white"
             >Features</a
           >
-          <a href="{{ url_for('pricing') }}" class="block py-2 text-white/90 hover:text-white"
-              >Pricing</a
-      >
+          <a
+            href="{{ url_for('pricing') }}"
+            class="block py-2 text-white/90 hover:text-white"
+            >Pricing</a
+          >
           <a
             href="{{ url_for('auth.login') }}"
             class="block py-2 text-white/90 hover:text-white"
@@ -337,20 +370,6 @@
             <ul class="space-y-2">
               <li>
                 <a
-                  href="/about"
-                  class="text-gray-600 hover:text-primary transition-colors"
-                  >About</a
-                >
-              </li>
-              <li>
-                <a
-                  href="/contact"
-                  class="text-gray-600 hover:text-primary transition-colors"
-                  >Contact</a
-                >
-              </li>
-              <li>
-                <a
                   href="/privacy"
                   class="text-gray-600 hover:text-primary transition-colors"
                   >Privacy Policy</a
@@ -369,6 +388,14 @@
                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                   <path
                     d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z" />
+                </svg>
+              </a>
+              <a
+                href="#"
+                class="text-gray-600 hover:text-primary transition-colors">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path
+                    d="M20 4H4c-1.103 0-2 .897-2 2v12c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2V6c0-1.103-.897-2-2-2zm0 2v.511l-8 4.8-8-4.8V6h16zM4 18V9.044l7.386 4.432a1 1 0 0 0 1.228 0L20 9.044 20.002 18H4z" />
                 </svg>
               </a>
               <a

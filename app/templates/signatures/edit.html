@@ -1,129 +1,137 @@
-{% extends "base.html" %}
-{% block title %}Edit Signature – Signature{% endblock %}
+{% extends "base.html" %} {% block title %}Edit Signature – Signature{% endblock
+%} {% block content %} {# Resolve display values: prefer form_data (POST error
+replay) over saved signature fields #} {% set v_name = form_data.name if
+form_data else signature.name %} {% set v_full_name = form_data.full_name if
+form_data else signature.full_name %} {% set v_job_title = form_data.job_title
+if form_data else (signature.job_title or '') %} {% set v_company =
+form_data.company if form_data else (signature.company or '') %} {% set
+v_department = form_data.department if form_data else (signature.department or
+'') %} {% set v_phone = form_data.phone if form_data else (signature.phone or
+'') %} {% set v_website = form_data.website if form_data else (signature.website
+or '') %} {% set v_linkedin = form_data.linkedin_url if form_data else
+(signature.linkedin_url or '') %} {% set v_twitter = form_data.twitter_url if
+form_data else (signature.twitter_url or '') %} {% set v_facebook =
+form_data.facebook_url if form_data else (signature.facebook_url or '') %} {%
+set v_instagram = form_data.instagram_url if form_data else
+(signature.instagram_url or '') %} {% set v_logo = form_data.logo_url if
+form_data else (signature.logo_url or '') %} {% set v_accent_color =
+form_data.accent_color if form_data else (signature.accent_color or '#0c2788')
+%} {% set v_layout = form_data.layout if form_data else (signature.layout or
+'classic') %} {% set v_font_family = form_data.font_family if form_data else
+(signature.font_family or 'Arial, Helvetica, sans-serif') %}
 
-{% block content %}
-{# Resolve display values: prefer form_data (POST error replay) over saved signature fields #}
-{% set v_name         = form_data.name          if form_data else signature.name %}
-{% set v_full_name    = form_data.full_name      if form_data else signature.full_name %}
-{% set v_job_title    = form_data.job_title      if form_data else (signature.job_title or '') %}
-{% set v_company      = form_data.company        if form_data else (signature.company or '') %}
-{% set v_department   = form_data.department     if form_data else (signature.department or '') %}
-{% set v_phone        = form_data.phone          if form_data else (signature.phone or '') %}
-{% set v_website      = form_data.website        if form_data else (signature.website or '') %}
-{% set v_linkedin     = form_data.linkedin_url   if form_data else (signature.linkedin_url or '') %}
-{% set v_twitter      = form_data.twitter_url    if form_data else (signature.twitter_url or '') %}
-{% set v_facebook     = form_data.facebook_url   if form_data else (signature.facebook_url or '') %}
-{% set v_instagram    = form_data.instagram_url  if form_data else (signature.instagram_url or '') %}
-{% set v_logo         = form_data.logo_url       if form_data else (signature.logo_url or '') %}
-{% set v_accent_color = form_data.accent_color   if form_data else (signature.accent_color or '#0c2788') %}
-{% set v_layout       = form_data.layout         if form_data else (signature.layout or 'classic') %}
-{% set v_font_family  = form_data.font_family    if form_data else (signature.font_family or 'Arial, Helvetica, sans-serif') %}
+<script>
+  function editSignatureData() {
+    return {
+      label:        {{ v_name | tojson }},
+      fullName:     {{ v_full_name | tojson }},
+      jobTitle:     {{ v_job_title | tojson }},
+      company:      {{ v_company | tojson }},
+      department:   {{ v_department | tojson }},
+      phone:        {{ v_phone | tojson }},
+      website:      {{ v_website | tojson }},
+      linkedinUrl:  {{ v_linkedin | tojson }},
+      twitterUrl:   {{ v_twitter | tojson }},
+      facebookUrl:  {{ v_facebook | tojson }},
+      instagramUrl: {{ v_instagram | tojson }},
+      logoUrl:      {{ v_logo | tojson }},
+      accentColor:  {{ v_accent_color | tojson }},
+      layout:       {{ v_layout | tojson }},
+      fontFamily:   {{ v_font_family | tojson }},
+      copied: false,
 
-<div
-  x-data="{
-    label:        '{{ v_name | e }}',
-    fullName:     '{{ v_full_name | e }}',
-    jobTitle:     '{{ v_job_title | e }}',
-    company:      '{{ v_company | e }}',
-    department:   '{{ v_department | e }}',
-    phone:        '{{ v_phone | e }}',
-    website:      '{{ v_website | e }}',
-    linkedinUrl:  '{{ v_linkedin | e }}',
-    twitterUrl:   '{{ v_twitter | e }}',
-    facebookUrl:  '{{ v_facebook | e }}',
-    instagramUrl: '{{ v_instagram | e }}',
-    logoUrl:      '{{ v_logo | e }}',
-    accentColor:  '{{ v_accent_color | e }}',
-    layout:       '{{ v_layout | e }}',
-    fontFamily:   '{{ v_font_family | e }}',
-    copied: false,
+      get formattedPhone() {
+        const digits = this.phone.replace(/\D/g, '');
+        if (digits.length === 11 && digits[0] === '1')
+          return `+1 ${digits.slice(1,4)} ${digits.slice(4,7)} ${digits.slice(7)}`;
+        if (digits.length === 10)
+          return `+1 ${digits.slice(0,3)} ${digits.slice(3,6)} ${digits.slice(6)}`;
+        return this.phone;
+      },
 
-    get formattedPhone() {
-      const digits = this.phone.replace(/\D/g, '');
-      if (digits.length === 11 && digits[0] === '1')
-        return `+1 ${digits.slice(1,4)} ${digits.slice(4,7)} ${digits.slice(7)}`;
-      if (digits.length === 10)
-        return `+1 ${digits.slice(0,3)} ${digits.slice(3,6)} ${digits.slice(6)}`;
-      return this.phone;
-    },
+      get previewHtml() {
+        const brand = this.accentColor || '#0c2788';
+        const font  = this.fontFamily  || 'Arial, Helvetica, sans-serif';
 
-    get previewHtml() {
-      const brand = this.accentColor || '#0c2788';
-      const font  = this.fontFamily  || 'Arial, Helvetica, sans-serif';
+        const namePart = this.fullName
+          ? `<div style='font-size:17px;font-weight:bold;color:#111;margin-bottom:3px;'>${this.fullName}</div>`
+          : `<div style='font-size:17px;font-weight:bold;color:#ccc;margin-bottom:3px;'>Your Name</div>`;
 
-      const namePart = this.fullName
-        ? `<div style='font-size:17px;font-weight:bold;color:#111;margin-bottom:3px;'>${this.fullName}</div>`
-        : `<div style='font-size:17px;font-weight:bold;color:#ccc;margin-bottom:3px;'>Your Name</div>`;
+        const titleParts = [this.jobTitle, this.company].filter(Boolean);
+        const titlePart  = titleParts.length
+          ? `<div style='font-size:13px;color:${brand};margin-bottom:2px;'>${titleParts.join(' · ')}</div>`
+          : '';
+        const deptPart = this.department
+          ? `<div style='font-size:12px;color:#777;margin-bottom:2px;'>${this.department}</div>`
+          : '';
 
-      const titleParts = [this.jobTitle, this.company].filter(Boolean);
-      const titlePart  = titleParts.length
-        ? `<div style='font-size:13px;color:${brand};margin-bottom:2px;'>${titleParts.join(' · ')}</div>`
-        : '';
-      const deptPart = this.department
-        ? `<div style='font-size:12px;color:#777;margin-bottom:2px;'>${this.department}</div>`
-        : '';
+        const divider = `<div style='border-top:1px solid #e0e0e0;margin:8px 0;'></div>`;
 
-      const divider = `<div style='border-top:1px solid #e0e0e0;margin:8px 0;'></div>`;
+        const contactParts = [];
+        if (this.formattedPhone) contactParts.push(`<span style='color:#555;font-size:12px;'>${this.formattedPhone}</span>`);
+        if (this.website) {
+          const d = this.website.replace('https://','').replace('http://','').replace(/\/$/,'');
+          contactParts.push(`<a href='${this.website}' style='color:${brand};font-size:12px;text-decoration:none;'>${d}</a>`);
+        }
+        const contactPart = contactParts.length
+          ? `<div style='margin-bottom:6px;'>${contactParts.join(' <span style=\'color:#ccc;\'>|</span> ')}</div>`
+          : '';
 
-      const contactParts = [];
-      if (this.formattedPhone) contactParts.push(`<span style='color:#555;font-size:12px;'>${this.formattedPhone}</span>`);
-      if (this.website) {
-        const d = this.website.replace('https://','').replace('http://','').replace(/\/$/,'');
-        contactParts.push(`<a href='${this.website}' style='color:${brand};font-size:12px;text-decoration:none;'>${d}</a>`);
+        const socials = [
+          [this.linkedinUrl,'in'],[this.twitterUrl,'𝕏'],
+          [this.facebookUrl,'f'],[this.instagramUrl,'IG'],
+        ];
+        const socialBadges = socials.filter(([u]) => u)
+          .map(([u,b]) => `<a href='${u}' style='display:inline-block;background:${brand};color:#fff;font-size:11px;font-weight:bold;text-decoration:none;padding:3px 7px;border-radius:4px;margin-right:4px;'>${b}</a>`)
+          .join('');
+        const socialPart = socialBadges ? `<div style='margin-top:4px;'>${socialBadges}</div>` : '';
+
+        const logoPart = this.logoUrl
+          ? `<td style='padding-right:16px;vertical-align:top;'><img src='${this.logoUrl}' width='64' height='64' style='border-radius:6px;display:block;' /></td>`
+          : '';
+
+        let contentTd = '';
+        if (this.layout === 'modern') {
+          const headerBg = `<div style='background:${brand};padding:10px 14px;border-radius:6px 6px 0 0;'><div style='font-size:17px;font-weight:bold;color:#fff;margin-bottom:3px;'>${this.fullName || 'Your Name'}</div>${titleParts.length ? `<div style='font-size:13px;color:rgba(255,255,255,0.8);'>${titleParts.join(' · ')}</div>` : ''}</div>`;
+          const subBg    = `<div style='background:#f9f9f9;padding:10px 14px;border-radius:0 0 6px 6px;border:1px solid #e0e0e0;border-top:none;'>${deptPart}${contactPart}${socialPart}</div>`;
+          contentTd = `<td style='vertical-align:top;'>${headerBg}${subBg}</td>`;
+        } else if (this.layout === 'minimal') {
+          contentTd = `<td style='vertical-align:top;padding:4px 0;'>${namePart}${titlePart}${deptPart}${contactPart}${socialPart}</td>`;
+        } else {
+          const border = this.logoUrl ? '' : `border-left:3px solid ${brand};padding-left:14px;`;
+          contentTd = `<td style='vertical-align:top;${border}'>${namePart}${titlePart}${deptPart}${divider}${contactPart}${socialPart}</td>`;
+        }
+
+        return `<table cellpadding='0' cellspacing='0' border='0' style='font-family:${font};max-width:520px;'><tr>${logoPart}${contentTd}</tr></table>`;
+      },
+
+      copyHtml() {
+        const tmp = document.createElement('textarea');
+        tmp.value = this.previewHtml;
+        document.body.appendChild(tmp);
+        tmp.select();
+        document.execCommand('copy');
+        document.body.removeChild(tmp);
+        this.copied = true;
+        setTimeout(() => this.copied = false, 2500);
       }
-      const contactPart = contactParts.length
-        ? `<div style='margin-bottom:6px;'>${contactParts.join(' <span style=\'color:#ccc;\'>|</span> ')}</div>`
-        : '';
+    };
+  }
+</script>
 
-      const socials = [
-        [this.linkedinUrl,'in'],[this.twitterUrl,'𝕏'],
-        [this.facebookUrl,'f'],[this.instagramUrl,'IG'],
-      ];
-      const socialBadges = socials.filter(([u]) => u)
-        .map(([u,b]) => `<a href='${u}' style='display:inline-block;background:${brand};color:#fff;font-size:11px;font-weight:bold;text-decoration:none;padding:3px 7px;border-radius:4px;margin-right:4px;'>${b}</a>`)
-        .join('');
-      const socialPart = socialBadges ? `<div style='margin-top:4px;'>${socialBadges}</div>` : '';
-
-      const logoPart = this.logoUrl
-        ? `<td style='padding-right:16px;vertical-align:top;'><img src='${this.logoUrl}' width='64' height='64' style='border-radius:6px;display:block;' /></td>`
-        : '';
-
-      let contentTd = '';
-      if (this.layout === 'modern') {
-        const headerBg = `<div style='background:${brand};padding:10px 14px;border-radius:6px 6px 0 0;'><div style='font-size:17px;font-weight:bold;color:#fff;margin-bottom:3px;'>${this.fullName || 'Your Name'}</div>${titleParts.length ? `<div style='font-size:13px;color:rgba(255,255,255,0.8);'>${titleParts.join(' · ')}</div>` : ''}</div>`;
-        const subBg    = `<div style='background:#f9f9f9;padding:10px 14px;border-radius:0 0 6px 6px;border:1px solid #e0e0e0;border-top:none;'>${deptPart}${contactPart}${socialPart}</div>`;
-        contentTd = `<td style='vertical-align:top;'>${headerBg}${subBg}</td>`;
-      } else if (this.layout === 'minimal') {
-        contentTd = `<td style='vertical-align:top;padding:4px 0;'>${namePart}${titlePart}${deptPart}${contactPart}${socialPart}</td>`;
-      } else {
-        const border = this.logoUrl ? '' : `border-left:3px solid ${brand};padding-left:14px;`;
-        contentTd = `<td style='vertical-align:top;${border}'>${namePart}${titlePart}${deptPart}${divider}${contactPart}${socialPart}</td>`;
-      }
-
-      return `<table cellpadding='0' cellspacing='0' border='0' style='font-family:${font};max-width:520px;'><tr>${logoPart}${contentTd}</tr></table>`;
-    },
-
-    copyHtml() {
-      const tmp = document.createElement('textarea');
-      tmp.value = this.previewHtml;
-      document.body.appendChild(tmp);
-      tmp.select();
-      document.execCommand('copy');
-      document.body.removeChild(tmp);
-      this.copied = true;
-      setTimeout(() => this.copied = false, 2500);
-    }
-  }"
-  class="min-h-screen bg-gray-50">
-
+<div x-data="editSignatureData()" class="min-h-screen bg-gray-50">
   <!-- Page header -->
   <div class="bg-primary border-b border-white/10 px-4 py-6">
     <div class="max-w-7xl mx-auto flex items-center justify-between">
       <div>
         <h1 class="text-2xl font-bold text-white">Edit Signature</h1>
-        <p class="text-white/60 text-sm mt-1">Update your details and see a live preview on the right.</p>
+        <p class="text-white/60 text-sm mt-1">
+          Update your details and see a live preview on the right.
+        </p>
       </div>
-      <a href="{{ url_for('dashboard.index') }}" class="text-white/70 hover:text-white text-sm transition-colors">
+      <a
+        href="{{ url_for('dashboard.index') }}"
+        class="text-white/70 hover:text-white text-sm transition-colors">
         ← Back to Dashboard
       </a>
     </div>
@@ -132,25 +140,36 @@
   <!-- Two-column layout -->
   <div class="max-w-7xl mx-auto px-4 py-10">
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
-
       <!-- LEFT: Form -->
       <div class="bg-white rounded-2xl shadow p-8">
-        <form method="POST" action="{{ url_for('signatures.edit', signature_id=signature.id) }}" class="space-y-6">
-
+        <form
+          method="POST"
+          action="{{ url_for('signatures.edit', signature_id=signature.id) }}"
+          class="space-y-6">
           <!-- Signature Label -->
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-1">
               Signature Label <span class="text-red-500">*</span>
             </label>
-            <input type="text" name="name" required x-model="label"
+            <input
+              type="text"
+              name="name"
+              required
+              x-model="label"
               placeholder="e.g. Work Signature"
               class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary outline-none transition-all text-gray-800 text-sm" />
-            <p class="text-xs text-gray-400 mt-1">A name to identify this signature (not shown in the signature itself).</p>
+            <p class="text-xs text-gray-400 mt-1">
+              A name to identify this signature (not shown in the signature
+              itself).
+            </p>
           </div>
 
           <!-- Divider -->
           <div class="border-t border-gray-100 pt-2">
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Personal Info</p>
+            <p
+              class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">
+              Personal Info
+            </p>
           </div>
 
           <!-- Full Name -->
@@ -158,7 +177,11 @@
             <label class="block text-sm font-semibold text-gray-700 mb-1">
               Full Name <span class="text-red-500">*</span>
             </label>
-            <input type="text" name="full_name" required x-model="fullName"
+            <input
+              type="text"
+              name="full_name"
+              required
+              x-model="fullName"
               placeholder="Jane Smith"
               class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary outline-none transition-all text-gray-800 text-sm" />
           </div>
@@ -166,14 +189,24 @@
           <!-- Job Title + Company -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-1">Job Title</label>
-              <input type="text" name="job_title" x-model="jobTitle"
+              <label class="block text-sm font-semibold text-gray-700 mb-1"
+                >Job Title</label
+              >
+              <input
+                type="text"
+                name="job_title"
+                x-model="jobTitle"
                 placeholder="Software Engineer"
                 class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary outline-none transition-all text-gray-800 text-sm" />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-1">Company</label>
-              <input type="text" name="company" x-model="company"
+              <label class="block text-sm font-semibold text-gray-700 mb-1"
+                >Company</label
+              >
+              <input
+                type="text"
+                name="company"
+                x-model="company"
                 placeholder="Acme Corp"
                 class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary outline-none transition-all text-gray-800 text-sm" />
             </div>
@@ -181,28 +214,46 @@
 
           <!-- Department -->
           <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Department</label>
-            <input type="text" name="department" x-model="department"
+            <label class="block text-sm font-semibold text-gray-700 mb-1"
+              >Department</label
+            >
+            <input
+              type="text"
+              name="department"
+              x-model="department"
               placeholder="Engineering"
               class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary outline-none transition-all text-gray-800 text-sm" />
           </div>
 
           <!-- Divider -->
           <div class="border-t border-gray-100 pt-2">
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Contact</p>
+            <p
+              class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">
+              Contact
+            </p>
           </div>
 
           <!-- Phone + Website -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-1">Phone</label>
-              <input type="tel" name="phone" x-model="phone"
+              <label class="block text-sm font-semibold text-gray-700 mb-1"
+                >Phone</label
+              >
+              <input
+                type="tel"
+                name="phone"
+                x-model="phone"
                 placeholder="+1 555 000 0000"
                 class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary outline-none transition-all text-gray-800 text-sm" />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-1">Website</label>
-              <input type="text" name="website" x-model="website"
+              <label class="block text-sm font-semibold text-gray-700 mb-1"
+                >Website</label
+              >
+              <input
+                type="text"
+                name="website"
+                x-model="website"
                 placeholder="https://yoursite.com"
                 class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary outline-none transition-all text-gray-800 text-sm" />
             </div>
@@ -210,20 +261,33 @@
 
           <!-- Divider -->
           <div class="border-t border-gray-100 pt-2">
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Social Links</p>
+            <p
+              class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">
+              Social Links
+            </p>
           </div>
 
           <!-- LinkedIn + Twitter -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-1">LinkedIn</label>
-              <input type="text" name="linkedin_url" x-model="linkedinUrl"
+              <label class="block text-sm font-semibold text-gray-700 mb-1"
+                >LinkedIn</label
+              >
+              <input
+                type="text"
+                name="linkedin_url"
+                x-model="linkedinUrl"
                 placeholder="https://linkedin.com/in/you"
                 class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary outline-none transition-all text-gray-800 text-sm" />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-1">Twitter / X</label>
-              <input type="text" name="twitter_url" x-model="twitterUrl"
+              <label class="block text-sm font-semibold text-gray-700 mb-1"
+                >Twitter / X</label
+              >
+              <input
+                type="text"
+                name="twitter_url"
+                x-model="twitterUrl"
                 placeholder="https://x.com/you"
                 class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary outline-none transition-all text-gray-800 text-sm" />
             </div>
@@ -232,14 +296,24 @@
           <!-- Facebook + Instagram -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-1">Facebook</label>
-              <input type="text" name="facebook_url" x-model="facebookUrl"
+              <label class="block text-sm font-semibold text-gray-700 mb-1"
+                >Facebook</label
+              >
+              <input
+                type="text"
+                name="facebook_url"
+                x-model="facebookUrl"
                 placeholder="https://facebook.com/you"
                 class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary outline-none transition-all text-gray-800 text-sm" />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-1">Instagram</label>
-              <input type="text" name="instagram_url" x-model="instagramUrl"
+              <label class="block text-sm font-semibold text-gray-700 mb-1"
+                >Instagram</label
+              >
+              <input
+                type="text"
+                name="instagram_url"
+                x-model="instagramUrl"
                 placeholder="https://instagram.com/you"
                 class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary outline-none transition-all text-gray-800 text-sm" />
             </div>
@@ -247,64 +321,104 @@
 
           <!-- Divider -->
           <div class="border-t border-gray-100 pt-2">
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Logo</p>
+            <p
+              class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">
+              Logo
+            </p>
           </div>
 
           <!-- Logo URL -->
           <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Logo URL</label>
-            <input type="text" name="logo_url" x-model="logoUrl"
+            <label class="block text-sm font-semibold text-gray-700 mb-1"
+              >Logo URL</label
+            >
+            <input
+              type="text"
+              name="logo_url"
+              x-model="logoUrl"
               placeholder="https://yoursite.com/logo.png"
               class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary outline-none transition-all text-gray-800 text-sm" />
-            <p class="text-xs text-gray-400 mt-1">Paste a direct image URL. 64×64px recommended.</p>
+            <p class="text-xs text-gray-400 mt-1">
+              Paste a direct image URL. 64×64px recommended.
+            </p>
           </div>
 
           <!-- Divider -->
           <div class="border-t border-gray-100 pt-2">
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Design</p>
+            <p
+              class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">
+              Design
+            </p>
           </div>
 
           <!-- Layout -->
           <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Layout</label>
+            <label class="block text-sm font-semibold text-gray-700 mb-2"
+              >Layout</label
+            >
             <div class="grid grid-cols-3 gap-3">
               <label class="cursor-pointer">
-                <input type="radio" name="layout" value="classic" x-model="layout" class="sr-only" />
-                <div :class="layout === 'classic' ? 'border-primary bg-primary/5' : 'border-gray-200'"
-                     class="border-2 rounded-lg p-3 text-center transition-all">
+                <input
+                  type="radio"
+                  name="layout"
+                  value="classic"
+                  x-model="layout"
+                  class="sr-only" />
+                <div
+                  :class="layout === 'classic' ? 'border-primary bg-primary/5' : 'border-gray-200'"
+                  class="border-2 rounded-lg p-3 text-center transition-all">
                   <div class="w-full h-8 flex items-center mb-1">
-                    <div class="w-1 h-full bg-gray-400 rounded mr-2 flex-shrink-0"></div>
+                    <div
+                      class="w-1 h-full bg-gray-400 rounded mr-2 flex-shrink-0"></div>
                     <div class="space-y-1 flex-1">
                       <div class="h-2 bg-gray-300 rounded w-3/4"></div>
                       <div class="h-1.5 bg-gray-200 rounded w-1/2"></div>
                     </div>
                   </div>
-                  <span class="text-xs font-semibold text-gray-600">Classic</span>
+                  <span class="text-xs font-semibold text-gray-600"
+                    >Classic</span
+                  >
                 </div>
               </label>
               <label class="cursor-pointer">
-                <input type="radio" name="layout" value="modern" x-model="layout" class="sr-only" />
-                <div :class="layout === 'modern' ? 'border-primary bg-primary/5' : 'border-gray-200'"
-                     class="border-2 rounded-lg p-3 text-center transition-all">
+                <input
+                  type="radio"
+                  name="layout"
+                  value="modern"
+                  x-model="layout"
+                  class="sr-only" />
+                <div
+                  :class="layout === 'modern' ? 'border-primary bg-primary/5' : 'border-gray-200'"
+                  class="border-2 rounded-lg p-3 text-center transition-all">
                   <div class="w-full h-8 mb-1 space-y-1">
                     <div class="h-3 bg-gray-400 rounded w-full"></div>
                     <div class="h-1.5 bg-gray-200 rounded w-3/4"></div>
                     <div class="h-1.5 bg-gray-200 rounded w-1/2"></div>
                   </div>
-                  <span class="text-xs font-semibold text-gray-600">Modern</span>
+                  <span class="text-xs font-semibold text-gray-600"
+                    >Modern</span
+                  >
                 </div>
               </label>
               <label class="cursor-pointer">
-                <input type="radio" name="layout" value="minimal" x-model="layout" class="sr-only" />
-                <div :class="layout === 'minimal' ? 'border-primary bg-primary/5' : 'border-gray-200'"
-                     class="border-2 rounded-lg p-3 text-center transition-all">
+                <input
+                  type="radio"
+                  name="layout"
+                  value="minimal"
+                  x-model="layout"
+                  class="sr-only" />
+                <div
+                  :class="layout === 'minimal' ? 'border-primary bg-primary/5' : 'border-gray-200'"
+                  class="border-2 rounded-lg p-3 text-center transition-all">
                   <div class="w-full h-8 flex items-center mb-1 pl-1">
                     <div class="space-y-1 flex-1">
                       <div class="h-2 bg-gray-300 rounded w-3/4"></div>
                       <div class="h-1.5 bg-gray-200 rounded w-1/2"></div>
                     </div>
                   </div>
-                  <span class="text-xs font-semibold text-gray-600">Minimal</span>
+                  <span class="text-xs font-semibold text-gray-600"
+                    >Minimal</span
+                  >
                 </div>
               </label>
             </div>
@@ -313,53 +427,80 @@
           <!-- Accent Color + Font -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-1">Accent Color</label>
+              <label
+                for="accent_color"
+                class="block text-sm font-semibold text-gray-700 mb-1"
+                >Accent Color</label
+              >
               <div class="flex items-center gap-3">
-                <input type="color" name="accent_color" x-model="accentColor"
-                       class="w-10 h-10 rounded-lg border-2 border-gray-200 cursor-pointer p-0.5" />
-                <span class="text-sm text-gray-500 font-mono" x-text="accentColor"></span>
+                <input
+                  type="color"
+                  id="accent_color"
+                  name="accent_color"
+                  x-model="accentColor"
+                  class="w-10 h-10 rounded-lg border-2 border-gray-200 cursor-pointer p-0.5" />
+                <span
+                  class="text-sm text-gray-500 font-mono"
+                  x-text="accentColor"></span>
               </div>
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-1">Font</label>
-              <select name="font_family" x-model="fontFamily"
-                      class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary outline-none transition-all text-gray-800 text-sm">
+              <label
+                for="font_family"
+                class="block text-sm font-semibold text-gray-700 mb-1"
+                >Font</label
+              >
+              <select
+                id="font_family"
+                name="font_family"
+                x-model="fontFamily"
+                class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary outline-none transition-all text-gray-800 text-sm">
                 <option value="Arial, Helvetica, sans-serif">Arial</option>
-                <option value="Georgia, 'Times New Roman', serif">Georgia</option>
+                <option value="Georgia, 'Times New Roman', serif">
+                  Georgia
+                </option>
                 <option value="Verdana, Geneva, sans-serif">Verdana</option>
-                <option value="'Trebuchet MS', Tahoma, sans-serif">Trebuchet MS</option>
+                <option value="'Trebuchet MS', Tahoma, sans-serif">
+                  Trebuchet MS
+                </option>
               </select>
             </div>
           </div>
 
           <!-- Submit -->
           <div class="pt-2">
-            <button type="submit"
+            <button
+              type="submit"
               class="w-full py-3 bg-primary text-white rounded-lg font-semibold text-lg hover:bg-primary-dark hover:shadow-xl transition-all">
               Save Changes
             </button>
           </div>
-
         </form>
       </div>
 
       <!-- RIGHT: Live Preview -->
       <div class="lg:sticky lg:top-24 space-y-4">
-
         <!-- Preview card -->
         <div class="bg-white rounded-2xl shadow p-8">
           <div class="flex items-center justify-between mb-6">
-            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-widest">Live Preview</h2>
+            <h2
+              class="text-sm font-semibold text-gray-500 uppercase tracking-widest">
+              Live Preview
+            </h2>
             <span class="text-xs text-gray-400">Updates as you type</span>
           </div>
 
           <!-- Simulated email window -->
           <div class="bg-gray-50 border border-gray-200 rounded-xl p-6">
             <div class="text-xs text-gray-400 mb-4 space-y-1">
-              <div><span class="font-semibold text-gray-500">From:</span>
+              <div>
+                <span class="font-semibold text-gray-500">From:</span>
                 <span x-text="fullName || 'Your Name'"></span>
               </div>
-              <div><span class="font-semibold text-gray-500">To:</span> colleague@company.com</div>
+              <div>
+                <span class="font-semibold text-gray-500">To:</span>
+                colleague@company.com
+              </div>
               <div class="border-t border-gray-200 pt-2 text-gray-500 italic">
                 Hi, please see my details below...
               </div>
@@ -375,9 +516,11 @@
         <!-- Copy HTML button -->
         <div class="bg-white rounded-2xl shadow p-6">
           <p class="text-sm text-gray-600 mb-3">
-            Want to use this now? Save your changes first, then copy the HTML from your dashboard.
+            Want to use this now? Save your changes first, then copy the HTML
+            from your dashboard.
           </p>
-          <button @click="copyHtml()"
+          <button
+            @click="copyHtml()"
             class="w-full py-2 border-2 border-primary text-primary rounded-lg font-semibold text-sm hover:bg-primary hover:text-white transition-all">
             <span x-show="!copied">Copy Preview HTML</span>
             <span x-show="copied" x-cloak>✓ Copied to clipboard!</span>
@@ -386,7 +529,6 @@
             This copies the preview. Save first to store it with tracking.
           </p>
         </div>
-
       </div>
     </div>
   </div>
