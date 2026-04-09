@@ -182,7 +182,7 @@
                 sig.company }}{% endif %}
               </p>
               <a
-                href="{{ url_for('analytics.index') }}"
+                href="{{ url_for('analytics.detail', signature_id=sig.id) }}"
                 class="text-xs text-gray-400 mt-1 hover:text-primary transition-colors inline-block">
                 {{ sig.total_opens }} opens &nbsp;&middot;&nbsp; {{
                 sig.total_clicks }} clicks &nbsp;&middot;&nbsp; Created {{

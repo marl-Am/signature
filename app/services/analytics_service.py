@@ -46,6 +46,39 @@ class AnalyticsSummary(TypedDict):
     top_platform: str | None
 
 
+class PlatformStat(TypedDict):
+    platform: str
+    clicks: int
+    pct: float
+
+
+class RecentOpen(TypedDict):
+    opened_at: datetime
+    device: str
+
+
+class RecentClick(TypedDict):
+    clicked_at: datetime
+    platform: str
+    device: str
+
+
+class SignatureDetail(TypedDict):
+    id: int
+    name: str
+    full_name: str
+    total_opens: int
+    total_clicks: int
+    ctr: float
+    last_opened_at: datetime | None
+    created_at: datetime | None
+    daily_last_30: list[DailyPoint]
+    platform_breakdown: list[PlatformStat]
+    top_device: str | None
+    recent_opens: list[RecentOpen]
+    recent_clicks: list[RecentClick]
+
+
 class AnalyticsService:
 
     @staticmethod
@@ -169,3 +202,164 @@ class AnalyticsService:
             daily_last_30=daily_last_30,
             top_platform=top_platform,
         )
+
+    @staticmethod
+    def get_signature_detail(signature_id: int) -> SignatureDetail:
+        """
+        Return full analytics detail for a single signature.
+        A01: ownership verified — 404 if not owned by current_user.
+        """
+        user_id: int = current_user.id
+
+        sig: Signature = Signature.query.filter_by(
+            id=signature_id, user_id=user_id
+        ).first_or_404()
+
+        ctr: float = (
+            round((sig.total_clicks / sig.total_opens) * 100, 1)
+            if sig.total_opens > 0
+            else 0.0
+        )
+
+        # ── Daily last 30 days ────────────────────────────────────────────
+        cutoff: datetime = datetime.now(timezone.utc) - timedelta(days=29)
+
+        opens_by_day: list = (
+            db.session.query(
+                func.strftime("%Y-%m-%d", SignatureOpen.opened_at).label("day"),
+                func.count(SignatureOpen.id).label("cnt"),
+            )
+            .filter(
+                SignatureOpen.signature_id == signature_id,
+                SignatureOpen.opened_at >= cutoff,
+            )
+            .group_by("day")
+            .all()
+        )
+
+        clicks_by_day: list = (
+            db.session.query(
+                func.strftime("%Y-%m-%d", SignatureClick.clicked_at).label("day"),
+                func.count(SignatureClick.id).label("cnt"),
+            )
+            .filter(
+                SignatureClick.signature_id == signature_id,
+                SignatureClick.clicked_at >= cutoff,
+            )
+            .group_by("day")
+            .all()
+        )
+
+        opens_map: dict[str, int] = {row.day: row.cnt for row in opens_by_day}
+        clicks_map: dict[str, int] = {row.day: row.cnt for row in clicks_by_day}
+
+        daily_last_30: list[DailyPoint] = []
+        for i in range(30):
+            day_dt = datetime.now(timezone.utc) - timedelta(days=29 - i)
+            day_str = day_dt.strftime("%Y-%m-%d")
+            daily_last_30.append(
+                DailyPoint(
+                    date=day_str,
+                    opens=opens_map.get(day_str, 0),
+                    clicks=clicks_map.get(day_str, 0),
+                )
+            )
+
+        # ── Platform breakdown ────────────────────────────────────────────
+        platform_rows: list = (
+            db.session.query(
+                SignatureClick.platform,
+                func.count(SignatureClick.id).label("cnt"),
+            )
+            .filter(SignatureClick.signature_id == signature_id)
+            .group_by(SignatureClick.platform)
+            .order_by(func.count(SignatureClick.id).desc())
+            .all()
+        )
+
+        total_click_count: int = sum(row.cnt for row in platform_rows)
+        platform_breakdown: list[PlatformStat] = [
+            PlatformStat(
+                platform=row.platform,
+                clicks=row.cnt,
+                pct=(
+                    round((row.cnt / total_click_count) * 100, 1)
+                    if total_click_count > 0
+                    else 0.0
+                ),
+            )
+            for row in platform_rows
+        ]
+
+        # ── Device breakdown from opens user_agent ────────────────────────
+        all_opens_ua: list = (
+            db.session.query(SignatureOpen.user_agent)
+            .filter(SignatureOpen.signature_id == signature_id)
+            .all()
+        )
+        device_counts: dict[str, int] = {}
+        for row in all_opens_ua:
+            device = AnalyticsService._detect_device(row.user_agent)
+            device_counts[device] = device_counts.get(device, 0) + 1
+        top_device: str | None = (
+            max(device_counts, key=lambda k: device_counts[k])
+            if device_counts
+            else None
+        )
+
+        # ── Recent opens (last 20) ────────────────────────────────────────
+        recent_open_rows: list = (
+            SignatureOpen.query.filter_by(signature_id=signature_id)
+            .order_by(SignatureOpen.opened_at.desc())
+            .limit(20)
+            .all()
+        )
+        recent_opens: list[RecentOpen] = [
+            RecentOpen(
+                opened_at=row.opened_at,
+                device=AnalyticsService._detect_device(row.user_agent),
+            )
+            for row in recent_open_rows
+        ]
+
+        # ── Recent clicks (last 20) ───────────────────────────────────────
+        recent_click_rows: list = (
+            SignatureClick.query.filter_by(signature_id=signature_id)
+            .order_by(SignatureClick.clicked_at.desc())
+            .limit(20)
+            .all()
+        )
+        recent_clicks: list[RecentClick] = [
+            RecentClick(
+                clicked_at=row.clicked_at,
+                platform=row.platform,
+                device=AnalyticsService._detect_device(row.user_agent),
+            )
+            for row in recent_click_rows
+        ]
+
+        return SignatureDetail(
+            id=sig.id,
+            name=sig.name,
+            full_name=sig.full_name,
+            total_opens=sig.total_opens,
+            total_clicks=sig.total_clicks,
+            ctr=ctr,
+            last_opened_at=sig.last_opened_at,
+            created_at=sig.created_at,
+            daily_last_30=daily_last_30,
+            platform_breakdown=platform_breakdown,
+            top_device=top_device,
+            recent_opens=recent_opens,
+            recent_clicks=recent_clicks,
+        )
+
+    @staticmethod
+    def _detect_device(user_agent: str | None) -> str:
+        """Classify a User-Agent string as Mobile or Desktop."""
+        if not user_agent:
+            return "Unknown"
+        ua = user_agent.lower()
+        if any(kw in ua for kw in ("mobile", "android", "iphone", "ipad")):
+            return "Mobile"
+        return "Desktop"

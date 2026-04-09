@@ -75,9 +75,11 @@
           </thead>
           <tbody class="divide-y divide-gray-50">
             {% for sig in summary.per_signature %}
-            <tr class="hover:bg-gray-50 transition-colors">
+            <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
+                onclick="window.location='{{ url_for('analytics.detail', signature_id=sig.id) }}'">
               <td class="py-4 pr-6">
-                <p class="font-semibold text-gray-800">{{ sig.name }}</p>
+                <a href="{{ url_for('analytics.detail', signature_id=sig.id) }}"
+                   class="font-semibold text-primary hover:underline">{{ sig.name }}</a>
                 <p class="text-xs text-gray-400">{{ sig.full_name }}</p>
               </td>
               <td class="py-4 pr-6 text-right font-mono text-gray-700">{{ sig.total_opens }}</td>

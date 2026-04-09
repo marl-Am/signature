@@ -360,7 +360,9 @@ class SignatureService:
                 f"{formatted_phone}</a>"
             )
         if website:
-            display: str = website.replace("https://", "").replace("http://", "").rstrip("/")
+            display: str = (
+                website.replace("https://", "").replace("http://", "").rstrip("/")
+            )
             tracked_website: str = f"/track/click/{tracking_code}/website"
             contact_parts.append(
                 f'<a href="{tracked_website}" style="color:{accent_color};text-decoration:none;font-size:12px;">'
@@ -377,10 +379,10 @@ class SignatureService:
         # --- Social links ---
         social_parts: list[str] = []
         social_map: list[tuple[str | None, str, str, str]] = [
-            (linkedin_url,  "LinkedIn",   "in", "linkedin"),
-            (twitter_url,   "Twitter/X",  "𝕏",  "twitter"),
-            (facebook_url,  "Facebook",   "f",  "facebook"),
-            (instagram_url, "Instagram",  "IG", "instagram"),
+            (linkedin_url, "LinkedIn", "in", "linkedin"),
+            (twitter_url, "Twitter/X", "𝕏", "twitter"),
+            (facebook_url, "Facebook", "f", "facebook"),
+            (instagram_url, "Instagram", "IG", "instagram"),
         ]
         for url, label, badge, platform in social_map:
             if url:
@@ -394,7 +396,9 @@ class SignatureService:
                 )
         social_html: str = ""
         if social_parts:
-            social_html = '<div style="margin-top:4px;">' + "".join(social_parts) + "</div>"
+            social_html = (
+                '<div style="margin-top:4px;">' + "".join(social_parts) + "</div>"
+            )
 
         # --- Logo ---
         logo_html: str = ""
@@ -413,8 +417,12 @@ class SignatureService:
 
         # --- Layout: build content_td differently per layout ---
         body_html: str = (
-            name_html + title_html + dept_html
-            + divider_html + contact_html + social_html
+            name_html
+            + title_html
+            + dept_html
+            + divider_html
+            + contact_html
+            + social_html
         )
 
         if layout == "modern":
@@ -439,40 +447,183 @@ class SignatureService:
                 + "</div>"
             )
             content_td = (
-                f'<td style="vertical-align:top;">'
-                + header_html + sub_html
-                + "</td>"
+                '<td style="vertical-align:top;">' + header_html + sub_html + "</td>"
+            )
+            html = (
+                f'<table cellpadding="0" cellspacing="0" border="0" '
+                f'style="font-family:{font_family};max-width:520px;">'
+                "<tr>" + logo_html + content_td + "</tr>"
+                "</table>" + pixel_html
             )
 
         elif layout == "minimal":
-            # Clean, no border, generous spacing
+            # Clean, no border, no divider
             content_td = (
-                f'<td style="vertical-align:top;padding:4px 0;">'
-                + name_html + title_html + dept_html
-                + contact_html + social_html
+                '<td style="vertical-align:top;padding:4px 0;">'
+                + name_html
+                + title_html
+                + dept_html
+                + contact_html
+                + social_html
                 + "</td>"
+            )
+            html = (
+                f'<table cellpadding="0" cellspacing="0" border="0" '
+                f'style="font-family:{font_family};max-width:520px;">'
+                "<tr>" + logo_html + content_td + "</tr>"
+                "</table>" + pixel_html
+            )
+
+        elif layout == "ruled":
+            # Top accent rule instead of left border
+            content_td = (
+                f'<td style="vertical-align:top;border-top:3px solid {accent_color};padding-top:8px;">'
+                + name_html
+                + title_html
+                + dept_html
+                + contact_html
+                + social_html
+                + "</td>"
+            )
+            html = (
+                f'<table cellpadding="0" cellspacing="0" border="0" '
+                f'style="font-family:{font_family};max-width:520px;">'
+                "<tr>" + logo_html + content_td + "</tr>"
+                "</table>" + pixel_html
+            )
+
+        elif layout == "avatar":
+            # Circular avatar (initials or logo) left of content
+            words: list[str] = full_name.strip().split() if full_name else []
+            initials: str = "".join(w[0] for w in words[:2]).upper() if words else "YN"
+            if logo_url:
+                avatar_td = (
+                    f'<td style="padding-right:16px;vertical-align:middle;">'
+                    f'<img src="{logo_url}" alt="{initials}" width="52" height="52" '
+                    f'style="width:52px;height:52px;border-radius:50%;object-fit:cover;display:block;" /></td>'
+                )
+            else:
+                avatar_td = (
+                    f'<td style="padding-right:16px;vertical-align:middle;">'
+                    f'<div style="width:52px;height:52px;border-radius:50%;background:{accent_color};'
+                    f'text-align:center;line-height:52px;display:inline-block;">'
+                    f'<span style="color:#ffffff;font-size:16px;font-weight:bold;line-height:52px;">'
+                    f"{initials}</span></div></td>"
+                )
+            content_td = (
+                '<td style="vertical-align:middle;">'
+                + name_html
+                + title_html
+                + dept_html
+                + divider_html
+                + contact_html
+                + social_html
+                + "</td>"
+            )
+            html = (
+                f'<table cellpadding="0" cellspacing="0" border="0" '
+                f'style="font-family:{font_family};max-width:520px;">'
+                "<tr>" + avatar_td + content_td + "</tr>"
+                "</table>" + pixel_html
+            )
+
+        elif layout == "compact":
+            # Single-line contact row: Job · Company | phone | website
+            job_span: str = (
+                f'<span style="color:{accent_color};font-weight:500;font-size:12px;">{job_title}</span>'
+                if job_title
+                else ""
+            )
+            comp_span: str = (
+                f'<span style="color:#555555;font-size:12px;">{company}</span>'
+                if company
+                else ""
+            )
+            sep1: str = (
+                '<span style="color:#cccccc;margin:0 5px;">&middot;</span>'
+                if job_span and comp_span
+                else ""
+            )
+            sep2: str = (
+                '<span style="color:#cccccc;margin:0 8px;">|</span>'
+                if (job_span or comp_span) and contact_parts
+                else ""
+            )
+            inline_contact: str = (
+                '<span style="color:#cccccc;margin:0 5px;">|</span>'.join(contact_parts)
+            )
+            compact_row: str = (
+                f'<div style="font-size:12px;margin-bottom:5px;">'
+                + job_span
+                + sep1
+                + comp_span
+                + sep2
+                + inline_contact
+                + "</div>"
+            )
+            content_td = (
+                '<td style="vertical-align:top;padding:4px 0;">'
+                + name_html
+                + dept_html
+                + compact_row
+                + social_html
+                + "</td>"
+            )
+            html = (
+                f'<table cellpadding="0" cellspacing="0" border="0" '
+                f'style="font-family:{font_family};max-width:520px;">'
+                "<tr>" + logo_html + content_td + "</tr>"
+                "</table>" + pixel_html
+            )
+
+        elif layout == "banner":
+            # Left-bordered name block; department as uppercase secondary label
+            name_block: str = (
+                f'<div style="border-left:4px solid {accent_color};padding-left:12px;margin-bottom:8px;">'
+                + name_html
+                + title_html
+                + "</div>"
+            )
+            dept_label: str = (
+                f'<div style="font-size:11px;color:#888888;letter-spacing:0.05em;'
+                f'text-transform:uppercase;margin-bottom:4px;">{department}</div>'
+                if department
+                else ""
+            )
+            content_td = (
+                '<td style="vertical-align:top;">'
+                + name_block
+                + dept_label
+                + contact_html
+                + social_html
+                + "</td>"
+            )
+            html = (
+                f'<table cellpadding="0" cellspacing="0" border="0" '
+                f'style="font-family:{font_family};max-width:520px;">'
+                "<tr>" + logo_html + content_td + "</tr>"
+                "</table>" + pixel_html
             )
 
         else:
-            # classic — left accent border (original behaviour)
-            border_style: str = (
-                f"border-left:3px solid {accent_color};padding-left:14px;" if not logo_url else ""
+            # Classic (default) — outer div carries the border so it always
+            # sits on the far-left edge even when a logo column is present.
+            content_td = '<td style="vertical-align:top;">' + body_html + "</td>"
+            inner_table: str = (
+                f'<table cellpadding="0" cellspacing="0" border="0" '
+                f'style="font-family:{font_family};max-width:520px;">'
+                "<tr>" + logo_html + content_td + "</tr>"
+                "</table>"
             )
-            content_td = (
-                f'<td style="vertical-align:top;{border_style}">'
-                + body_html
-                + "</td>"
+            html = (
+                f'<div style="border-left:3px solid {accent_color};padding-left:14px;">'
+                + inner_table
+                + "</div>"
+                + pixel_html
             )
-
-        html: str = (
-            f'<table cellpadding="0" cellspacing="0" border="0" '
-            f'style="font-family:{font_family};max-width:520px;">'
-            "<tr>" + logo_html + content_td + "</tr>"
-            "</table>" + pixel_html
-        )
 
         return html
-    
+
     @staticmethod
     def _format_phone(phone: str | None) -> str | None:
         """
