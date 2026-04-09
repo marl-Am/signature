@@ -66,6 +66,7 @@ class User(UserMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     email_verified = db.Column(db.Boolean, default=False, nullable=False)
     email_verification_token = db.Column(db.String(100), unique=True, nullable=True)
+    email_verification_expires = db.Column(db.DateTime, nullable=True)
 
     # Account lockout (prevents brute force attacks)
     failed_login_attempts = db.Column(db.Integer, default=0, nullable=False)
@@ -208,8 +209,14 @@ class User(UserMixin, db.Model):
     # ========================================
 
     def generate_verification_token(self) -> str:
-        """Generate a secure email verification token."""
+        """
+        Generate a secure email verification token that expires in 24 hours.
+
+        Returns:
+            URL-safe verification token.
+        """
         self.email_verification_token = secrets.token_urlsafe(32)
+        self.email_verification_expires = datetime.utcnow() + timedelta(hours=24)
         db.session.commit()
         return self.email_verification_token
 
@@ -217,15 +224,23 @@ class User(UserMixin, db.Model):
         """
         Verify email with provided token.
 
+        Checks both token equality and expiry — both naive UTC, safe to compare.
+
         Returns:
-            True if verification successful, False otherwise.
+            True if verification successful, False if token is wrong or expired.
         """
-        if self.email_verification_token == token:
-            self.email_verified = True
-            self.email_verification_token = None
-            db.session.commit()
-            return True
-        return False
+        if (
+            self.email_verification_token != token
+            or self.email_verification_expires is None
+            or datetime.utcnow() > self.email_verification_expires  # both naive UTC
+        ):
+            return False
+
+        self.email_verified = True
+        self.email_verification_token = None
+        self.email_verification_expires = None
+        db.session.commit()
+        return True
 
     # ========================================
     # PASSWORD RESET
@@ -293,7 +308,7 @@ class User(UserMixin, db.Model):
         Returns:
             True if user can create a signature, False otherwise.
         """
-        
+
         if self.subscription_tier == "pro":
             return True
 

@@ -90,6 +90,64 @@ def send_welcome_email(to_email: str, to_name: str) -> Tuple[bool, Optional[str]
         return False, str(exc)
 
 
+def send_verification_email(
+    to_email: str, to_name: str, verify_url: str
+) -> Tuple[bool, Optional[str]]:
+    """
+    Send an email address verification email to a newly registered user.
+
+    Args:
+        to_email:   Recipient email address.
+        to_name:    Recipient display name.
+        verify_url: Fully-qualified verification URL (includes the secure token).
+
+    Returns:
+        Tuple of (success, error_message).
+    """
+    client = _get_client()
+    if client is None:
+        return False, "Email service is not configured."
+
+    subject = "Signature — please verify your email address"
+    html_content = f"""
+    <p>Hi {to_name},</p>
+    <p>Thanks for signing up! Click the link below to verify your email address:</p>
+    <p><a href="{verify_url}">{verify_url}</a></p>
+    <p>This link expires in <strong>24 hours</strong>.</p>
+    <p>
+      If you did not create a Signature account, you can safely ignore this email.
+    </p>
+    <p>— The Signature Team</p>
+    """
+
+    message = Mail(
+        from_email=Email(_get_from_email(), "Signature"),
+        to_emails=To(to_email, to_name),
+        subject=subject,
+        html_content=Content("text/html", html_content),
+    )
+
+    try:
+        response = client.send(message)  # type: ignore[union-attr]
+        if response.status_code in (200, 202):
+            logger.info(
+                "Verification email sent to %s (status %s)",
+                to_email,
+                response.status_code,
+            )
+            return True, None
+        else:
+            logger.error(
+                "SendGrid returned status %s for verification email to %s",
+                response.status_code,
+                to_email,
+            )
+            return False, f"Email service returned status {response.status_code}"
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Failed to send verification email to %s: %s", to_email, exc)
+        return False, str(exc)
+
+
 def send_password_reset_email(
     to_email: str, to_name: str, reset_url: str
 ) -> Tuple[bool, Optional[str]]:

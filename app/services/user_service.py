@@ -254,6 +254,64 @@ class UserService:
         return False, "Invalid verification token"
 
     @staticmethod
+    def change_email(
+        user: "User", current_password: str, new_email: str
+    ) -> Tuple[bool, Optional[str]]:
+        """
+        Change the user's email address.
+
+        Requires current password re-confirmation (A07).
+        Resets email_verified and generates a new verification token
+        so the new address must be confirmed before it is trusted.
+
+        Returns:
+            Tuple of (success, token_or_error).
+            On success the second element is the new verification token
+            so the caller can send the verification email.
+        """
+        if not user.check_password(current_password):
+            return False, "Current password is incorrect"
+
+        is_valid, email_error = UserService.validate_email(new_email)
+        if not is_valid:
+            return False, email_error
+
+        new_email = new_email.lower()
+
+        if new_email == user.email:
+            return False, "New email address must be different from your current one"
+
+        if User.query.filter_by(email=new_email).first():
+            return False, "An account with this email already exists"
+
+        user.email = new_email
+        user.email_verified = False
+        db.session.commit()
+
+        token: str = user.generate_verification_token()
+        return True, token
+
+    @staticmethod
+    def delete_account(
+        user: "User", current_password: str
+    ) -> Tuple[bool, Optional[str]]:
+        """
+        Permanently delete a user account and all associated data.
+
+        Requires current password re-confirmation (A01/A07).
+        Cascading deletes on the signatures relationship handle child rows.
+
+        Returns:
+            Tuple of (success, error_message).
+        """
+        if not user.check_password(current_password):
+            return False, "Current password is incorrect"
+
+        db.session.delete(user)
+        db.session.commit()
+        return True, None
+
+    @staticmethod
     def get_user_by_id(user_id: int) -> Optional[User]:
         return User.query.get(user_id)
 

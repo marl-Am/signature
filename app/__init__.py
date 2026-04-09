@@ -46,6 +46,7 @@ def create_app() -> Flask:
     from app.routes.billing import billing_bp
     from app.routes.subscription import subscription_bp
     from app.routes.analytics import analytics_bp
+    from app.routes.profile import profile_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -54,6 +55,7 @@ def create_app() -> Flask:
     app.register_blueprint(billing_bp)
     app.register_blueprint(subscription_bp)
     app.register_blueprint(analytics_bp)
+    app.register_blueprint(profile_bp)
 
     @app.route("/")
     def index():

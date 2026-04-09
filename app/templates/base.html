@@ -163,6 +163,11 @@
                   class="block px-4 py-2 hover:bg-gray-100"
                   >Subscription</a
                 >
+                <a
+                  href="{{ url_for('profile.index') }}"
+                  class="block px-4 py-2 hover:bg-gray-100"
+                  >Profile</a
+                >
                 <div class="border-t border-gray-200 my-2"></div>
                 <a
                   href="{{ url_for('auth.logout') }}"
@@ -250,6 +255,11 @@
             href="/subscription/manage"
             class="block py-2 text-white/90 hover:text-white"
             >Subscription</a
+          >
+          <a
+            href="{{ url_for('profile.index') }}"
+            class="block py-2 text-white/90 hover:text-white"
+            >Profile</a
           >
           <div class="border-t border-white/10 my-2"></div>
           <a

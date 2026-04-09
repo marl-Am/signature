@@ -49,7 +49,33 @@ def register() -> Union[str, Response]:
 
         if user:
             login_user(user)
-            flash("Registration successful! Welcome aboard.", "success")
+
+            # Generate token and send verification email
+            token: str = user.generate_verification_token()
+            verify_url: str = url_for("auth.verify_email", token=token, _external=True)
+            try:
+                from app.services.email_service import send_verification_email
+
+                success, err = send_verification_email(
+                    to_email=user.email,
+                    to_name=user.name,
+                    verify_url=verify_url,
+                )
+                if not success:
+                    logger.warning(
+                        "Verification email failed for %s: %s", user.email, err
+                    )
+            except Exception as exc:  # noqa: BLE001
+                logger.exception(
+                    "Unexpected error sending verification email for %s: %s",
+                    user.email,
+                    exc,
+                )
+
+            flash(
+                "Registration successful! Please check your email to verify your address.",
+                "success",
+            )
             return redirect(url_for("dashboard.index"))
         else:
             flash(f"Registration failed: {error_message}", "danger")
@@ -98,6 +124,43 @@ def logout() -> Response:
     logout_user()
     flash("You have been logged out successfully.", "success")
     return redirect(url_for("index"))
+
+
+@auth_bp.route("/verify-email/<string:token>")
+def verify_email(token: str) -> Response:
+    """
+    Email verification endpoint — reached via the link emailed after registration.
+
+    A07: Token is single-use; it is cleared from the DB on successful verification.
+    A01: Any authenticated user can verify their own email via this link.
+         Mismatched tokens simply find no user and show an error.
+    """
+    from app.models.user import User
+
+    user: User | None = User.query.filter_by(email_verification_token=token).first()
+
+    if user is None:
+        # Token not found — already used, expired, or tampered with
+        flash(
+            "This verification link is invalid or has already been used. "
+            "Please request a new one.",
+            "danger",
+        )
+        return redirect(url_for("auth.login"))
+
+    user.verify_email(token)
+    logger.info("Email verified for user %s", user.email)
+
+    # If already logged in, stay on dashboard; otherwise go to login
+    if current_user.is_authenticated:
+        flash("Your email address has been verified.", "success")
+        return redirect(url_for("dashboard.index"))
+
+    flash(
+        "Your email address has been verified. You can now log in.",
+        "success",
+    )
+    return redirect(url_for("auth.login"))
 
 
 @auth_bp.route("/forgot-password", methods=["GET", "POST"])
