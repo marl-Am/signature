@@ -65,6 +65,14 @@ def create_app() -> Flask:
     def pricing():
         return render_template("pricing.html")
 
+    @app.route("/privacy")
+    def privacy():
+        return render_template("privacy.html")
+
+    @app.route("/terms")
+    def terms():
+        return render_template("terms.html")
+
     # Custom error pages
     @app.errorhandler(404)
     def page_not_found(e):
