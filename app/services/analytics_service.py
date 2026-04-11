@@ -356,10 +356,34 @@ class AnalyticsService:
 
     @staticmethod
     def _detect_device(user_agent: str | None) -> str:
-        """Classify a User-Agent string as Mobile or Desktop."""
+        """
+        Classify a User-Agent string as Desktop, Mobile, or Unknown.
+        Desktop signals are checked first — a UA containing both 'windows'
+        and 'mobile' (e.g. Windows Phone) is rare; desktop wins.
+        """
         if not user_agent:
             return "Unknown"
-        ua = user_agent.lower()
-        if any(kw in ua for kw in ("mobile", "android", "iphone", "ipad")):
+        ua: str = user_agent.lower()
+
+        desktop_signals: tuple[str, ...] = (
+            "windows nt",
+            "macintosh",
+            "mac os x",
+            "x11",
+            "linux x86_64",
+            "cros",
+        )
+        mobile_signals: tuple[str, ...] = (
+            "android",
+            "iphone",
+            "ipad",
+            "ipod",
+            "windows phone",
+            "mobile",
+        )
+
+        if any(kw in ua for kw in desktop_signals):
+            return "Desktop"
+        if any(kw in ua for kw in mobile_signals):
             return "Mobile"
-        return "Desktop"
+        return "Unknown"

@@ -241,3 +241,43 @@ def reset_password(token: str) -> Union[str, Response]:
             return render_template("auth/reset_password.html", token=token)
 
     return render_template("auth/reset_password.html", token=token)
+
+
+@auth_bp.route("/resend-verification")
+@login_required
+def resend_verification() -> Response:
+    """
+    Resend the verification email to the current user.
+    Only useful if the user is logged in but not yet verified.
+    """
+    if current_user.email_verified:
+        flash("Your email address is already verified.", "info")
+        return redirect(url_for("dashboard.index"))
+
+    token: str = current_user.generate_verification_token()
+    verify_url: str = url_for("auth.verify_email", token=token, _external=True)
+
+    try:
+        from app.services.email_service import send_verification_email
+
+        success, err = send_verification_email(
+            to_email=current_user.email,
+            to_name=current_user.name,
+            verify_url=verify_url,
+        )
+        if success:
+            flash("Verification email sent. Please check your inbox.", "success")
+        else:
+            logger.warning(
+                "Resend verification failed for %s: %s", current_user.email, err
+            )
+            flash("Could not send the email. Please try again later.", "danger")
+    except Exception as exc:  # noqa: BLE001
+        logger.exception(
+            "Unexpected error resending verification for %s: %s",
+            current_user.email,
+            exc,
+        )
+        flash("An unexpected error occurred. Please try again later.", "danger")
+
+    return redirect(url_for("dashboard.index"))

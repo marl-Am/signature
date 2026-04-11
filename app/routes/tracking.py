@@ -44,6 +44,18 @@ _PLATFORM_FIELD: dict[str, str] = {
     "website": "website",
 }
 
+# User-agent substrings that identify known email privacy proxies and security
+# scanners. Requests from these are silently ignored — the GIF/redirect still
+# fires so the client never sees an error, but no analytics row is written.
+_PROXY_SIGNATURES: tuple[str, ...] = (
+    "GoogleImageProxy",
+    "Apple Mail Privacy Protection",
+    "Applebot",
+    "Proofpoint",
+    "Barracuda",
+    "Nexus 5 Build/MRA58N",  # Gmail image caching proxy
+)
+
 
 @tracking_bp.route("/pixel/<string:tracking_code>.gif")
 def pixel(tracking_code: str) -> Response:
@@ -61,27 +73,28 @@ def pixel(tracking_code: str) -> Response:
     ).first()
 
     if signature is not None:
-        try:
-            ua: str | None = request.headers.get("User-Agent")
-            signature.increment_opens()
-            db.session.add(
-                SignatureOpen(
-                    signature_id=signature.id,
-                    opened_at=datetime.now(timezone.utc),
-                    user_agent=ua,
+        ua: str = request.headers.get("User-Agent", "")
+        if not any(proxy in ua for proxy in _PROXY_SIGNATURES):
+            try:
+                signature.increment_opens()
+                db.session.add(
+                    SignatureOpen(
+                        signature_id=signature.id,
+                        opened_at=datetime.now(timezone.utc),
+                        user_agent=ua,
+                    )
                 )
-            )
-            db.session.commit()
-            logger.debug(
-                "Open recorded — signature_id=%s total_opens=%s",
-                signature.id,
-                signature.total_opens,
-            )
-        except Exception:
-            db.session.rollback()
-            logger.exception(
-                "Failed to record open for tracking_code=%s", tracking_code
-            )
+                db.session.commit()
+                logger.debug(
+                    "Open recorded — signature_id=%s total_opens=%s",
+                    signature.id,
+                    signature.total_opens,
+                )
+            except Exception:
+                db.session.rollback()
+                logger.exception(
+                    "Failed to record open for tracking_code=%s", tracking_code
+                )
 
     response = make_response(_TRANSPARENT_GIF)
     response.headers["Content-Type"] = "image/gif"
@@ -136,23 +149,24 @@ def click(tracking_code: str, platform: str) -> Union[Response, tuple[str, int]]
         return redirect(url_for("index"))
 
     try:
-        ua: str | None = request.headers.get("User-Agent")
-        signature.increment_clicks()
-        db.session.add(
-            SignatureClick(
-                signature_id=signature.id,
-                platform=platform,
-                clicked_at=datetime.now(timezone.utc),
-                user_agent=ua,
+        ua: str = request.headers.get("User-Agent", "")
+        if not any(proxy in ua for proxy in _PROXY_SIGNATURES):
+            signature.increment_clicks()
+            db.session.add(
+                SignatureClick(
+                    signature_id=signature.id,
+                    platform=platform,
+                    clicked_at=datetime.now(timezone.utc),
+                    user_agent=ua,
+                )
             )
-        )
-        db.session.commit()
-        logger.debug(
-            "Click recorded — signature_id=%s platform=%s total_clicks=%s",
-            signature.id,
-            platform,
-            signature.total_clicks,
-        )
+            db.session.commit()
+            logger.debug(
+                "Click recorded — signature_id=%s platform=%s total_clicks=%s",
+                signature.id,
+                platform,
+                signature.total_clicks,
+            )
     except Exception:
         db.session.rollback()
         logger.exception(

@@ -1,9 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Preview: {{ signature.name }} – Signature{% endblock %}
 
+{% block extra_css %}
+<style>
+  #sig-render a { pointer-events: none; }
+</style>
+{% endblock %}
+
 {% block content %}
 <section class="min-h-screen bg-gradient-to-br from-primary via-primary-dark to-primary flex flex-col items-center justify-center py-20 px-4">
-
   <div class="w-full max-w-2xl">
 
     <!-- Header -->
@@ -20,13 +25,10 @@
 
     <!-- Simulated email window -->
     <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
-
-      <!-- Email chrome bar -->
       <div class="bg-gray-100 border-b border-gray-200 px-6 py-4 space-y-2">
         <div class="text-sm text-gray-500">
           <span class="font-semibold text-gray-700">From:</span>
-          {{ signature.full_name }}
-          {% if signature.company %} — {{ signature.company }}{% endif %}
+          {{ signature.full_name }}{% if signature.company %} — {{ signature.company }}{% endif %}
         </div>
         <div class="text-sm text-gray-500">
           <span class="font-semibold text-gray-700">To:</span> colleague@company.com
@@ -36,30 +38,102 @@
         </div>
       </div>
 
-      <!-- Email body -->
       <div class="px-6 py-6">
         <p class="text-gray-600 text-sm mb-6">
           Hi there,<br><br>
           It was great connecting with you. Please find my details below.
         </p>
-
-        <!-- Divider mimicking email signature separator -->
         <div class="border-t border-gray-200 pt-5">
-          {{ signature.html_content | safe }}
+          <div id="sig-render">{{ signature.html_content | safe }}</div>
         </div>
       </div>
     </div>
 
-    <!-- Copy HTML button -->
-    <div class="mt-6 text-center" x-data="{ copied: false }">
+    <!-- Action buttons -->
+    <div class="mt-6 flex gap-3 justify-center" x-data="{ copied: false, copiedHtml: false }">
+      <!-- Copy Signature (rich text) -->
       <button
-        @click="navigator.clipboard.writeText(`{{ signature.html_content | replace('`', '') | replace('\n', '') }}`).then(() => { copied = true; setTimeout(() => copied = false, 2500); })"
-        class="px-6 py-2 border-2 border-white text-white rounded-lg font-semibold text-sm hover:bg-white hover:text-primary transition-all">
-        <span x-show="!copied">Copy HTML</span>
-        <span x-show="copied" x-cloak>✓ Copied!</span>
+        id="copy-rich-btn"
+        class="px-6 py-2 bg-white text-primary rounded-lg font-semibold text-sm hover:bg-white/90 transition-all">
+        Copy Signature
       </button>
+
+      <!-- Copy raw HTML -->
+      <button
+        @click="navigator.clipboard.writeText(`{{ signature.html_content | replace('`', '') | replace('\n', '') }}`).then(() => { copiedHtml = true; setTimeout(() => copiedHtml = false, 2500); })"
+        class="px-6 py-2 border-2 border-white text-white rounded-lg font-semibold text-sm hover:bg-white hover:text-primary transition-all">
+        <span x-show="!copiedHtml">Copy HTML</span>
+        <span x-show="copiedHtml" x-cloak>✓ Copied!</span>
+      </button>
+    </div>
+
+    <!-- Install instructions -->
+    <div class="mt-8 bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-white">
+      <h2 class="font-bold text-lg mb-4">How to install in Gmail</h2>
+      <ol class="space-y-3 text-sm text-white/90">
+        <li class="flex gap-3">
+          <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">1</span>
+          <span>Click <strong class="text-white">Copy Signature</strong> above — this copies the rendered signature as rich text.</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">2</span>
+          <span>Open <strong class="text-white">Gmail</strong> and go to <strong class="text-white">Settings → See all settings → General</strong>.</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">3</span>
+          <span>Scroll to <strong class="text-white">Signature</strong> and click <strong class="text-white">Create new</strong> or click inside an existing signature box.</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">4</span>
+          <span>Click inside the signature editor box and paste (<strong class="text-white">Ctrl+V</strong> on Windows, <strong class="text-white">Cmd+V</strong> on Mac).</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">5</span>
+          <span>Click <strong class="text-white">Save Changes</strong> at the bottom of the Settings page.</span>
+        </li>
+      </ol>
+      <p class="mt-4 text-xs text-white/60">Works with Gmail. For Outlook, paste the signature in <strong class="text-white/80">File → Options → Mail → Signatures</strong>.</p>
     </div>
 
   </div>
 </section>
+
+{% block extra_js %}
+<script>
+  document.getElementById('copy-rich-btn').addEventListener('click', function () {
+    const sigEl = document.getElementById('sig-render');
+
+    // Create a temporary off-screen contenteditable element
+    const temp = document.createElement('div');
+    temp.setAttribute('contenteditable', 'true');
+    temp.style.position = 'fixed';
+    temp.style.top = '-9999px';
+    temp.style.left = '-9999px';
+    temp.style.opacity = '0';
+    temp.innerHTML = sigEl.innerHTML;
+    document.body.appendChild(temp);
+
+    // Select all content inside it
+    const range = document.createRange();
+    range.selectNodeContents(temp);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+
+    // Copy as rich text
+    const success = document.execCommand('copy');
+    sel.removeAllRanges();
+    document.body.removeChild(temp);
+
+    const btn = document.getElementById('copy-rich-btn');
+    if (success) {
+      btn.textContent = '✓ Copied!';
+      setTimeout(function () { btn.textContent = 'Copy Signature'; }, 2500);
+    } else {
+      btn.textContent = 'Copy failed — try Copy HTML';
+      setTimeout(function () { btn.textContent = 'Copy Signature'; }, 3000);
+    }
+  });
+</script>
+{% endblock %}
 {% endblock %}

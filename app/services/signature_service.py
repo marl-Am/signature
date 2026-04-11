@@ -5,7 +5,7 @@ Signature service - Business logic for signature operations
 Security: A01 - All queries filtered by user_id to prevent unauthorized access
 """
 
-
+from flask import request
 from app import db
 from app.models.signature import Signature
 from flask_login import current_user
@@ -363,7 +363,9 @@ class SignatureService:
             display: str = (
                 website.replace("https://", "").replace("http://", "").rstrip("/")
             )
-            tracked_website: str = f"/track/click/{tracking_code}/website"
+            tracked_website: str = (
+                f"{request.host_url.rstrip('/')}/track/click/{tracking_code}/website"
+            )
             contact_parts.append(
                 f'<a href="{tracked_website}" style="color:{accent_color};text-decoration:none;font-size:12px;">'
                 f"{display}</a>"
@@ -386,7 +388,9 @@ class SignatureService:
         ]
         for url, label, badge, platform in social_map:
             if url:
-                tracked: str = f"/track/click/{tracking_code}/{platform}"
+                tracked: str = (
+                    f"{request.host_url.rstrip('/')}/track/click/{tracking_code}/{platform}"
+                )
                 social_parts.append(
                     f'<a href="{tracked}" title="{label}" '
                     f'style="display:inline-block;background:{accent_color};color:#ffffff;'
@@ -411,7 +415,7 @@ class SignatureService:
 
         # --- Tracking pixel ---
         pixel_html: str = (
-            f'<img src="/track/pixel/{tracking_code}.gif" '
+            f'<img src="{request.host_url.rstrip("/")}/track/pixel/{tracking_code}.gif" '
             f'width="1" height="1" alt="" style="display:none;" />'
         )
 
