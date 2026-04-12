@@ -8,18 +8,17 @@ Security Features Implemented:
 - A07: Authentication Failures - account lockout, session management
 - A09: Logging - track login attempts and suspicious activity
 
-Datetime note: All datetimes are stored as naive UTC (datetime.utcnow()).
-SQLite does not persist timezone info, so naive UTC is used consistently
-throughout this model to avoid offset-naive vs offset-aware comparison errors.
-When this project moves to PostgreSQL with timezone-aware columns, switch
-every datetime.utcnow() call to datetime.now(timezone.utc) at once.
+Datetime note: All datetimes use datetime.now(timezone.utc) — timezone-aware UTC.
+This is required for PostgreSQL (Supabase) which stores TIMESTAMPTZ and returns
+aware datetimes. Using naive datetime.utcnow() against an aware column raises a
+TypeError at runtime.
 """
 
 from app import db
 from flask_login import UserMixin
 from argon2 import PasswordHasher, Type
 from argon2.exceptions import VerifyMismatchError, InvalidHashError
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 import secrets
 
@@ -82,10 +81,14 @@ class User(UserMixin, db.Model):
     last_login_at = db.Column(db.DateTime, nullable=True)
     last_login_ip = db.Column(db.String(45), nullable=True)  # IPv6 compatible
 
-    # Use callable form so each row gets its own timestamp at insert time
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(
+        db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
+    )
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
     )
 
     # ========================================
@@ -166,8 +169,7 @@ class User(UserMixin, db.Model):
         if self.locked_until is None:
             return False
 
-        # Both sides are naive UTC — safe to compare
-        if datetime.utcnow() > self.locked_until:
+        if datetime.now(timezone.utc) > self.locked_until:
             self.locked_until = None
             self.failed_login_attempts = 0
             db.session.commit()
@@ -185,7 +187,7 @@ class User(UserMixin, db.Model):
         LOCKOUT_DURATION_MINUTES = 15
 
         if self.failed_login_attempts >= MAX_ATTEMPTS:
-            self.locked_until = datetime.utcnow() + timedelta(
+            self.locked_until = datetime.now(timezone.utc) + timedelta(
                 minutes=LOCKOUT_DURATION_MINUTES
             )
 
@@ -200,7 +202,7 @@ class User(UserMixin, db.Model):
         """
         self.failed_login_attempts = 0
         self.locked_until = None
-        self.last_login_at = datetime.utcnow()
+        self.last_login_at = datetime.now(timezone.utc)
         self.last_login_ip = ip_address
         db.session.commit()
 
@@ -216,7 +218,9 @@ class User(UserMixin, db.Model):
             URL-safe verification token.
         """
         self.email_verification_token = secrets.token_urlsafe(32)
-        self.email_verification_expires = datetime.utcnow() + timedelta(hours=24)
+        self.email_verification_expires = datetime.now(timezone.utc) + timedelta(
+            hours=24
+        )
         db.session.commit()
         return self.email_verification_token
 
@@ -224,15 +228,13 @@ class User(UserMixin, db.Model):
         """
         Verify email with provided token.
 
-        Checks both token equality and expiry — both naive UTC, safe to compare.
-
         Returns:
             True if verification successful, False if token is wrong or expired.
         """
         if (
             self.email_verification_token != token
             or self.email_verification_expires is None
-            or datetime.utcnow() > self.email_verification_expires  # both naive UTC
+            or datetime.now(timezone.utc) > self.email_verification_expires
         ):
             return False
 
@@ -254,7 +256,7 @@ class User(UserMixin, db.Model):
             URL-safe reset token.
         """
         self.password_reset_token = secrets.token_urlsafe(32)
-        self.password_reset_expires = datetime.utcnow() + timedelta(hours=1)
+        self.password_reset_expires = datetime.now(timezone.utc) + timedelta(hours=1)
         db.session.commit()
         return self.password_reset_token
 
@@ -262,15 +264,13 @@ class User(UserMixin, db.Model):
         """
         Reset password using a valid, unexpired token.
 
-        Both sides of the expiry comparison are naive UTC — safe to compare.
-
         Returns:
             True if reset successful, False otherwise.
         """
         if (
             self.password_reset_token != token
             or self.password_reset_expires is None
-            or datetime.utcnow() > self.password_reset_expires  # both naive UTC
+            or datetime.now(timezone.utc) > self.password_reset_expires
         ):
             return False
 
@@ -294,7 +294,7 @@ class User(UserMixin, db.Model):
         if self.subscription_status == "active":
             return True
         if self.subscription_status == "trial" and self.trial_ends_at:
-            return datetime.utcnow() < self.trial_ends_at
+            return datetime.now(timezone.utc) < self.trial_ends_at
         return False
 
     def can_create_signature(self) -> bool:
@@ -308,7 +308,6 @@ class User(UserMixin, db.Model):
         Returns:
             True if user can create a signature, False otherwise.
         """
-
         if self.subscription_tier == "pro":
             return True
 
