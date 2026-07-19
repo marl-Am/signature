@@ -12,7 +12,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.wrappers import Response
 
-from app.services.user_service import UserService
+from app.services.user_service import UserService, AuthFailureReason
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,7 @@ def login() -> Union[str, Response]:
         password: str = request.form.get("password", "")
         remember: bool = request.form.get("remember") == "on"
 
-        user, error_message = UserService.authenticate_user(
+        user, error_message, failure_reason = UserService.authenticate_user(
             email=email,
             password=password,
         )
@@ -104,14 +104,20 @@ def login() -> Union[str, Response]:
             login_user(user, remember=remember)
             flash("Login successful!", "success")
 
-            # A10: Only redirect to `next` if it is a safe local URL
             next_page: str | None = request.args.get("next")
             if next_page and _is_safe_redirect_url(next_page):
                 return redirect(next_page)
             return redirect(url_for("dashboard.index"))
         else:
-            # A07: Generic message — do not reveal whether the email exists
-            flash("Invalid email or password.", "danger")
+            if failure_reason == AuthFailureReason.ACCOUNT_LOCKED and error_message is not None:
+                # Safe to disclose: lockout applies regardless of whether the
+                # password just entered was correct, so this does not leak
+                # credential validity (A07).
+                flash(error_message, "danger")
+            else:
+                # A07: Generic message for all other cases — do not reveal
+                # whether the email exists or whether the password was wrong.
+                flash("Invalid email or password.", "danger")
             return render_template("auth/login.html", email=email)
 
     return render_template("auth/login.html")

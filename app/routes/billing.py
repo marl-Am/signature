@@ -29,7 +29,6 @@ Security notes:
 """
 
 import logging
-from typing import Union
 
 import stripe
 from flask import (
@@ -39,22 +38,25 @@ from flask import (
     redirect,
     request,
     url_for,
-    Response,
     make_response,
 )
+from werkzeug.wrappers import Response
+
 from flask_login import login_required, current_user
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app import db
 from app.models.user import User
 from app.models.signature import Signature
+
+from types import ModuleType
 
 logger = logging.getLogger(__name__)
 
 billing_bp = Blueprint("billing", __name__, url_prefix="/billing")
 
 
-def _stripe_client() -> None:
+def _stripe_client() -> ModuleType:
     """Return a configured Stripe client using the secret key from config."""
     stripe.api_key = current_app.config["STRIPE_SECRET_KEY"]
     return stripe
@@ -107,6 +109,13 @@ def upgrade() -> Response:
         flash("Could not connect to payment provider. Please try again.", "danger")
         return redirect(url_for("pricing"))
 
+    if not checkout_session.url:
+        logger.error(
+            "Stripe Checkout Session created without a url: id=%s", checkout_session.id
+        )
+        flash("Could not connect to payment provider. Please try again.", "danger")
+        return redirect(url_for("pricing"))
+
     return redirect(checkout_session.url, code=303)
 
 
@@ -151,7 +160,7 @@ def cancel() -> Response:
 
 
 @billing_bp.route("/webhook", methods=["POST"])
-def webhook() -> Union[Response, tuple[Response, int]]:
+def webhook() -> Response:
     """
     Receive and process Stripe webhook events.
 
@@ -168,7 +177,7 @@ def webhook() -> Union[Response, tuple[Response, int]]:
 
     if not webhook_secret:
         logger.error("STRIPE_WEBHOOK_SECRET is not configured.")
-        return make_response("Webhook secret not configured.", 500), 500
+        return make_response("Webhook secret not configured.", 500)
 
     # --- Verify signature (A08) ---
     try:
@@ -176,10 +185,10 @@ def webhook() -> Union[Response, tuple[Response, int]]:
         event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
     except ValueError:
         logger.warning("Stripe webhook: invalid payload received.")
-        return make_response("Invalid payload.", 400), 400
+        return make_response("Invalid payload.", 400)
     except stripe.SignatureVerificationError:
         logger.warning("Stripe webhook: signature verification failed.")
-        return make_response("Invalid signature.", 400), 400
+        return make_response("Invalid signature.", 400)
 
     event_type: str = event["type"]
     logger.info("Stripe webhook received: %s", event_type)
@@ -195,7 +204,7 @@ def webhook() -> Union[Response, tuple[Response, int]]:
         _handle_subscription_updated(event["data"]["object"])
 
     # Return 200 for all unhandled events so Stripe does not retry them.
-    return make_response("", 200)
+    return make_response("Success", 200)
 
 
 # ---------------------------------------------------------------------------
@@ -203,7 +212,7 @@ def webhook() -> Union[Response, tuple[Response, int]]:
 # ---------------------------------------------------------------------------
 
 
-def _handle_checkout_completed(session) -> None:
+def _handle_checkout_completed(session: stripe.checkout.Session) -> None:
     """
     Upgrade user to Pro and unlock all their signatures.
 
@@ -237,7 +246,7 @@ def _handle_checkout_completed(session) -> None:
     logger.info("User %s upgraded to Pro; all signatures unlocked.", user.id)
 
 
-def _handle_subscription_deleted(subscription) -> None:
+def _handle_subscription_deleted(subscription: stripe.Subscription) -> None:
     """
     Downgrade user to Free and lock all signatures beyond the free tier limit.
 
@@ -267,7 +276,7 @@ def _handle_subscription_deleted(subscription) -> None:
 
     period_end: int | None = getattr(subscription, "current_period_end", None)
     if period_end:
-        user.subscription_ends_at = datetime.utcfromtimestamp(period_end)
+        user.subscription_ends_at = datetime.fromtimestamp(period_end, tz=timezone.utc)
 
     # Lock all signatures beyond the first one (ordered oldest-first so the
     # user keeps their original/primary signature active).
@@ -290,7 +299,7 @@ def _handle_subscription_deleted(subscription) -> None:
     )
 
 
-def _handle_subscription_updated(subscription) -> None:
+def _handle_subscription_updated(subscription: stripe.Subscription) -> None:
     stripe_customer_id: str | None = getattr(subscription, "customer", None)
     stripe_status: str | None = getattr(subscription, "status", None)
 
@@ -319,7 +328,9 @@ def _handle_subscription_updated(subscription) -> None:
         user.subscription_status = "cancelled"
         period_end_ts: int | None = getattr(subscription, "cancel_at", None)
         if period_end_ts:
-            user.subscription_ends_at = datetime.utcfromtimestamp(period_end_ts)
+            user.subscription_ends_at = datetime.fromtimestamp(
+                period_end_ts, tz=timezone.utc
+            )
 
     db.session.commit()
     logger.info("User %s subscription updated to %s.", user.id, stripe_status)

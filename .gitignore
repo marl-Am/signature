@@ -52,3 +52,14 @@ PROMPT
 
 _docs/
 _docs
+
+tests/
+tests
+
+requirements-dev.txt
+requirements-dev
+
+test_outputs/
+test_outputs
+
+app/templates/email_templates/

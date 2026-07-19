@@ -165,8 +165,8 @@ class AnalyticsService:
             .all()
         )
 
-        opens_map: dict[str, int] = {row.day: row.cnt for row in opens_by_day}
-        clicks_map: dict[str, int] = {row.day: row.cnt for row in clicks_by_day}
+        opens_map: dict[str, int] = {day: cnt for day, cnt in opens_by_day}
+        clicks_map: dict[str, int] = {day: cnt for day, cnt in clicks_by_day}
 
         daily_last_30: list[DailyPoint] = []
         for i in range(30):
@@ -250,8 +250,8 @@ class AnalyticsService:
             .all()
         )
 
-        opens_map: dict[str, int] = {row.day: row.cnt for row in opens_by_day}
-        clicks_map: dict[str, int] = {row.day: row.cnt for row in clicks_by_day}
+        opens_map: dict[str, int] = {day: cnt for day, cnt in opens_by_day}
+        clicks_map: dict[str, int] = {day: cnt for day, cnt in clicks_by_day}
 
         daily_last_30: list[DailyPoint] = []
         for i in range(30):

@@ -44,6 +44,9 @@ class ProductionConfig(Config):
     DEBUG: bool = False
     SQLALCHEMY_DATABASE_URI: str = os.getenv("DATABASE_URL", "")
     REMEMBER_COOKIE_SECURE: bool = True
+    SESSION_COOKIE_SECURE: bool = True
+    SESSION_COOKIE_HTTPONLY: bool = True
+    SESSION_COOKIE_SAMESITE: str = "Lax"
 
 
 class TestingConfig(Config):

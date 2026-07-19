@@ -11,7 +11,7 @@ from app.models.signature import Signature
 from flask_login import current_user
 from typing import List, Optional
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class SignatureService:
@@ -184,7 +184,7 @@ class SignatureService:
             if field in allowed_fields:
                 setattr(signature, field, value)
 
-        signature.updated_at = datetime.utcnow()
+        signature.updated_at = datetime.now(timezone.utc)
 
         signature.html_content = SignatureService._generate_html_content(
             full_name=signature.full_name,
@@ -437,14 +437,14 @@ class SignatureService:
             )
             if title_parts:
                 header_html += (
-                    f'<div style="font-size:13px;color:rgba(255,255,255,0.8);">'
+                    '<div style="font-size:13px;color:rgba(255,255,255,0.8);">'
                     + " &middot; ".join(title_parts)
                     + "</div>"
                 )
             header_html += "</div>"
             sub_html: str = (
-                f'<div style="background:#f9f9f9;padding:10px 14px;border-radius:0 0 6px 6px;'
-                f'border:1px solid #e0e0e0;border-top:none;">'
+                '<div style="background:#f9f9f9;padding:10px 14px;border-radius:0 0 6px 6px;'
+                'border:1px solid #e0e0e0;border-top:none;">'
                 + (dept_html if department else "")
                 + contact_html
                 + social_html
@@ -557,7 +557,7 @@ class SignatureService:
                 '<span style="color:#cccccc;margin:0 5px;">|</span>'.join(contact_parts)
             )
             compact_row: str = (
-                f'<div style="font-size:12px;margin-bottom:5px;">'
+                '<div style="font-size:12px;margin-bottom:5px;">'
                 + job_span
                 + sep1
                 + comp_span

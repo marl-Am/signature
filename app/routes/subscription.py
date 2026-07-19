@@ -14,24 +14,19 @@ Security notes:
 """
 
 import logging
-from typing import Union
 
 import stripe
+from werkzeug.wrappers import Response
 from flask import (
     Blueprint,
     current_app,
     flash,
     redirect,
     render_template,
-    request,
     url_for,
-    Response,
 )
 from flask_login import login_required, current_user
-from datetime import datetime
-
-from app import db
-from app.models.user import User
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +54,7 @@ def manage() -> str:
     """
     _init_stripe()
 
-    stripe_sub: dict | None = None
+    stripe_sub: stripe.Subscription | None = None
     stripe_error: bool = False
 
     if current_user.subscription_tier == "pro" and current_user.stripe_subscription_id:
@@ -82,7 +77,7 @@ def manage() -> str:
     if stripe_sub:
         raw_end: int | None = getattr(stripe_sub, "cancel_at", None)
         if raw_end:
-            period_end = datetime.utcfromtimestamp(raw_end)
+            period_end = datetime.fromtimestamp(raw_end, tz=timezone.utc)
         cancel_at_period_end = bool(getattr(stripe_sub, "cancel_at_period_end", False))
 
     # Fallback to DB value if the live Stripe call returned nothing

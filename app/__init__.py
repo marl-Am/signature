@@ -5,7 +5,8 @@ from flask_login import LoginManager
 from flask_migrate import Migrate
 from dotenv import load_dotenv
 from app.config import DevelopmentConfig
-import os
+from typing import Type
+
 
 load_dotenv()
 
@@ -15,12 +16,19 @@ login_manager = LoginManager()
 migrate = Migrate()
 
 
-def create_app() -> Flask:
-    """Application factory pattern"""
+def create_app(config_class: Type[object] = DevelopmentConfig) -> Flask:
+    """
+    Application factory pattern.
+
+    Args:
+        config_class: Config class to load (DevelopmentConfig, ProductionConfig,
+            or TestingConfig from app.config). Defaults to DevelopmentConfig so
+            every existing call site (wsgi.py) keeps working unchanged.
+    """
     app = Flask(__name__)
 
-    # Load config object (swap to ProductionConfig for prod)
-    app.config.from_object(DevelopmentConfig)
+    # Load config object — caller decides which environment this is.
+    app.config.from_object(config_class)
 
     # Initialize extensions
     db.init_app(app)
@@ -36,7 +44,7 @@ def create_app() -> Flask:
     def load_user(user_id: str):
         from app.models.user import User
 
-        return User.query.get(int(user_id))
+        return db.session.get(User, int(user_id))
 
     # Register blueprints
     from app.routes.auth import auth_bp
@@ -77,7 +85,7 @@ def create_app() -> Flask:
     @app.errorhandler(404)
     def page_not_found(e):
         return render_template("errors/404.html"), 404
-    
+
     @app.errorhandler(500)
     def internal_error(e):
         return render_template("errors/500.html"), 500

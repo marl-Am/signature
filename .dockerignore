@@ -1,0 +1,49 @@
+# --- Secrets: never ship these into an image (OWASP A02) ---
+.env
+.env.*
+!.env.example
+
+# --- Local dev database and instance data ---
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Version control ---
+.git/
+.gitignore
+.github/
+
+# --- Python artifacts ---
+__pycache__/
+*.py[cod]
+*.pyo
+*$py.class
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# --- Virtual environments ---
+venv/
+.venv/
+env/
+
+# --- Docker itself (no need to ship these into the image) ---
+Dockerfile
+.dockerignore
+
+# --- Tests: not needed at runtime, reduces attack surface (OWASP A05) ---
+tests/
+
+# --- Docs and misc project files not needed inside the container ---
+docs/
+*.md
+.vscode/
+.idea/
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+
+# --- Node (only relevant if you ever add a JS build step; harmless otherwise) ---
+node_modules/

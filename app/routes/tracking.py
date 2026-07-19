@@ -17,7 +17,9 @@ import logging
 from datetime import datetime, timezone
 from typing import Union
 
-from flask import Blueprint, make_response, redirect, request, url_for, Response
+from flask import Blueprint, make_response, redirect, request, url_for
+from werkzeug.wrappers import Response
+
 from app import db
 from app.models.signature import Signature
 from app.models.analytics import SignatureOpen, SignatureClick

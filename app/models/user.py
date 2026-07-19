@@ -8,10 +8,18 @@ Security Features Implemented:
 - A07: Authentication Failures - account lockout, session management
 - A09: Logging - track login attempts and suspicious activity
 
-Datetime note: All datetimes use datetime.now(timezone.utc) — timezone-aware UTC.
-This is required for PostgreSQL (Supabase) which stores TIMESTAMPTZ and returns
-aware datetimes. Using naive datetime.utcnow() against an aware column raises a
-TypeError at runtime.
+Datetime note: All datetimes are written as timezone-aware UTC via
+datetime.now(timezone.utc). PostgreSQL (Supabase, production) stores these as
+TIMESTAMPTZ and returns them aware, so comparisons work directly.
+
+SQLite (local dev and test) does NOT preserve timezone info on TIMESTAMP
+columns — a value written as aware UTC comes back naive on read. Comparing
+a naive value against an aware datetime.now(timezone.utc) raises:
+    TypeError: can't compare offset-naive and offset-aware datetimes
+_ensure_aware_utc() normalizes any value read back as naive (assumed to be
+UTC, since that's the only thing ever written) before every such comparison,
+so behavior is correct on both SQLite and PostgreSQL without touching the
+storage layer or requiring a schema/migration change.
 """
 
 from app import db
@@ -36,6 +44,20 @@ ph = PasswordHasher(
     parallelism=ARGON2_PARALLELISM,
     type=Type.ID,  # Explicitly use Argon2id
 )
+
+
+def _ensure_aware_utc(value: datetime) -> datetime:
+    """
+    Return `value` as timezone-aware UTC.
+
+    If `value` is already aware (e.g. read back from PostgreSQL), it is
+    returned unchanged. If it is naive (e.g. read back from SQLite, which
+    drops tzinfo on round-trip), it is assumed to be UTC — the only
+    timezone this codebase ever writes — and tagged accordingly.
+    """
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
 
 
 class User(UserMixin, db.Model):
@@ -169,7 +191,7 @@ class User(UserMixin, db.Model):
         if self.locked_until is None:
             return False
 
-        if datetime.now(timezone.utc) > self.locked_until:
+        if datetime.now(timezone.utc) > _ensure_aware_utc(self.locked_until):
             self.locked_until = None
             self.failed_login_attempts = 0
             db.session.commit()
@@ -234,7 +256,8 @@ class User(UserMixin, db.Model):
         if (
             self.email_verification_token != token
             or self.email_verification_expires is None
-            or datetime.now(timezone.utc) > self.email_verification_expires
+            or datetime.now(timezone.utc)
+            > _ensure_aware_utc(self.email_verification_expires)
         ):
             return False
 
@@ -270,7 +293,8 @@ class User(UserMixin, db.Model):
         if (
             self.password_reset_token != token
             or self.password_reset_expires is None
-            or datetime.now(timezone.utc) > self.password_reset_expires
+            or datetime.now(timezone.utc)
+            > _ensure_aware_utc(self.password_reset_expires)
         ):
             return False
 
@@ -294,7 +318,7 @@ class User(UserMixin, db.Model):
         if self.subscription_status == "active":
             return True
         if self.subscription_status == "trial" and self.trial_ends_at:
-            return datetime.now(timezone.utc) < self.trial_ends_at
+            return datetime.now(timezone.utc) < _ensure_aware_utc(self.trial_ends_at)
         return False
 
     def can_create_signature(self) -> bool:

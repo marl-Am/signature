@@ -8,17 +8,23 @@ Security Features:
 - A09: Logging - Track login attempts and suspicious activity
 """
 
-import re
 import logging
+import re
+from datetime import datetime, timedelta, timezone
+from enum import Enum
 from typing import Optional, Tuple
-from datetime import datetime, timedelta
-
 from flask import request
-
 from app import db
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
+
+
+class AuthFailureReason(Enum):
+    ACCOUNT_NOT_FOUND = "account_not_found"
+    ACCOUNT_LOCKED = "account_locked"
+    ACCOUNT_DEACTIVATED = "account_deactivated"
+    INVALID_CREDENTIALS = "invalid_credentials"
 
 
 class UserService:
@@ -102,7 +108,7 @@ class UserService:
         user = User(email=email.lower(), name=name)
         user.set_password(password)  # A04: Secure password hashing
 
-        user.trial_ends_at = datetime.utcnow() + timedelta(days=14)
+        user.trial_ends_at = datetime.now(timezone.utc) + timedelta(days=14)
         user.subscription_status = "trial"
         user.subscription_tier = "free"
 
@@ -124,42 +130,44 @@ class UserService:
 
         return user, None
 
+
     @staticmethod
     def authenticate_user(
         email: str, password: str
-    ) -> Tuple[Optional[User], Optional[str]]:
+    ) -> Tuple[Optional[User], Optional[str], Optional["AuthFailureReason"]]:
         """
         Authenticate user login.
 
-        Security:
-        - A07: Account lockout after failed attempts
-        - A09: Logs login attempts with IP
-
         Returns:
-            Tuple of (User object or None, error_message or None).
+            Tuple of (User object or None, error_message or None, failure_reason or None).
         """
         user = User.query.filter_by(email=email.lower()).first()
 
         if not user:
-            return None, "Invalid email or password"
+            return None, "Invalid email or password", AuthFailureReason.ACCOUNT_NOT_FOUND
 
         if user.is_locked():
             return (
                 None,
                 "Account is locked due to too many failed login attempts. Try again later.",
+                AuthFailureReason.ACCOUNT_LOCKED,
             )
 
         if not user.is_active:
-            return None, "This account has been deactivated. Please contact support."
+            return (
+                None,
+                "This account has been deactivated. Please contact support.",
+                AuthFailureReason.ACCOUNT_DEACTIVATED,
+            )
 
         if not user.check_password(password):
             user.record_failed_login()
-            return None, "Invalid email or password"
+            return None, "Invalid email or password", AuthFailureReason.INVALID_CREDENTIALS
 
         ip_address: Optional[str] = request.remote_addr if request else None
         user.record_successful_login(ip_address)
 
-        return user, None
+        return user, None, None
 
     @staticmethod
     def initiate_password_reset(email: str) -> Tuple[bool, str, Optional[str]]:
