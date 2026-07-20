@@ -22,6 +22,7 @@ RUN apt-get update \
 
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
+RUN pip install --no-cache-dir --upgrade pip
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -30,7 +31,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Stage 2: runtime
 # Slim final image, no compilers, no build tooling, non-root user.
 # ---------------------------------------------------------------------------
-FROM python:3.13.5-slim AS runtime
+FROM python:3.13-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
