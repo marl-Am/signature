@@ -141,7 +141,7 @@ class AnalyticsService:
 
         opens_by_day: list[tuple[str, int]] = (
             db.session.query(
-                func.strftime("%Y-%m-%d", SignatureOpen.opened_at).label("day"),
+                func.date(SignatureOpen.opened_at).label("day"),
                 func.count(SignatureOpen.id).label("cnt"),
             )
             .filter(
@@ -154,7 +154,7 @@ class AnalyticsService:
 
         clicks_by_day: list[tuple[str, int]] = (
             db.session.query(
-                func.strftime("%Y-%m-%d", SignatureClick.clicked_at).label("day"),
+                func.date(SignatureClick.clicked_at).label("day"),
                 func.count(SignatureClick.id).label("cnt"),
             )
             .filter(
@@ -165,8 +165,8 @@ class AnalyticsService:
             .all()
         )
 
-        opens_map: dict[str, int] = {day: cnt for day, cnt in opens_by_day}
-        clicks_map: dict[str, int] = {day: cnt for day, cnt in clicks_by_day}
+        opens_map: dict[str, int] = {str(day): cnt for day, cnt in opens_by_day}
+        clicks_map: dict[str, int] = {str(day): cnt for day, cnt in clicks_by_day}
 
         daily_last_30: list[DailyPoint] = []
         for i in range(30):
@@ -226,7 +226,7 @@ class AnalyticsService:
 
         opens_by_day: list = (
             db.session.query(
-                func.strftime("%Y-%m-%d", SignatureOpen.opened_at).label("day"),
+                func.date(SignatureOpen.opened_at).label("day"),
                 func.count(SignatureOpen.id).label("cnt"),
             )
             .filter(
@@ -239,7 +239,7 @@ class AnalyticsService:
 
         clicks_by_day: list = (
             db.session.query(
-                func.strftime("%Y-%m-%d", SignatureClick.clicked_at).label("day"),
+                func.date(SignatureClick.clicked_at).label("day"),
                 func.count(SignatureClick.id).label("cnt"),
             )
             .filter(
@@ -250,8 +250,8 @@ class AnalyticsService:
             .all()
         )
 
-        opens_map: dict[str, int] = {day: cnt for day, cnt in opens_by_day}
-        clicks_map: dict[str, int] = {day: cnt for day, cnt in clicks_by_day}
+        opens_map: dict[str, int] = {str(day): cnt for day, cnt in opens_by_day}
+        clicks_map: dict[str, int] = {str(day): cnt for day, cnt in clicks_by_day}
 
         daily_last_30: list[DailyPoint] = []
         for i in range(30):

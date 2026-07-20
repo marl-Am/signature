@@ -12,6 +12,17 @@ class Config:
     SECRET_KEY: str = os.getenv("SECRET_KEY", "dev-secret-key-change-this-later")
     SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
 
+    # A05 (Security Misconfiguration) / reliability: verify pooled connections
+    # are alive before reuse, and recycle them before Neon's idle-connection
+    # timeout can silently close them out from under us. Without this, a
+    # connection Neon closed while idle raises psycopg2.OperationalError
+    # ("SSL connection has been closed unexpectedly") on the next request
+    # that tries to reuse it.
+    SQLALCHEMY_ENGINE_OPTIONS: dict = {
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
+    }
+
     # A07: Remember-me cookie settings
     REMEMBER_COOKIE_DURATION: timedelta = timedelta(days=30)
     REMEMBER_COOKIE_HTTPONLY: bool = True

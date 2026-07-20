@@ -88,6 +88,19 @@ def create_app(config_class: Type[object] = DevelopmentConfig) -> Flask:
 
     @app.errorhandler(500)
     def internal_error(e):
+        # Roll back any failed transaction before rendering the error page.
+        # Without this, a broken session from the request that triggered
+        # this handler causes the error page itself to fail with
+        # sqlalchemy.exc.PendingRollbackError.
+        db.session.rollback()
         return render_template("errors/500.html"), 500
+
+    # Ensure every request ends with a clean session, success or failure —
+    # this is what actually returns the connection to the pool correctly
+    # rather than leaving it in a broken transaction state for the next
+    # request to trip over.
+    @app.teardown_appcontext
+    def shutdown_session(exception=None):
+        db.session.remove()
 
     return app
