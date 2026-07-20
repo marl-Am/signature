@@ -17,9 +17,9 @@ class Config:
     REMEMBER_COOKIE_HTTPONLY: bool = True
     REMEMBER_COOKIE_SAMESITE: str = "Lax"
 
-    # Email — SendGrid (A02: loaded from env, never hardcoded)
-    SENDGRID_API_KEY: str = os.getenv("SENDGRID_API_KEY", "")
-    SENDGRID_FROM_EMAIL: str = os.getenv("SENDGRID_FROM_EMAIL", "no-reply@example.com")
+    # Email — Brevo (A02: loaded from env, never hardcoded)
+    BREVO_API_KEY: str = os.getenv("BREVO_API_KEY", "")
+    BREVO_FROM_EMAIL: str = os.getenv("BREVO_FROM_EMAIL", "no-reply@example.com")
 
     # Stripe (A02: loaded from env, never hardcoded)
     STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "")

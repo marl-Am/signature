@@ -1,6 +1,6 @@
 # app/services/email_service.py
 """
-Email service - SendGrid integration for transactional emails.
+Email service - Brevo (formerly Sendinblue) integration for transactional emails.
 
 Security:
 - A02: API key loaded from environment, never hardcoded
@@ -9,31 +9,95 @@ Security:
 
 import os
 import logging
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Any
 
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail, Email, To, Content
+import requests
 
 logger = logging.getLogger(__name__)
 
+BREVO_API_URL: str = "https://api.brevo.com/v3/smtp/email"
+_REQUEST_TIMEOUT_SECONDS: int = 10
 
-def _get_client() -> Optional[SendGridAPIClient]:
+
+def _get_api_key() -> Optional[str]:
     """
-    Build a SendGrid client from the environment variable.
+    Read the Brevo API key from the environment.
 
     Returns None (and logs an error) if the key is missing so that the
     application can degrade gracefully instead of crashing.
     """
-    api_key: Optional[str] = os.getenv("SENDGRID_API_KEY")
+    api_key: Optional[str] = os.getenv("BREVO_API_KEY")
     if not api_key:
-        logger.error("SENDGRID_API_KEY is not set — email will not be sent.")
+        logger.error("BREVO_API_KEY is not set — email will not be sent.")
         return None
-    return SendGridAPIClient(api_key)
+    return api_key
 
 
 def _get_from_email() -> str:
     """Return the verified sender address from env, with a safe fallback."""
-    return os.getenv("SENDGRID_FROM_EMAIL", "no-reply@example.com")
+    return os.getenv("BREVO_FROM_EMAIL", "no-reply@example.com")
+
+
+def _send(
+    to_email: str,
+    to_name: str,
+    subject: str,
+    html_content: str,
+) -> Tuple[bool, Optional[str]]:
+    """
+    Shared send path for all transactional emails via Brevo's REST API.
+
+    Args:
+        to_email:     Recipient email address.
+        to_name:      Recipient display name.
+        subject:      Email subject line.
+        html_content: Rendered HTML body.
+
+    Returns:
+        Tuple of (success, error_message).
+    """
+    api_key: Optional[str] = _get_api_key()
+    if api_key is None:
+        return False, "Email service is not configured."
+
+    payload: dict[str, Any] = {
+        "sender": {"name": "Signature", "email": _get_from_email()},
+        "to": [{"email": to_email, "name": to_name}],
+        "subject": subject,
+        "htmlContent": html_content,
+    }
+    headers: dict[str, str] = {
+        "api-key": api_key,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+
+    try:
+        response = requests.post(
+            BREVO_API_URL,
+            json=payload,
+            headers=headers,
+            timeout=_REQUEST_TIMEOUT_SECONDS,
+        )
+        if response.status_code == 201:
+            logger.info(
+                "Email sent to %s (status %s, subject: %s)",
+                to_email,
+                response.status_code,
+                subject,
+            )
+            return True, None
+        else:
+            logger.error(
+                "Brevo returned status %s for email to %s: %s",
+                response.status_code,
+                to_email,
+                response.text,
+            )
+            return False, f"Email service returned status {response.status_code}"
+    except requests.RequestException as exc:
+        logger.exception("Failed to send email to %s: %s", to_email, exc)
+        return False, str(exc)
 
 
 def send_welcome_email(to_email: str, to_name: str) -> Tuple[bool, Optional[str]]:
@@ -47,10 +111,6 @@ def send_welcome_email(to_email: str, to_name: str) -> Tuple[bool, Optional[str]
     Returns:
         Tuple of (success, error_message).
     """
-    client = _get_client()
-    if client is None:
-        return False, "Email service is not configured."
-
     subject = "Welcome to Signature — your account is ready"
     html_content = f"""
     <p>Hi {to_name},</p>
@@ -63,31 +123,7 @@ def send_welcome_email(to_email: str, to_name: str) -> Tuple[bool, Optional[str]
     <p>If you have questions, just reply to this email.</p>
     <p>— The Signature Team</p>
     """
-
-    message = Mail(
-        from_email=Email(_get_from_email(), "Signature"),
-        to_emails=To(to_email, to_name),
-        subject=subject,
-        html_content=Content("text/html", html_content),
-    )
-
-    try:
-        response = client.send(message)  # type: ignore[union-attr]
-        if response.status_code in (200, 202):
-            logger.info(
-                "Welcome email sent to %s (status %s)", to_email, response.status_code
-            )
-            return True, None
-        else:
-            logger.error(
-                "SendGrid returned status %s for welcome email to %s",
-                response.status_code,
-                to_email,
-            )
-            return False, f"Email service returned status {response.status_code}"
-    except Exception as exc:  # noqa: BLE001
-        logger.exception("Failed to send welcome email to %s: %s", to_email, exc)
-        return False, str(exc)
+    return _send(to_email, to_name, subject, html_content)
 
 
 def send_verification_email(
@@ -104,10 +140,6 @@ def send_verification_email(
     Returns:
         Tuple of (success, error_message).
     """
-    client = _get_client()
-    if client is None:
-        return False, "Email service is not configured."
-
     subject = "Signature — please verify your email address"
     html_content = f"""
     <p>Hi {to_name},</p>
@@ -119,33 +151,7 @@ def send_verification_email(
     </p>
     <p>— The Signature Team</p>
     """
-
-    message = Mail(
-        from_email=Email(_get_from_email(), "Signature"),
-        to_emails=To(to_email, to_name),
-        subject=subject,
-        html_content=Content("text/html", html_content),
-    )
-
-    try:
-        response = client.send(message)  # type: ignore[union-attr]
-        if response.status_code in (200, 202):
-            logger.info(
-                "Verification email sent to %s (status %s)",
-                to_email,
-                response.status_code,
-            )
-            return True, None
-        else:
-            logger.error(
-                "SendGrid returned status %s for verification email to %s",
-                response.status_code,
-                to_email,
-            )
-            return False, f"Email service returned status {response.status_code}"
-    except Exception as exc:  # noqa: BLE001
-        logger.exception("Failed to send verification email to %s: %s", to_email, exc)
-        return False, str(exc)
+    return _send(to_email, to_name, subject, html_content)
 
 
 def send_password_reset_email(
@@ -162,10 +168,6 @@ def send_password_reset_email(
     Returns:
         Tuple of (success, error_message).
     """
-    client = _get_client()
-    if client is None:
-        return False, "Email service is not configured."
-
     subject = "Signature — password reset request"
     html_content = f"""
     <p>Hi {to_name},</p>
@@ -178,30 +180,4 @@ def send_password_reset_email(
     </p>
     <p>— The Signature Team</p>
     """
-
-    message = Mail(
-        from_email=Email(_get_from_email(), "Signature"),
-        to_emails=To(to_email, to_name),
-        subject=subject,
-        html_content=Content("text/html", html_content),
-    )
-
-    try:
-        response = client.send(message)  # type: ignore[union-attr]
-        if response.status_code in (200, 202):
-            logger.info(
-                "Password reset email sent to %s (status %s)",
-                to_email,
-                response.status_code,
-            )
-            return True, None
-        else:
-            logger.error(
-                "SendGrid returned status %s for reset email to %s",
-                response.status_code,
-                to_email,
-            )
-            return False, f"Email service returned status {response.status_code}"
-    except Exception as exc:  # noqa: BLE001
-        logger.exception("Failed to send password reset email to %s: %s", to_email, exc)
-        return False, str(exc)
+    return _send(to_email, to_name, subject, html_content)
