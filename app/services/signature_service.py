@@ -5,6 +5,8 @@ Signature service - Business logic for signature operations
 Security: A01 - All queries filtered by user_id to prevent unauthorized access
 """
 
+import re
+
 from flask import request
 from app import db
 from app.models.signature import Signature
@@ -643,3 +645,23 @@ class SignatureService:
         if len(digits) == 10:
             return f"+1 {digits[0:3]} {digits[3:6]} {digits[6:]}"
         return phone
+
+    # Matches the exact tracking pixel <img> tag produced in
+    # _generate_html_content — targeted narrowly by the /track/pixel/ path
+    # segment so it can never accidentally strip a user's own logo <img>.
+    _PIXEL_IMG_PATTERN = re.compile(r'<img[^>]*?/track/pixel/[^"]*\.gif[^>]*/?>')
+
+    @staticmethod
+    def strip_tracking_pixel(html_content: str) -> str:
+        """
+        Return signature HTML with the tracking pixel <img> tag removed.
+
+        Used ONLY for the in-app visual preview. Loading the preview page
+        in a browser fetches every <img> on it just like a real email
+        client would, which would otherwise increment total_opens every
+        time the owner previews their own signature. The stored
+        html_content used for the Copy Signature/Copy HTML buttons and for
+        real outgoing emails is never modified — only what's rendered
+        on-screen here.
+        """
+        return SignatureService._PIXEL_IMG_PATTERN.sub("", html_content)

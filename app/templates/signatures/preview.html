@@ -44,13 +44,20 @@
           It was great connecting with you. Please find my details below.
         </p>
         <div class="border-t border-gray-200 pt-5">
-          <div id="sig-render">{{ signature.html_content | safe }}</div>
+          <div id="sig-render">{{ preview_html | safe }}</div>
         </div>
       </div>
     </div>
 
+    <!-- The real signature HTML (with tracking pixel intact), embedded as
+         JSON-encoded text rather than actual DOM. A <script type="application/json">
+         block is never parsed as HTML, so the pixel <img> inside it is not
+         fetched just because this page is open — it's only materialized into
+         real DOM for a brief moment when a copy button is clicked. -->
+    <script id="sig-full-html" type="application/json">{{ signature.html_content | tojson }}</script>
+
     <!-- Action buttons -->
-    <div class="mt-6 flex gap-3 justify-center" x-data="{ copied: false, copiedHtml: false }">
+    <div class="mt-6 flex gap-3 justify-center">
       <!-- Copy Signature (rich text) -->
       <button
         id="copy-rich-btn"
@@ -60,10 +67,9 @@
 
       <!-- Copy raw HTML -->
       <button
-        @click="navigator.clipboard.writeText(`{{ signature.html_content | replace('`', '') | replace('\n', '') }}`).then(() => { copiedHtml = true; setTimeout(() => copiedHtml = false, 2500); })"
+        id="copy-html-btn"
         class="px-6 py-2 border-2 border-white text-white rounded-lg font-semibold text-sm hover:bg-white hover:text-primary transition-all">
-        <span x-show="!copiedHtml">Copy HTML</span>
-        <span x-show="copiedHtml" x-cloak>✓ Copied!</span>
+        Copy HTML
       </button>
     </div>
 
@@ -100,9 +106,12 @@
 
 {% block extra_js %}
 <script>
-  document.getElementById('copy-rich-btn').addEventListener('click', function () {
-    const sigEl = document.getElementById('sig-render');
+  // The real signature HTML, with the live tracking pixel intact — this is
+  // what actually gets pasted into the user's email client, not the
+  // pixel-stripped version shown in #sig-render above.
+  const rawHtml = JSON.parse(document.getElementById('sig-full-html').textContent);
 
+  document.getElementById('copy-rich-btn').addEventListener('click', function () {
     // Create a temporary off-screen contenteditable element
     const temp = document.createElement('div');
     temp.setAttribute('contenteditable', 'true');
@@ -110,7 +119,7 @@
     temp.style.top = '-9999px';
     temp.style.left = '-9999px';
     temp.style.opacity = '0';
-    temp.innerHTML = sigEl.innerHTML;
+    temp.innerHTML = rawHtml;
     document.body.appendChild(temp);
 
     // Select all content inside it
@@ -133,6 +142,14 @@
       btn.textContent = 'Copy failed — try Copy HTML';
       setTimeout(function () { btn.textContent = 'Copy Signature'; }, 3000);
     }
+  });
+
+  document.getElementById('copy-html-btn').addEventListener('click', function () {
+    const btn = document.getElementById('copy-html-btn');
+    navigator.clipboard.writeText(rawHtml).then(function () {
+      btn.textContent = '✓ Copied!';
+      setTimeout(function () { btn.textContent = 'Copy HTML'; }, 2500);
+    });
   });
 </script>
 {% endblock %}

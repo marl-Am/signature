@@ -162,9 +162,20 @@ def edit(signature_id: int) -> Union[str, Response]:
 @signatures_bp.route("/<int:signature_id>/preview")
 @login_required
 def preview(signature_id: int) -> Union[str, Response]:
-    """Render the saved signature HTML in isolation."""
+    """
+    Render the saved signature HTML in isolation.
+
+    The on-screen render uses a pixel-stripped copy so viewing your own
+    signature does not inflate total_opens. The Copy Signature / Copy HTML
+    buttons on this page still use signature.html_content directly (with
+    the real pixel intact), since that's the exact HTML the user pastes
+    into their actual email client.
+    """
     signature = SignatureService.get_signature_by_id(signature_id)
-    return render_template("signatures/preview.html", signature=signature)
+    preview_html: str = SignatureService.strip_tracking_pixel(signature.html_content)
+    return render_template(
+        "signatures/preview.html", signature=signature, preview_html=preview_html
+    )
 
 
 @signatures_bp.route("/<int:signature_id>/delete", methods=["POST"])
