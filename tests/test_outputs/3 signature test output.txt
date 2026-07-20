@@ -1,0 +1,236 @@
+(venv) PS C:\Users\marlo\Documents\Github\signature> pytest -v
+======================================================== test session starts ========================================================
+platform win32 -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\marlo\Documents\Github\signature\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\marlo\Documents\Github\signature
+plugins: anyio-4.12.0
+collected 41 items                                                                                                                   
+
+tests/test_auth.py::test_register_creates_user_and_logs_in PASSED                                                              [  2%]
+tests/test_auth.py::test_register_rejects_duplicate_email PASSED                                                               [  4%]
+tests/test_auth.py::test_register_rejects_weak_password PASSED                                                                 [  7%]
+tests/test_auth.py::test_register_redirects_if_already_authenticated PASSED                                                    [  9%]
+tests/test_auth.py::test_login_success PASSED                                                                                  [ 12%]
+tests/test_auth.py::test_login_wrong_password_shows_generic_message PASSED                                                     [ 14%]
+tests/test_auth.py::test_login_unknown_email_shows_same_generic_message PASSED                                                 [ 17%]
+tests/test_auth.py::test_account_locks_after_five_failed_attempts FAILED                                                       [ 19%]
+tests/test_auth.py::test_open_redirect_is_blocked PASSED                                                                       [ 21%]
+tests/test_auth.py::test_logout_requires_login PASSED                                                                          [ 24%]
+tests/test_auth.py::test_logout_clears_session PASSED                                                                          [ 26%]
+tests/test_auth.py::test_verify_email_with_valid_token PASSED                                                                  [ 29%]
+tests/test_auth.py::test_verify_email_with_invalid_token PASSED                                                                [ 31%]
+tests/test_auth.py::test_forgot_password_gives_same_message_regardless_of_email_existing FAILED                                [ 34%]
+tests/test_auth.py::test_reset_password_with_valid_token PASSED                                                                [ 36%]
+tests/test_auth.py::test_reset_password_rejects_mismatched_confirmation PASSED                                                 [ 39%]
+tests/test_auth.py::test_reset_password_rejects_invalid_token PASSED                                                           [ 41%]
+tests/test_auth.py::test_resend_verification_requires_login PASSED                                                             [ 43%]
+tests/test_auth.py::test_resend_verification_when_already_verified PASSED                                                      [ 46%]
+tests/test_billing.py::test_upgrade_requires_login PASSED                                                                      [ 48%]
+tests/test_billing.py::test_upgrade_redirects_to_stripe_checkout PASSED                                                        [ 51%]
+tests/test_billing.py::test_upgrade_already_pro_shows_info PASSED                                                              [ 53%]
+tests/test_billing.py::test_upgrade_missing_price_id_shows_error PASSED                                                        [ 56%]
+tests/test_billing.py::test_upgrade_stripe_error_shows_friendly_message PASSED                                                 [ 58%]
+tests/test_billing.py::test_webhook_rejects_invalid_signature PASSED                                                           [ 60%]
+tests/test_billing.py::test_webhook_rejects_missing_webhook_secret PASSED                                                      [ 63%]
+tests/test_billing.py::test_webhook_checkout_completed_upgrades_user_and_unlocks_signatures PASSED                             [ 65%]
+tests/test_billing.py::test_webhook_checkout_completed_ignores_other_users PASSED                                              [ 68%]
+tests/test_billing.py::test_webhook_subscription_deleted_downgrades_and_locks_extra_signatures PASSED                          [ 70%]
+tests/test_billing.py::test_webhook_subscription_updated_maps_status PASSED                                                    [ 73%]
+tests/test_signatures.py::test_create_requires_login PASSED                                                                    [ 75%]
+tests/test_signatures.py::test_create_succeeds_for_logged_in_user PASSED                                                       [ 78%]
+tests/test_signatures.py::test_create_requires_name_and_full_name PASSED                                                       [ 80%]
+tests/test_signatures.py::test_create_normalizes_bare_domain_to_https PASSED                                                   [ 82%]
+tests/test_signatures.py::test_free_tier_blocks_second_signature PASSED                                                        [ 85%]
+tests/test_signatures.py::test_deleting_signature_frees_free_tier_slot PASSED                                                  [ 87%]
+tests/test_signatures.py::test_user_cannot_edit_another_users_signature PASSED                                                 [ 90%]
+tests/test_signatures.py::test_user_cannot_preview_another_users_signature PASSED                                              [ 92%]
+tests/test_signatures.py::test_user_cannot_delete_another_users_signature PASSED                                               [ 95%]
+tests/test_signatures.py::test_owner_can_edit_own_signature PASSED                                                             [ 97%]
+tests/test_signatures.py::test_edit_requires_name_and_full_name PASSED                                                         [100%]
+
+============================================================= FAILURES ==============================================================
+___________________________________________ test_account_locks_after_five_failed_attempts ___________________________________________
+
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+
+    def test_account_locks_after_five_failed_attempts(
+        app: Flask, client: FlaskClient
+    ) -> None:
+        register_via_client(client, email="lockout@example.com")
+        client.get("/auth/logout")
+    
+        for _ in range(5):
+            login_via_client(client, email="lockout@example.com", password="WrongPass1!")
+    
+        user = get_user_by_email(app, "lockout@example.com")
+        assert user.failed_login_attempts == 5
+        assert user.locked_until is not None
+    
+        # Even the CORRECT password must now be rejected while locked
+        response = login_via_client(client, email="lockout@example.com")
+        assert response.status_code == 200
+>       assert b"locked" in response.data.lower()
+E       assert b'locked' in b'<!doctype html>\n<html lang="en">\n  <head>\n    <meta charset="utf-8" />\n    <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n    <meta\n      name="description"\n      content="create professional email signatures in minutes. track opens, clicks, and engagement with a built-in analytics dashboard." />\n    <title>\n      login - signature\n  </title>\n\n    <!-- favicon -->\n    <link\n      rel="icon"\n      type="image/x-icon"\n      href="/static/favicon.ico" />\n\n <!-- tailwind css cdn (production: use build process) -->\n    <script src="https://cdn.tailwindcss.com"></script>\n\n    <!-- alpine.js for interactivity -->\n    <script\n      defer\n      src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>\n\n    <!-- custom tailwind configuration -->\n    <script>\n      tailwind.config = {\n        theme: {\n          extend: {\n      colors: {\n              primary: \'rgb(12, 39, 136)\', // your brand blue\n              \'primary-dark\': \'rgb(8, 26, 91)\',\n              \'primary-light\': \'rgb(20, 60, 180)\',\n            },\n            fontfamily: {\n              sans: [\n     \'-apple-system... 0 24 24">\n                  <path\n                    d="m20 4h4c-1.103 0-2 .897-2 2v12c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2v6c0-1.103-.897-2-2-2zm0 2v.511l-8 4.8-8-4.8v6h16zm4 18v9.044l7.386 4.432a1 1 0 0 0 1.228 0l20 9.044 20.002 18h4z"/>\n                </svg>\n              </a>\n              <a\n                href="#"\n                class="text-gray-600 hover:text-primary transition-colors">\n                <svg class="w-6 h-6" fill="currentcolor" viewbox="0 0 24 24">\n                  <path\n                    d="m19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-1119h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />\n                </svg>\n              </a>\n           </div>\n          </div>\n        </div>\n\n        <div\n          class="border-t border-gray-200 mt-8 pt-8 text-center text-gray-600">\n          <p>&copy; 2026 signature. all rights reserved.</p>\n        </div>\n      </div>\n    </footer>\n\n    \n  </body>\n</html>'
+E        +  where b'<!doctype html>\n<html lang="en">\n  <head>\n    <meta charset="utf-8" />\n    <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n    <meta\n      name="description"\n      content="create professional email signatures in minutes. track opens, clicks, and engagement with a built-in analytics dashboard." />\n    <title>\n      login - signature\n    </title>\n\n    <!-- favicon -->\n    <link\n      rel="icon"\n      type="image/x-icon"\n      href="/static/favicon.ico" />\n\n    <!-- tailwind css cdn (production: use build process) -->\n    <script src="https://cdn.tailwindcss.com"></script>\n\n    <!-- alpine.js for interactivity -->\n    <script\n      defer\n      src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>\n\n    <!-- custom tailwind configuration -->\n    <script>\n      tailwind.config = {\n        theme: {\n          extend: {\n            colors: {\n              primary: \'rgb(12, 39, 136)\', // your brand blue\n              \'primary-dark\': \'rgb(8, 26, 91)\',\n     \'primary-light\': \'rgb(20, 60, 180)\',\n            },\n            fontfamily: {\n              sans: [\n                \'-apple-system... 0 24 24">\n                  <path\n                    d="m20 4h4c-1.103 0-2 .897-2 2v12c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2v6c0-1.103-.897-2-2-2zm0 2v.511l-8 4.8-8-4.8v6h16zm4 18v9.044l7.386 4.432a1 1 0 0 0 1.228 0l20 9.044 20.002 18h4z" />\n          </svg>\n              </a>\n              <a\n                href="#"\n                class="text-gray-600 hover:text-primary transition-colors">\n                <svg class="w-6 h-6" fill="currentcolor" viewbox="0 0 24 24">\n                  <path\n               d="m19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />\n                </svg>\n              </a>\n </div>\n          </div>\n        </div>\n\n        <div\n          class="border-t border-gray-200 mt-8 pt-8 text-center text-gray-600">\n          <p>&copy; 2026 signature. all rights reserved.</p>\n        </div>\n      </div>\n    </footer>\n\n    \n  </body>\n</html>' = <built-in method lower of bytes object at 0x0000023499EEC2A0>()
+E        +    where <built-in method lower of bytes object at 0x0000023499EEC2A0> = b'<!doctype html>\n<html lang="en">\n  <head>\n <meta charset="UTF-8" />\n    <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n    <meta\n      name="description"\n      content="Create professional email signatures in minutes. Track opens, clicks, and engagement with a built-in analyticsdashboard." />\n    <title>\n      Login - Signature\n    </title>\n\n    <!-- Favicon -->\n    <link\n      rel="icon"\n      type="image/x-icon"\n      href="/static/favicon.ico" />\n\n    <!-- Tailwind CSS CDN (Production: use build process) -->\n    <script src="https://cdn.tailwindcss.com"></script>\n\n    <!-- Alpine.js for interactivity -->\n    <script\n      defer\n      src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>\n\n    <!-- Custom Tailwind Configuration -->\n    <script>\n      tailwind.config = {\n        theme: {\n          extend: {\n            colors: {\n              primary: \'rgb(12, 39, 136)\', // Your brand blue\n              \'primary-dark\': \'rgb(8, 26, 91)\',\n              \'primary-light\': \'rgb(20, 60, 180)\',\n            },\n       fontFamily: {\n              sans: [\n                \'-apple-system... 0 24 24">\n                  <path\n  d="M20 4H4c-1.103 0-2 .897-2 2v12c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2V6c0-1.103-.897-2-2-2zm0 2v.511l-8 4.8-8-4.8V6h16zM4 18V9.044l7.386 4.432a1 1 0 0 0 1.228 0L20 9.044 20.002 18H4z" />\n                </svg>\n              </a>\n              <a\n    href="#"\n                class="text-gray-600 hover:text-primary transition-colors">\n                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">\n                  <path\n                    d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 55 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.7641.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />\n                </svg>\n              </a>\n            </div>\n          </div>\n        </div>\n\n        <div\n class="border-t border-gray-200 mt-8 pt-8 text-center text-gray-600">\n          <p>&copy; 2026 SIGNATURE. All rights reserved.</p>\n        </div>\n      </div>\n    </footer>\n\n    \n  </body>\n</html>'.lower
+E        +      where b'<!doctype html>\n<html lang="en">\n  <head>\n    <meta charset="UTF-8" />\n    <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n    <meta\n      name="description"\n      content="Create professional email signatures in minutes. Track opens, clicks, and engagement with a built-in analytics dashboard." />\n    <title>\n      Login - Signature\n    </title>\n\n    <!-- Favicon -->\n    <link\n      rel="icon"\n      type="image/x-icon"\n      href="/static/favicon.ico" />\n\n    <!--Tailwind CSS CDN (Production: use build process) -->\n    <script src="https://cdn.tailwindcss.com"></script>\n\n    <!-- Alpine.js for interactivity -->\n    <script\n      defer\n      src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>\n\n  <!-- Custom Tailwind Configuration -->\n    <script>\n      tailwind.config = {\n        theme: {\n          extend: {\ncolors: {\n              primary: \'rgb(12, 39, 136)\', // Your brand blue\n              \'primary-dark\': \'rgb(8, 26, 91)\',\n         \'primary-light\': \'rgb(20, 60, 180)\',\n            },\n            fontFamily: {\n              sans: [\n                \'-apple-system... 0 24 24">\n                  <path\n                    d="M20 4H4c-1.103 0-2 .897-2 2v12c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2V6c0-1.103-.897-2-2-2zm0 2v.511l-8 4.8-8-4.8V6h16zM4 18V9.044l7.386 4.432a1 1 0 0 0 1.228 0L20 9.044 20.002 18H4z" />\n              </svg>\n              </a>\n              <a\n                href="#"\n                class="text-gray-600 hover:text-primary transition-colors">\n                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">\n                  <path\n                   d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />\n                </svg>\n              </a>\n     </div>\n          </div>\n        </div>\n\n        <div\n          class="border-t border-gray-200 mt-8 pt-8 text-center text-gray-600">\n          <p>&copy; 2026 SIGNATURE. All rights reserved.</p>\n        </div>\n      </div>\n    </footer>\n\n    \n  </body>\n</html>' = <WrapperTestResponse 13443 bytes [200 OK]>.data
+
+tests\test_auth.py:119: AssertionError
+_______________________________ test_forgot_password_gives_same_message_regardless_of_email_existing ________________________________
+
+client = <FlaskClient <Flask 'app'>>
+
+    def test_forgot_password_gives_same_message_regardless_of_email_existing(
+        client: FlaskClient,
+    ) -> None:
+        """A07: response must not leak whether the account exists."""
+        register_via_client(client, email="known@example.com")
+        client.get("/auth/logout")
+    
+>       known_response = client.post(
+            "/auth/forgot-password",
+            data={"email": "known@example.com"},
+            follow_redirects=True,
+        )
+
+tests\test_auth.py:199: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+venv\Lib\site-packages\werkzeug\test.py:1167: in post
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+venv\Lib\site-packages\flask\testing.py:235: in open
+    response = super().open(
+venv\Lib\site-packages\werkzeug\test.py:1150: in open
+    response = self.resolve_redirect(response, buffered=buffered)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+venv\Lib\site-packages\werkzeug\test.py:1056: in resolve_redirect
+    return self.open(builder, buffered=buffered)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+venv\Lib\site-packages\flask\testing.py:235: in open
+    response = super().open(
+venv\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+venv\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+venv\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+venv\Lib\site-packages\flask\app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+venv\Lib\site-packages\flask\app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+venv\Lib\site-packages\flask\app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+venv\Lib\site-packages\flask\app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+venv\Lib\site-packages\flask\app.py:917: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+venv\Lib\site-packages\flask\app.py:902: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    @auth_bp.route("/login", methods=["GET", "POST"])
+    def login() -> Union[str, Response]:
+        """User login page."""
+        if current_user.is_authenticated:
+            return redirect(url_for("dashboard.index"))
+    
+        if request.method == "POST":
+            email: str = request.form.get("email", "").strip()
+            password: str = request.form.get("password", "")
+            remember: bool = request.form.get("remember") == "on"
+    
+            user, error_message, failure_reason = UserService.authenticate_user(
+                email=email,
+                password=password,
+            )
+    
+            if user:
+                login_user(user, remember=remember)
+                flash("Login successful!", "success")
+    
+                next_page: str | None = request.args.get("next")
+                if next_page and _is_safe_redirect_url(next_page):
+                    return redirect(next_page)
+                return redirect(url_for("dashboard.index"))
+            else:
+                # A07: Generic message for all other cases — do not reveal
+                # whether the email exists or whether the password was wrong.
+                flash("Invalid email or password.", "danger")
+    
+>       return render_template("auth/login.html", email=email)
+                                                        ^^^^^
+E       UnboundLocalError: cannot access local variable 'email' where it is not associated with a value
+
+app\routes\auth.py:116: UnboundLocalError
+========================================================= warnings summary ==========================================================
+tests/test_billing.py::test_upgrade_already_pro_shows_info
+  C:\Users\marlo\Documents\Github\signature\tests\test_billing.py:70: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    db_user = User.query.get(user.id)
+
+tests/test_billing.py::test_webhook_checkout_completed_upgrades_user_and_unlocks_signatures
+  C:\Users\marlo\Documents\Github\signature\tests\test_billing.py:179: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    updated_user = User.query.get(user.id)
+
+tests/test_billing.py::test_webhook_checkout_completed_upgrades_user_and_unlocks_signatures
+  C:\Users\marlo\Documents\Github\signature\tests\test_billing.py:184: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    updated_sig = Signature.query.get(sig_id)
+
+tests/test_billing.py::test_webhook_checkout_completed_ignores_other_users
+  C:\Users\marlo\Documents\Github\signature\tests\test_billing.py:215: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    attacker_after = User.query.get(attacker.id)
+
+tests/test_billing.py::test_webhook_checkout_completed_ignores_other_users
+  C:\Users\marlo\Documents\Github\signature\tests\test_billing.py:216: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    victim_after = User.query.get(victim.id)
+
+tests/test_billing.py::test_webhook_subscription_deleted_downgrades_and_locks_extra_signatures
+  C:\Users\marlo\Documents\Github\signature\tests\test_billing.py:229: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    db_user = User.query.get(user.id)
+
+tests/test_billing.py::test_webhook_subscription_deleted_downgrades_and_locks_extra_signatures
+  C:\Users\marlo\Documents\Github\signature\tests\test_billing.py:275: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    updated_user = User.query.get(user.id)
+
+tests/test_billing.py::test_webhook_subscription_deleted_downgrades_and_locks_extra_signatures
+  C:\Users\marlo\Documents\Github\signature\tests\test_billing.py:280: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    oldest = Signature.query.get(sig1_id)
+
+tests/test_billing.py::test_webhook_subscription_deleted_downgrades_and_locks_extra_signatures
+  C:\Users\marlo\Documents\Github\signature\tests\test_billing.py:281: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    newest = Signature.query.get(sig2_id)
+
+tests/test_billing.py::test_webhook_subscription_updated_maps_status
+  C:\Users\marlo\Documents\Github\signature\tests\test_billing.py:294: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    db_user = User.query.get(user.id)
+
+tests/test_billing.py::test_webhook_subscription_updated_maps_status
+  C:\Users\marlo\Documents\Github\signature\tests\test_billing.py:317: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    updated_user = User.query.get(user.id)
+
+tests/test_signatures.py::test_user_cannot_delete_another_users_signature
+  C:\Users\marlo\Documents\Github\signature\tests\test_signatures.py:160: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    assert Signature.query.get(signature_id) is not None
+
+tests/test_signatures.py::test_owner_can_edit_own_signature
+  C:\Users\marlo\Documents\Github\signature\app\services\signature_service.py:187: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    signature.updated_at = datetime.utcnow()
+
+tests/test_signatures.py::test_owner_can_edit_own_signature
+  C:\Users\marlo\Documents\Github\signature\tests\test_signatures.py:183: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    signature = Signature.query.get(signature_id)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+====================================================== short test summary info ======================================================
+FAILED tests/test_auth.py::test_account_locks_after_five_failed_attempts - assert b'locked' in b'<!doctype html>\n<html lang="en">\n<head>\n    <meta charset="utf-8" />\n    <meta name="viewport" conten...
+FAILED tests/test_auth.py::test_forgot_password_gives_same_message_regardless_of_email_existing - UnboundLocalError: cannot access local variable 'email' where it is not associated with a value
+============================================ 2 failed, 39 passed, 14 warnings in 14.10s =============================================
+(venv) PS C:\Users\marlo\Documents\Github\signature> 

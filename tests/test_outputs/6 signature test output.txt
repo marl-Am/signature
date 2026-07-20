@@ -1,0 +1,105 @@
+(venv) PS C:\Users\marlo\Documents\Github\signature> pytest -v
+=============================================== test session starts ================================================
+platform win32 -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\marlo\Documents\Github\signature\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\marlo\Documents\Github\signature
+plugins: anyio-4.12.0
+collected 41 items                                                                                                  
+
+tests/test_auth.py::test_register_creates_user_and_logs_in PASSED                                             [  2%]
+tests/test_auth.py::test_register_rejects_duplicate_email PASSED                                              [  4%]
+tests/test_auth.py::test_register_rejects_weak_password PASSED                                                [  7%]
+tests/test_auth.py::test_register_redirects_if_already_authenticated PASSED                                   [  9%]
+tests/test_auth.py::test_login_success PASSED                                                                 [ 12%]
+tests/test_auth.py::test_login_wrong_password_shows_generic_message PASSED                                    [ 14%]
+tests/test_auth.py::test_login_unknown_email_shows_same_generic_message PASSED                                [ 17%]
+tests/test_auth.py::test_account_locks_after_five_failed_attempts PASSED                                      [ 19%]
+tests/test_auth.py::test_open_redirect_is_blocked PASSED                                                      [ 21%]
+tests/test_auth.py::test_logout_requires_login PASSED                                                         [ 24%]
+tests/test_auth.py::test_logout_clears_session PASSED                                                         [ 26%]
+tests/test_auth.py::test_verify_email_with_valid_token PASSED                                                 [ 29%]
+tests/test_auth.py::test_verify_email_with_invalid_token PASSED                                               [ 31%]
+tests/test_auth.py::test_forgot_password_gives_same_message_regardless_of_email_existing PASSED               [ 34%]
+tests/test_auth.py::test_reset_password_with_valid_token PASSED                                               [ 36%]
+tests/test_auth.py::test_reset_password_rejects_mismatched_confirmation PASSED                                [ 39%]
+tests/test_auth.py::test_reset_password_rejects_invalid_token PASSED                                          [ 41%]
+tests/test_auth.py::test_resend_verification_requires_login PASSED                                            [ 43%]
+tests/test_auth.py::test_resend_verification_when_already_verified PASSED                                     [ 46%]
+tests/test_billing.py::test_upgrade_requires_login PASSED                                                     [ 48%]
+tests/test_billing.py::test_upgrade_redirects_to_stripe_checkout PASSED                                       [ 51%]
+tests/test_billing.py::test_upgrade_already_pro_shows_info PASSED                                             [ 53%]
+tests/test_billing.py::test_upgrade_missing_price_id_shows_error PASSED                                       [ 56%]
+tests/test_billing.py::test_upgrade_stripe_error_shows_friendly_message PASSED                                [ 58%]
+tests/test_billing.py::test_webhook_rejects_invalid_signature PASSED                                          [ 60%]
+tests/test_billing.py::test_webhook_rejects_missing_webhook_secret PASSED                                     [ 63%]
+tests/test_billing.py::test_webhook_checkout_completed_upgrades_user_and_unlocks_signatures PASSED            [ 65%]
+tests/test_billing.py::test_webhook_checkout_completed_ignores_other_users PASSED                             [ 68%]
+tests/test_billing.py::test_webhook_subscription_deleted_downgrades_and_locks_extra_signatures PASSED         [ 70%]
+tests/test_billing.py::test_webhook_subscription_updated_maps_status PASSED                                   [ 73%]
+tests/test_signatures.py::test_create_requires_login PASSED                                                   [ 75%]
+tests/test_signatures.py::test_create_succeeds_for_logged_in_user PASSED                                      [ 78%]
+tests/test_signatures.py::test_create_requires_name_and_full_name PASSED                                      [ 80%]
+tests/test_signatures.py::test_create_normalizes_bare_domain_to_https PASSED                                  [ 82%]
+tests/test_signatures.py::test_free_tier_blocks_second_signature PASSED                                       [ 85%]
+tests/test_signatures.py::test_deleting_signature_frees_free_tier_slot PASSED                                 [ 87%]
+tests/test_signatures.py::test_user_cannot_edit_another_users_signature PASSED                                [ 90%]
+tests/test_signatures.py::test_user_cannot_preview_another_users_signature PASSED                             [ 92%]
+tests/test_signatures.py::test_user_cannot_delete_another_users_signature PASSED                              [ 95%]
+tests/test_signatures.py::test_owner_can_edit_own_signature PASSED                                            [ 97%]
+tests/test_signatures.py::test_edit_requires_name_and_full_name PASSED                                        [100%]
+
+================================================= warnings summary =================================================
+tests/test_billing.py::test_upgrade_already_pro_shows_info
+  C:\Users\marlo\Documents\Github\signature\tests\test_billing.py:70: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    db_user = User.query.get(user.id)
+
+tests/test_billing.py::test_webhook_checkout_completed_upgrades_user_and_unlocks_signatures
+  C:\Users\marlo\Documents\Github\signature\tests\test_billing.py:179: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    updated_user = User.query.get(user.id)
+
+tests/test_billing.py::test_webhook_checkout_completed_upgrades_user_and_unlocks_signatures
+  C:\Users\marlo\Documents\Github\signature\tests\test_billing.py:184: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    updated_sig = Signature.query.get(sig_id)
+
+tests/test_billing.py::test_webhook_checkout_completed_ignores_other_users
+  C:\Users\marlo\Documents\Github\signature\tests\test_billing.py:215: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    attacker_after = User.query.get(attacker.id)
+
+tests/test_billing.py::test_webhook_checkout_completed_ignores_other_users
+  C:\Users\marlo\Documents\Github\signature\tests\test_billing.py:216: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    victim_after = User.query.get(victim.id)
+
+tests/test_billing.py::test_webhook_subscription_deleted_downgrades_and_locks_extra_signatures
+  C:\Users\marlo\Documents\Github\signature\tests\test_billing.py:229: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    db_user = User.query.get(user.id)
+
+tests/test_billing.py::test_webhook_subscription_deleted_downgrades_and_locks_extra_signatures
+  C:\Users\marlo\Documents\Github\signature\tests\test_billing.py:275: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    updated_user = User.query.get(user.id)
+
+tests/test_billing.py::test_webhook_subscription_deleted_downgrades_and_locks_extra_signatures
+  C:\Users\marlo\Documents\Github\signature\tests\test_billing.py:280: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    oldest = Signature.query.get(sig1_id)
+
+tests/test_billing.py::test_webhook_subscription_deleted_downgrades_and_locks_extra_signatures
+  C:\Users\marlo\Documents\Github\signature\tests\test_billing.py:281: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    newest = Signature.query.get(sig2_id)
+
+tests/test_billing.py::test_webhook_subscription_updated_maps_status
+  C:\Users\marlo\Documents\Github\signature\tests\test_billing.py:294: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    db_user = User.query.get(user.id)
+
+tests/test_billing.py::test_webhook_subscription_updated_maps_status
+  C:\Users\marlo\Documents\Github\signature\tests\test_billing.py:317: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    updated_user = User.query.get(user.id)
+
+tests/test_signatures.py::test_user_cannot_delete_another_users_signature
+  C:\Users\marlo\Documents\Github\signature\tests\test_signatures.py:160: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    assert Signature.query.get(signature_id) is not None
+
+tests/test_signatures.py::test_owner_can_edit_own_signature
+  C:\Users\marlo\Documents\Github\signature\tests\test_signatures.py:183: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    signature = Signature.query.get(signature_id)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+========================================= 41 passed, 13 warnings in 19.18s =========================================

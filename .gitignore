@@ -53,8 +53,6 @@ PROMPT
 _docs/
 _docs
 
-tests/
-tests
 
 requirements-dev.txt
 requirements-dev
