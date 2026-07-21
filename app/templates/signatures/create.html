@@ -19,8 +19,16 @@ are interpolated.
 
     function sanitizeUrl(value) {
       if (!value) return '';
+      let trimmed = String(value).trim();
+      if (!trimmed) return '';
+      // Mirror the server-side normalization in _normalize_url(): a bare
+      // domain like "link.com" is not a valid absolute URL on its own, so
+      // assume https:// if no scheme was typed, same as the form does on submit.
+      if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
+        trimmed = 'https://' + trimmed;
+      }
       try {
-        const parsed = new URL(String(value).trim());
+        const parsed = new URL(trimmed);
         if (parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'mailto:') {
           return escapeHtml(parsed.href);
         }
