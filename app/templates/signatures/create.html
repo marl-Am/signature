@@ -1,6 +1,5 @@
-{% extends "base.html" %} {% block title %}Create Signature – Signature{% endblock %} {% block content %} 
-
-{# ─── Alpine data initialiser
+{% extends "base.html" %} {% block title %}Create Signature – Signature{%
+endblock %} {% block content %} {# ─── Alpine data initialiser
 ────────────────────────────────────────────── All string values are emitted
 through | tojson so Jinja produces properly escaped JSON strings. This prevents
 quote conflicts when font_family values like Georgia, 'Times New Roman', serif
@@ -8,139 +7,174 @@ are interpolated.
 ───────────────────────────────────────────────────────────────────────────── #}
 
 <script>
-  function initCreate() {
-    return {
-      label:        {{ (form_data.get('name', '')         if form_data else '')                              | tojson }},
-      fullName:     {{ (form_data.get('full_name', '')    if form_data else current_user.name)                | tojson }},
-      jobTitle:     {{ (form_data.get('job_title', '')    if form_data else '')                               | tojson }},
-      company:      {{ (form_data.get('company', '')      if form_data else '')                               | tojson }},
-      department:   {{ (form_data.get('department', '')   if form_data else '')                               | tojson }},
-      phone:        {{ (form_data.get('phone', '')        if form_data else '')                               | tojson }},
-      website:      {{ (form_data.get('website', '')      if form_data else '')                               | tojson }},
-      linkedinUrl:  {{ (form_data.get('linkedin_url', '') if form_data else '')                               | tojson }},
-      twitterUrl:   {{ (form_data.get('twitter_url', '')  if form_data else '')                               | tojson }},
-      facebookUrl:  {{ (form_data.get('facebook_url', '') if form_data else '')                               | tojson }},
-      instagramUrl: {{ (form_data.get('instagram_url', '')if form_data else '')                               | tojson }},
-      logoUrl:      {{ (form_data.get('logo_url', '')     if form_data else '')                               | tojson }},
-      accentColor:  {{ (form_data.get('accent_color', '#0c2788') if form_data else '#0c2788')                 | tojson }},
-      layout:       {{ (form_data.get('layout', 'classic') if form_data else 'classic')                       | tojson }},
-      fontFamily:   {{ (form_data.get('font_family', 'Arial, Helvetica, sans-serif') if form_data else 'Arial, Helvetica, sans-serif') | tojson }},
-      copied: false,
+    function escapeHtml(value) {
+      if (value === null || value === undefined) return '';
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
 
-      get formattedPhone() {
-        const digits = this.phone.replace(/\D/g, '');
-        if (digits.length === 11 && digits[0] === '1')
-          return `+1 ${digits.slice(1,4)} ${digits.slice(4,7)} ${digits.slice(7)}`;
-        if (digits.length === 10)
-          return `+1 ${digits.slice(0,3)} ${digits.slice(3,6)} ${digits.slice(6)}`;
-        return this.phone;
-      },
-
-      get previewHtml() {
-        const brand = this.accentColor || '#0c2788';
-        const font  = this.fontFamily  || 'Arial, Helvetica, sans-serif';
-
-        const namePart = this.fullName
-          ? `<div style='font-size:17px;font-weight:bold;color:#111;margin-bottom:3px;'>${this.fullName}</div>`
-          : `<div style='font-size:17px;font-weight:bold;color:#ccc;margin-bottom:3px;'>Your Name</div>`;
-
-        const titleParts = [this.jobTitle, this.company].filter(Boolean);
-        const titlePart  = titleParts.length
-          ? `<div style='font-size:13px;color:${brand};margin-bottom:2px;'>${titleParts.join(' · ')}</div>`
-          : '';
-        const deptPart = this.department
-          ? `<div style='font-size:12px;color:#777;margin-bottom:2px;'>${this.department}</div>`
-          : '';
-
-        const divider = `<div style='border-top:1px solid #e0e0e0;margin:8px 0;'></div>`;
-
-        const contactParts = [];
-        if (this.formattedPhone) contactParts.push(`<span style='color:#555;font-size:12px;'>${this.formattedPhone}</span>`);
-        if (this.website) {
-          const d = this.website.replace('https://','').replace('http://','').replace(/\/$/,'');
-          contactParts.push(`<a href='${this.website}' style='color:${brand};font-size:12px;text-decoration:none;'>${d}</a>`);
+    function sanitizeUrl(value) {
+      if (!value) return '';
+      try {
+        const parsed = new URL(String(value).trim());
+        if (parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'mailto:') {
+          return escapeHtml(parsed.href);
         }
-        const contactPart = contactParts.length
-          ? `<div style='margin-bottom:6px;'>${contactParts.join(' <span style=\'color:#ccc;\'>|</span> ')}</div>`
-          : '';
-
-        const socials = [
-          [this.linkedinUrl,'in'],[this.twitterUrl,'𝕏'],
-          [this.facebookUrl,'f'],[this.instagramUrl,'IG'],
-        ];
-        const socialBadges = socials.filter(([u]) => u)
-          .map(([u,b]) => `<a href='${u}' style='display:inline-block;background:${brand};color:#fff;font-size:11px;font-weight:bold;text-decoration:none;padding:3px 7px;border-radius:4px;margin-right:4px;'>${b}</a>`)
-          .join('');
-        const socialPart = socialBadges ? `<div style='margin-top:4px;'>${socialBadges}</div>` : '';
-
-        const logoPart = this.logoUrl
-          ? `<td style='padding-right:16px;vertical-align:top;'><img src='${this.logoUrl}' width='64' height='64' style='border-radius:6px;display:block;' /></td>`
-          : '';
-
-        // --- Avatar layout: returns its own table early ---
-        if (this.layout === 'avatar') {
-          const initials = this.fullName
-            ? this.fullName.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()
-            : 'YN';
-          const avatarCol = this.logoUrl
-            ? `<td style='padding-right:16px;vertical-align:middle;'><img src='${this.logoUrl}' width='52' height='52' style='width:52px;height:52px;border-radius:50%;object-fit:cover;display:block;' /></td>`
-            : `<td style='padding-right:16px;vertical-align:middle;'><div style='width:52px;height:52px;border-radius:50%;background:${brand};text-align:center;line-height:52px;display:inline-block;'><span style='color:#fff;font-size:16px;font-weight:bold;line-height:52px;'>${initials}</span></div></td>`;
-          return `<table cellpadding='0' cellspacing='0' border='0' style='font-family:${font};max-width:520px;'><tr>${avatarCol}<td style='vertical-align:middle;'>${namePart}${titlePart}${deptPart}${divider}${contactPart}${socialPart}</td></tr></table>`;
-        }
-
-        let contentTd = '';
-        if (this.layout === 'modern') {
-          const headerBg = `<div style='background:${brand};padding:10px 14px;border-radius:6px 6px 0 0;'><div style='font-size:17px;font-weight:bold;color:#fff;margin-bottom:3px;'>${this.fullName || 'Your Name'}</div>${titleParts.length ? `<div style='font-size:13px;color:rgba(255,255,255,0.8);'>${titleParts.join(' · ')}</div>` : ''}</div>`;
-          const subBg    = `<div style='background:#f9f9f9;padding:10px 14px;border-radius:0 0 6px 6px;border:1px solid #e0e0e0;border-top:none;'>${deptPart}${contactPart}${socialPart}</div>`;
-          contentTd = `<td style='vertical-align:top;'>${headerBg}${subBg}</td>`;
-
-        } else if (this.layout === 'minimal') {
-          contentTd = `<td style='vertical-align:top;padding:4px 0;'>${namePart}${titlePart}${deptPart}${contactPart}${socialPart}</td>`;
-
-        } else if (this.layout === 'ruled') {
-          // Option A: top accent rule instead of left border
-          contentTd = `<td style='vertical-align:top;border-top:3px solid ${brand};padding-top:8px;'>${namePart}${titlePart}${deptPart}${contactPart}${socialPart}</td>`;
-
-        } else if (this.layout === 'compact') {
-          // Option C: single-line contact row
-          const jobSpan  = this.jobTitle ? `<span style='color:${brand};font-weight:500;font-size:12px;'>${this.jobTitle}</span>` : '';
-          const compSpan = this.company  ? `<span style='color:#555;font-size:12px;'>${this.company}</span>` : '';
-          const sep1 = jobSpan && compSpan ? `<span style='color:#ccc;margin:0 5px;'>·</span>` : '';
-          const sep2 = (jobSpan || compSpan) && contactParts.length ? `<span style='color:#ccc;margin:0 8px;'>|</span>` : '';
-          const inlineContact = contactParts.join(`<span style='color:#ccc;margin:0 5px;'>|</span>`);
-          const compactRow = `<div style='font-size:12px;margin-bottom:5px;'>${jobSpan}${sep1}${compSpan}${sep2}${inlineContact}</div>`;
-          contentTd = `<td style='vertical-align:top;padding:4px 0;'>${namePart}${deptPart}${compactRow}${socialPart}</td>`;
-
-        } else if (this.layout === 'banner') {
-          // Option D: left-bordered name block, dept as uppercase label
-          const nameBlock = `<div style='border-left:4px solid ${brand};padding-left:12px;margin-bottom:8px;'>${namePart}${titlePart}</div>`;
-          const deptLabel = this.department
-            ? `<div style='font-size:11px;color:#888;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:4px;'>${this.department}</div>`
-            : '';
-          contentTd = `<td style='vertical-align:top;'>${nameBlock}${deptLabel}${contactPart}${socialPart}</td>`;
-
-        } else {
-          // Classic (default) — border goes on the outer wrapper, not the td,
-          // so it always sits on the far left edge even when a logo is present.
-          contentTd = `<td style='vertical-align:top;'>${namePart}${titlePart}${deptPart}${divider}${contactPart}${socialPart}</td>`;
-          return `<div style='border-left:3px solid ${brand};padding-left:14px;'><table cellpadding='0' cellspacing='0' border='0' style='font-family:${font};max-width:520px;'><tr>${logoPart}${contentTd}</tr></table></div>`;
-        }
-
-        return `<table cellpadding='0' cellspacing='0' border='0' style='font-family:${font};max-width:520px;'><tr>${logoPart}${contentTd}</tr></table>`;
-      },
-
-      copyHtml() {
-        const tmp = document.createElement('textarea');
-        tmp.value = this.previewHtml;
-        document.body.appendChild(tmp);
-        tmp.select();
-        document.execCommand('copy');
-        document.body.removeChild(tmp);
-        this.copied = true;
-        setTimeout(() => this.copied = false, 2500);
+      } catch (e) {
+        // Not a valid absolute URL — reject rather than guess at intent.
       }
-    };
-  }
+      return '';
+    }
+
+    function sanitizeColor(value) {
+      const trimmed = String(value || '').trim();
+      return /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(trimmed) ? trimmed : '#0c2788';
+    }
+
+    function initCreate() {
+      return {
+        label:        {{ (form_data.get('name', '')         if form_data else '')                              | tojson }},
+        fullName:     {{ (form_data.get('full_name', '')    if form_data else current_user.name)                | tojson }},
+        jobTitle:     {{ (form_data.get('job_title', '')    if form_data else '')                               | tojson }},
+        company:      {{ (form_data.get('company', '')      if form_data else '')                               | tojson }},
+        department:   {{ (form_data.get('department', '')   if form_data else '')                               | tojson }},
+        phone:        {{ (form_data.get('phone', '')        if form_data else '')                               | tojson }},
+        website:      {{ (form_data.get('website', '')      if form_data else '')                               | tojson }},
+        linkedinUrl:  {{ (form_data.get('linkedin_url', '') if form_data else '')                               | tojson }},
+        twitterUrl:   {{ (form_data.get('twitter_url', '')  if form_data else '')                               | tojson }},
+        facebookUrl:  {{ (form_data.get('facebook_url', '') if form_data else '')                               | tojson }},
+        instagramUrl: {{ (form_data.get('instagram_url', '')if form_data else '')                               | tojson }},
+        logoUrl:      {{ (form_data.get('logo_url', '')     if form_data else '')                               | tojson }},
+        accentColor:  {{ (form_data.get('accent_color', '#0c2788') if form_data else '#0c2788')                 | tojson }},
+        layout:       {{ (form_data.get('layout', 'classic') if form_data else 'classic')                       | tojson }},
+        fontFamily:   {{ (form_data.get('font_family', 'Arial, Helvetica, sans-serif') if form_data else 'Arial, Helvetica, sans-serif') | tojson }},
+        copied: false,
+
+        get formattedPhone() {
+          const digits = this.phone.replace(/\D/g, '');
+          if (digits.length === 11 && digits[0] === '1')
+            return `+1 ${digits.slice(1,4)} ${digits.slice(4,7)} ${digits.slice(7)}`;
+          if (digits.length === 10)
+            return `+1 ${digits.slice(0,3)} ${digits.slice(3,6)} ${digits.slice(6)}`;
+          return this.phone;
+        },
+
+        get previewHtml() {
+          const brand = sanitizeColor(this.accentColor);
+          const font  = this.fontFamily  || 'Arial, Helvetica, sans-serif';
+
+          const safeFullName = escapeHtml(this.fullName);
+          const safeJobTitle = escapeHtml(this.jobTitle);
+          const safeCompany  = escapeHtml(this.company);
+          const safeDept     = escapeHtml(this.department);
+
+          const namePart = this.fullName
+            ? `<div style='font-size:17px;font-weight:bold;color:#111;margin-bottom:3px;'>${safeFullName}</div>`
+            : `<div style='font-size:17px;font-weight:bold;color:#ccc;margin-bottom:3px;'>Your Name</div>`;
+
+          const titleParts = [safeJobTitle, safeCompany].filter(Boolean);
+          const titlePart  = titleParts.length
+            ? `<div style='font-size:13px;color:${brand};margin-bottom:2px;'>${titleParts.join(' · ')}</div>`
+            : '';
+          const deptPart = this.department
+            ? `<div style='font-size:12px;color:#777;margin-bottom:2px;'>${safeDept}</div>`
+            : '';
+
+          const divider = `<div style='border-top:1px solid #e0e0e0;margin:8px 0;'></div>`;
+
+          const safeWebsite = sanitizeUrl(this.website);
+          const contactParts = [];
+          if (this.formattedPhone) contactParts.push(`<span style='color:#555;font-size:12px;'>${this.formattedPhone}</span>`);
+          if (safeWebsite) {
+            const d = escapeHtml(this.website.replace('https://','').replace('http://','').replace(/\/$/,''));
+            contactParts.push(`<a href='${safeWebsite}' style='color:${brand};font-size:12px;text-decoration:none;'>${d}</a>`);
+          }
+          const contactPart = contactParts.length
+            ? `<div style='margin-bottom:6px;'>${contactParts.join(' <span style=\'color:#ccc;\'>|</span> ')}</div>`
+            : '';
+
+          const socials = [
+            [sanitizeUrl(this.linkedinUrl),'in'],[sanitizeUrl(this.twitterUrl),'𝕏'],
+            [sanitizeUrl(this.facebookUrl),'f'],[sanitizeUrl(this.instagramUrl),'IG'],
+          ];
+          const socialBadges = socials.filter(([u]) => u)
+            .map(([u,b]) => `<a href='${u}' style='display:inline-block;background:${brand};color:#fff;font-size:11px;font-weight:bold;text-decoration:none;padding:3px 7px;border-radius:4px;margin-right:4px;'>${b}</a>`)
+            .join('');
+          const socialPart = socialBadges ? `<div style='margin-top:4px;'>${socialBadges}</div>` : '';
+
+          const safeLogoUrl = sanitizeUrl(this.logoUrl);
+          const logoPart = safeLogoUrl
+            ? `<td style='padding-right:16px;vertical-align:top;'><img src='${safeLogoUrl}' width='64' height='64' style='border-radius:6px;display:block;' /></td>`
+            : '';
+
+          // --- Avatar layout: returns its own table early ---
+          if (this.layout === 'avatar') {
+            const initials = this.fullName
+              ? escapeHtml(this.fullName.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase())
+              : 'YN';
+            const avatarCol = safeLogoUrl
+              ? `<td style='padding-right:16px;vertical-align:middle;'><img src='${safeLogoUrl}' width='52' height='52' style='width:52px;height:52px;border-radius:50%;object-fit:cover;display:block;' /></td>`
+              : `<td style='padding-right:16px;vertical-align:middle;'><div style='width:52px;height:52px;border-radius:50%;background:${brand};text-align:center;line-height:52px;display:inline-block;'><span style='color:#fff;font-size:16px;font-weight:bold;line-height:52px;'>${initials}</span></div></td>`;
+            return `<table cellpadding='0' cellspacing='0' border='0' style="font-family:${font};max-width:520px;"><tr>${avatarCol}<td style='vertical-align:middle;'>${namePart}${titlePart}${deptPart}${divider}${contactPart}${socialPart}</td></tr></table>`;
+          }
+
+          let contentTd = '';
+          if (this.layout === 'modern') {
+            const headerBg = `<div style='background:${brand};padding:10px 14px;border-radius:6px 6px 0 0;'><div style='font-size:17px;font-weight:bold;color:#fff;margin-bottom:3px;'>${safeFullName || 'Your Name'}</div>${titleParts.length ? `<div style='font-size:13px;color:rgba(255,255,255,0.8);'>${titleParts.join(' · ')}</div>` : ''}</div>`;
+            const subBg    = `<div style='background:#f9f9f9;padding:10px 14px;border-radius:0 0 6px 6px;border:1px solid #e0e0e0;border-top:none;'>${deptPart}${contactPart}${socialPart}</div>`;
+            contentTd = `<td style='vertical-align:top;'>${headerBg}${subBg}</td>`;
+
+          } else if (this.layout === 'minimal') {
+            contentTd = `<td style='vertical-align:top;padding:4px 0;'>${namePart}${titlePart}${deptPart}${contactPart}${socialPart}</td>`;
+
+          } else if (this.layout === 'ruled') {
+            // Option A: top accent rule instead of left border
+            contentTd = `<td style='vertical-align:top;border-top:3px solid ${brand};padding-top:8px;'>${namePart}${titlePart}${deptPart}${contactPart}${socialPart}</td>`;
+
+          } else if (this.layout === 'compact') {
+            // Option C: single-line contact row
+            const jobSpan  = this.jobTitle ? `<span style='color:${brand};font-weight:500;font-size:12px;'>${safeJobTitle}</span>` : '';
+            const compSpan = this.company  ? `<span style='color:#555;font-size:12px;'>${safeCompany}</span>` : '';
+            const sep1 = jobSpan && compSpan ? `<span style='color:#ccc;margin:0 5px;'>·</span>` : '';
+            const sep2 = (jobSpan || compSpan) && contactParts.length ? `<span style='color:#ccc;margin:0 8px;'>|</span>` : '';
+            const inlineContact = contactParts.join(`<span style='color:#ccc;margin:0 5px;'>|</span>`);
+            const compactRow = `<div style='font-size:12px;margin-bottom:5px;'>${jobSpan}${sep1}${compSpan}${sep2}${inlineContact}</div>`;
+            contentTd = `<td style='vertical-align:top;padding:4px 0;'>${namePart}${deptPart}${compactRow}${socialPart}</td>`;
+
+          } else if (this.layout === 'banner') {
+            // Option D: left-bordered name block, dept as uppercase label
+            const nameBlock = `<div style='border-left:4px solid ${brand};padding-left:12px;margin-bottom:8px;'>${namePart}${titlePart}</div>`;
+            const deptLabel = this.department
+              ? `<div style='font-size:11px;color:#888;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:4px;'>${safeDept}</div>`
+              : '';
+            contentTd = `<td style='vertical-align:top;'>${nameBlock}${deptLabel}${contactPart}${socialPart}</td>`;
+
+          } else {
+            // Classic (default) — border goes on the outer wrapper, not the td,
+            // so it always sits on the far left edge even when a logo is present.
+            contentTd = `<td style='vertical-align:top;'>${namePart}${titlePart}${deptPart}${divider}${contactPart}${socialPart}</td>`;
+            return `<div style='border-left:3px solid ${brand};padding-left:14px;'><table cellpadding='0' cellspacing='0' border='0' style="font-family:${font};max-width:520px;"><tr>${logoPart}${contentTd}</tr></table></div>`;
+          }
+
+          return `<table cellpadding='0' cellspacing='0' border='0' style="font-family:${font};max-width:520px;"><tr>${logoPart}${contentTd}</tr></table>`;
+        },
+
+        copyHtml() {
+          const tmp = document.createElement('textarea');
+          tmp.value = this.previewHtml;
+          document.body.appendChild(tmp);
+          tmp.select();
+          document.execCommand('copy');
+          document.body.removeChild(tmp);
+          this.copied = true;
+          setTimeout(() => this.copied = false, 2500);
+        }
+      };
+    }
 </script>
 
 <div x-data="initCreate()" class="min-h-screen bg-gray-50">

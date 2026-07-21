@@ -6,6 +6,8 @@ Security: A01 - All queries filtered by user_id to prevent unauthorized access
 """
 
 import re
+import html
+from urllib.parse import urlparse
 
 from flask import request
 from app import db
@@ -302,6 +304,45 @@ class SignatureService:
         }
 
     @staticmethod
+    def _escape(value: str | None) -> str:
+        """
+        HTML-escape user-supplied text before it is embedded in stored
+        signature HTML.
+
+        Security: A03 - This is what actually prevents stored XSS. Every
+        free-text field (name, title, company, department, phone display
+        text) must pass through this before landing in an f-string, since
+        html_content is later rendered with Jinja's `| safe` filter on the
+        preview page and pasted verbatim into real email clients.
+        """
+        return html.escape(value, quote=True) if value else ""
+
+    @staticmethod
+    def _sanitize_href(
+        url: str | None,
+        allowed_schemes: tuple[str, ...] = ("http", "https"),
+    ) -> Optional[str]:
+        """
+        Validate a URL before it is embedded in an href/src attribute.
+
+        Security: A03 - Rejects anything without an allowed scheme (blocks
+        javascript:, data:, vbscript:, and malformed values that could
+        break out of the surrounding double-quoted attribute) and
+        HTML-escapes whatever is left. Returns None for anything invalid
+        so callers can simply omit that link/image rather than render a
+        broken or dangerous attribute.
+        """
+        if not url:
+            return None
+        try:
+            parsed = urlparse(url)
+        except ValueError:
+            return None
+        if parsed.scheme not in allowed_schemes or not parsed.netloc:
+            return None
+        return html.escape(url, quote=True)
+
+    @staticmethod
     def _generate_html_content(
         full_name: str,
         job_title: str | None,
@@ -324,14 +365,26 @@ class SignatureService:
         Supports three layouts: classic, modern, minimal.
         """
 
+        # --- Escape/validate every user-supplied value up front (A03) ---
+        safe_full_name: str = SignatureService._escape(full_name)
+        safe_job_title: str = SignatureService._escape(job_title)
+        safe_company: str = SignatureService._escape(company)
+        safe_department: str = SignatureService._escape(department)
+        safe_website: Optional[str] = SignatureService._sanitize_href(website)
+        safe_logo_url: Optional[str] = SignatureService._sanitize_href(logo_url)
+        safe_linkedin_url: Optional[str] = SignatureService._sanitize_href(linkedin_url)
+        safe_twitter_url: Optional[str] = SignatureService._sanitize_href(twitter_url)
+        safe_facebook_url: Optional[str] = SignatureService._sanitize_href(facebook_url)
+        safe_instagram_url: Optional[str] = SignatureService._sanitize_href(instagram_url)
+
         # --- Name ---
         name_html: str = (
             f'<div style="font-size:17px;font-weight:bold;color:#111111;margin-bottom:3px;">'
-            f"{full_name}</div>"
+            f"{safe_full_name}</div>"
         )
 
         # --- Title / Company ---
-        title_parts: list[str] = [p for p in [job_title, company] if p]
+        title_parts: list[str] = [p for p in [safe_job_title, safe_company] if p]
         title_html: str = ""
         if title_parts:
             title_html = (
@@ -342,10 +395,10 @@ class SignatureService:
 
         # --- Department ---
         dept_html: str = ""
-        if department:
+        if safe_department:
             dept_html = (
                 f'<div style="font-size:12px;color:#777777;margin-bottom:2px;">'
-                f"{department}</div>"
+                f"{safe_department}</div>"
             )
 
         # --- Divider ---
@@ -356,14 +409,17 @@ class SignatureService:
         # --- Contact ---
         contact_parts: list[str] = []
         formatted_phone: str | None = SignatureService._format_phone(phone)
-        if formatted_phone:
+        safe_formatted_phone: str = SignatureService._escape(formatted_phone)
+        if safe_formatted_phone:
             contact_parts.append(
-                f'<a href="tel:{formatted_phone}" style="color:#555555;text-decoration:none;font-size:12px;">'
-                f"{formatted_phone}</a>"
+                f'<a href="tel:{safe_formatted_phone}" style="color:#555555;text-decoration:none;font-size:12px;">'
+                f"{safe_formatted_phone}</a>"
             )
-        if website:
-            display: str = (
+        if safe_website:
+            display: str = SignatureService._escape(
                 website.replace("https://", "").replace("http://", "").rstrip("/")
+                if website
+                else ""
             )
             tracked_website: str = (
                 f"{request.host_url.rstrip('/')}/track/click/{tracking_code}/website"
@@ -383,10 +439,10 @@ class SignatureService:
         # --- Social links ---
         social_parts: list[str] = []
         social_map: list[tuple[str | None, str, str, str]] = [
-            (linkedin_url, "LinkedIn", "in", "linkedin"),
-            (twitter_url, "Twitter/X", "𝕏", "twitter"),
-            (facebook_url, "Facebook", "f", "facebook"),
-            (instagram_url, "Instagram", "IG", "instagram"),
+            (safe_linkedin_url, "LinkedIn", "in", "linkedin"),
+            (safe_twitter_url, "Twitter/X", "𝕏", "twitter"),
+            (safe_facebook_url, "Facebook", "f", "facebook"),
+            (safe_instagram_url, "Instagram", "IG", "instagram"),
         ]
         for url, label, badge, platform in social_map:
             if url:
@@ -408,10 +464,10 @@ class SignatureService:
 
         # --- Logo ---
         logo_html: str = ""
-        if logo_url:
+        if safe_logo_url:
             logo_html = (
                 f'<td style="padding-right:16px;vertical-align:top;">'
-                f'<img src="{logo_url}" alt="Logo" width="64" height="64" '
+                f'<img src="{safe_logo_url}" alt="Logo" width="64" height="64" '
                 f'style="border-radius:6px;display:block;" /></td>'
             )
 
@@ -435,7 +491,7 @@ class SignatureService:
             # Colored header band containing name + title, white body below
             header_html: str = (
                 f'<div style="background:{accent_color};padding:10px 14px;border-radius:6px 6px 0 0;">'
-                f'<div style="font-size:17px;font-weight:bold;color:#ffffff;margin-bottom:3px;">{full_name}</div>'
+                f'<div style="font-size:17px;font-weight:bold;color:#ffffff;margin-bottom:3px;">{safe_full_name}</div>'
             )
             if title_parts:
                 header_html += (
@@ -501,11 +557,13 @@ class SignatureService:
         elif layout == "avatar":
             # Circular avatar (initials or logo) left of content
             words: list[str] = full_name.strip().split() if full_name else []
-            initials: str = "".join(w[0] for w in words[:2]).upper() if words else "YN"
-            if logo_url:
+            initials: str = SignatureService._escape(
+                "".join(w[0] for w in words[:2]).upper() if words else "YN"
+            )
+            if safe_logo_url:
                 avatar_td = (
                     f'<td style="padding-right:16px;vertical-align:middle;">'
-                    f'<img src="{logo_url}" alt="{initials}" width="52" height="52" '
+                    f'<img src="{safe_logo_url}" alt="{initials}" width="52" height="52" '
                     f'style="width:52px;height:52px;border-radius:50%;object-fit:cover;display:block;" /></td>'
                 )
             else:
@@ -536,13 +594,13 @@ class SignatureService:
         elif layout == "compact":
             # Single-line contact row: Job · Company | phone | website
             job_span: str = (
-                f'<span style="color:{accent_color};font-weight:500;font-size:12px;">{job_title}</span>'
-                if job_title
+                f'<span style="color:{accent_color};font-weight:500;font-size:12px;">{safe_job_title}</span>'
+                if safe_job_title
                 else ""
             )
             comp_span: str = (
-                f'<span style="color:#555555;font-size:12px;">{company}</span>'
-                if company
+                f'<span style="color:#555555;font-size:12px;">{safe_company}</span>'
+                if safe_company
                 else ""
             )
             sep1: str = (
@@ -592,8 +650,8 @@ class SignatureService:
             )
             dept_label: str = (
                 f'<div style="font-size:11px;color:#888888;letter-spacing:0.05em;'
-                f'text-transform:uppercase;margin-bottom:4px;">{department}</div>'
-                if department
+                f'text-transform:uppercase;margin-bottom:4px;">{safe_department}</div>'
+                if safe_department
                 else ""
             )
             content_td = (
