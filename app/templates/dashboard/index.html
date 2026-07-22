@@ -246,10 +246,10 @@
 
           <!-- Card row -->
           <div
-            class="flex items-center justify-between border border-gray-100 rounded-xl p-5 hover:border-primary transition-all"
+            class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border border-gray-100 rounded-xl p-5 hover:border-primary transition-all"
             :class="showHtml ? 'rounded-b-none border-b-0' : ''">
             <!-- Left: info -->
-            <div class="flex-1 min-w-0 mr-4">
+            <div class="flex-1 min-w-0 sm:mr-4">
               <div class="flex items-center gap-3 mb-1">
                 <span class="font-semibold text-gray-800">{{ sig.name }}</span>
                 {% if sig.is_active %}
@@ -279,7 +279,7 @@
             </div>
 
             <!-- Right: actions -->
-            <div class="flex items-center gap-2 flex-shrink-0">
+            <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
               <a
                 href="{{ url_for('signatures.preview', signature_id=sig.id) }}"
                 class="px-3 py-1.5 text-xs border border-gray-300 text-gray-600 rounded-lg font-semibold hover:bg-gray-100 transition-all">
