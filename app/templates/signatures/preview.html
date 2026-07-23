@@ -74,9 +74,36 @@
     </div>
 
     <!-- Install instructions -->
-    <div class="mt-8 bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-white">
-      <h2 class="font-bold text-lg mb-4">How to install in Gmail</h2>
-      <ol class="space-y-3 text-sm text-white/90">
+    <div class="mt-8 bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-white" x-data="{ client: 'gmail' }">
+      <h2 class="font-bold text-lg mb-4">How to install your signature</h2>
+
+      <!-- Tab buttons -->
+      <div class="flex gap-1 mb-5 border-b border-white/20" role="tablist">
+        <button
+          type="button"
+          @click="client = 'gmail'"
+          :class="client === 'gmail' ? 'border-white text-white' : 'border-transparent text-white/60 hover:text-white/90'"
+          class="px-4 py-2 text-sm font-semibold border-b-2 transition-colors">
+          Gmail
+        </button>
+        <button
+          type="button"
+          @click="client = 'outlook'"
+          :class="client === 'outlook' ? 'border-white text-white' : 'border-transparent text-white/60 hover:text-white/90'"
+          class="px-4 py-2 text-sm font-semibold border-b-2 transition-colors">
+          Outlook
+        </button>
+        <button
+          type="button"
+          @click="client = 'apple'"
+          :class="client === 'apple' ? 'border-white text-white' : 'border-transparent text-white/60 hover:text-white/90'"
+          class="px-4 py-2 text-sm font-semibold border-b-2 transition-colors">
+          Apple Mail
+        </button>
+      </div>
+
+      <!-- Gmail panel -->
+      <ol x-show="client === 'gmail'" class="space-y-3 text-sm text-white/90">
         <li class="flex gap-3">
           <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">1</span>
           <span>Click <strong class="text-white">Copy Signature</strong> above — this copies the rendered signature as rich text.</span>
@@ -87,7 +114,7 @@
         </li>
         <li class="flex gap-3">
           <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">3</span>
-          <span>Scroll to <strong class="text-white">Signature</strong> and click <strong class="text-white">Create new</strong> or click inside an existing signature box.</span>
+          <span>Scroll to <strong class="text-white">Signature</strong> and click <strong class="text-white">Create new</strong>, or click inside an existing signature box (select all and delete first if it already has content).</span>
         </li>
         <li class="flex gap-3">
           <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">4</span>
@@ -95,10 +122,96 @@
         </li>
         <li class="flex gap-3">
           <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">5</span>
+          <span>Scroll to <strong class="text-white">Signature defaults</strong> and set both <strong class="text-white">"FOR NEW EMAILS USE"</strong> and <strong class="text-white">"ON REPLY/FORWARD USE"</strong> to this signature — otherwise it won't actually be added to emails you send.</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">6</span>
           <span>Click <strong class="text-white">Save Changes</strong> at the bottom of the Settings page.</span>
         </li>
       </ol>
-      <p class="mt-4 text-xs text-white/60">Works with Gmail. For Outlook, paste the signature in <strong class="text-white/80">File → Options → Mail → Signatures</strong>.</p>
+
+      <!-- Outlook panel -->
+      <div x-show="client === 'outlook'" x-cloak class="text-sm text-white/90">
+        <p class="mb-3 font-semibold text-white">New Outlook / Outlook on the web (outlook.office.com):</p>
+        <ol class="space-y-3 mb-6">
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">1</span>
+            <span>Click <strong class="text-white">Copy Signature</strong> above.</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">2</span>
+            <span>Click the <strong class="text-white">gear icon</strong> (Settings) in the top right, then <strong class="text-white">View all Outlook settings</strong>. If you instead see <strong class="text-white">Accounts → Signatures</strong> directly, use that.</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">3</span>
+            <span>Go to <strong class="text-white">Mail → Compose and reply</strong>, then click <strong class="text-white">+ New signature</strong> and name it.</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">4</span>
+            <span>Click inside the editor and paste (<strong class="text-white">Ctrl+V</strong> on Windows, <strong class="text-white">Cmd+V</strong> on Mac).</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">5</span>
+            <span>Set both the <strong class="text-white">"For new messages"</strong> and <strong class="text-white">"For replies/forwards"</strong> dropdowns to this signature.</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">6</span>
+            <span>Click <strong class="text-white">Save</strong>.</span>
+          </li>
+        </ol>
+        <p class="mb-3 font-semibold text-white">Classic Outlook desktop (Windows, with the ribbon toolbar):</p>
+        <ol class="space-y-3">
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">1</span>
+            <span>Click <strong class="text-white">Copy Signature</strong> above.</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">2</span>
+            <span>Go to <strong class="text-white">File → Options → Mail → Signatures</strong>.</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">3</span>
+            <span>Click <strong class="text-white">New</strong>, name it, then paste into the editor box.</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">4</span>
+            <span>Under <strong class="text-white">"Choose default signature,"</strong> set the account and both the <strong class="text-white">New messages</strong> and <strong class="text-white">Replies/forwards</strong> dropdowns to this signature.</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">5</span>
+            <span>Click <strong class="text-white">OK</strong>.</span>
+          </li>
+        </ol>
+      </div>
+
+      <!-- Apple Mail panel -->
+      <ol x-show="client === 'apple'" x-cloak class="space-y-3 text-sm text-white/90">
+        <li class="flex gap-3">
+          <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">1</span>
+          <span>Click <strong class="text-white">Copy Signature</strong> above.</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">2</span>
+          <span>Open <strong class="text-white">Mail</strong>, then from the menu bar choose <strong class="text-white">Mail → Settings</strong> (older macOS: <strong class="text-white">Preferences</strong>), or press <strong class="text-white">Cmd+,</strong></span>
+        </li>
+        <li class="flex gap-3">
+          <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">3</span>
+          <span>Click the <strong class="text-white">Signatures</strong> tab, select the account on the left, then click <strong class="text-white">+</strong> to add a new signature and name it.</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">4</span>
+          <span><strong class="text-white">Important:</strong> uncheck <strong class="text-white">"Always match my default message font"</strong> before pasting, or Apple Mail will strip your signature's fonts and colors.</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">5</span>
+          <span>Click inside the signature box on the right and paste (<strong class="text-white">Cmd+V</strong>). The preview pane may not show images, but they'll appear correctly in actual outgoing emails.</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="flex-shrink-0 w-6 h-6 bg-white text-primary rounded-full flex items-center justify-center font-bold text-xs">6</span>
+          <span>Make sure the signature is checked/assigned to the account in the middle column, then close Settings and send a test email to confirm it looks right.</span>
+        </li>
+      </ol>
+
     </div>
 
   </div>
