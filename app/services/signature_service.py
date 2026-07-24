@@ -362,7 +362,14 @@ class SignatureService:
     ) -> str:
         """
         Generate email-client-compatible HTML for the signature.
-        Supports three layouts: classic, modern, minimal.
+        Supports seven layouts: classic, modern, minimal, ruled, avatar,
+        compact, banner.
+
+        Free-tier accounts get a small "Sent with Signature" watermark
+        appended after the signature body; Pro accounts do not. This is
+        re-evaluated every time html_content is generated (on create and
+        on edit), so a signature's watermark will reflect the user's
+        current subscription_tier the next time it's saved.
         """
 
         # --- Escape/validate every user-supplied value up front (A03) ---
@@ -476,6 +483,22 @@ class SignatureService:
             f'<img src="{request.host_url.rstrip("/")}/track/pixel/{tracking_code}.gif" '
             f'width="1" height="1" alt="" style="display:none;" />'
         )
+
+        # --- Free-tier watermark ---
+        # This is static, developer-authored text, not user input, so it does
+        # not go through _escape(). Defaults to showing the watermark
+        # ("free") if subscription_tier is ever missing, rather than
+        # defaulting to "pro" — since this is a retention/monetization
+        # feature, failing closed (watermark shown) is the safe default.
+        watermark_html: str = ""
+        if getattr(current_user, "subscription_tier", "free") != "pro":
+            watermark_html = (
+                '<div style="margin-top:8px;font-size:10px;color:#aaaaaa;'
+                'font-family:Arial, Helvetica, sans-serif;">'
+                'Sent with <a href="' + request.host_url.rstrip("/") + '" '
+                'style="color:#aaaaaa;text-decoration:underline;">Signature</a>'
+                "</div>"
+            )
 
         # --- Layout: build content_td differently per layout ---
         body_html: str = (
@@ -685,6 +708,9 @@ class SignatureService:
                 + "</div>"
                 + pixel_html
             )
+
+        if watermark_html:
+            html += watermark_html
 
         return html
 
