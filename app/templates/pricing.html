@@ -61,42 +61,28 @@
               </svg>
               1 email signature
             </li>
+            
             <li class="flex items-center gap-3 text-gray-700">
               <svg class="w-5 h-5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
               </svg>
-              Basic signature creation
+              Analytics dashboard (opens + clicks)
             </li>
-            <li class="flex items-center gap-3 text-gray-700">
-              <svg class="w-5 h-5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-              </svg>
-              Basic analytics (opens only)
-            </li>
+
             <li class="flex items-center gap-3 text-gray-700">
               <svg class="w-5 h-5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
               </svg>
               Works with all email clients
             </li>
+
             <li class="flex items-center gap-3 text-gray-400">
               <svg class="w-5 h-5 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
               </svg>
-              <span>Watermark on signature</span>
+              <span>Signature watermark</span>
             </li>
-            <li class="flex items-center gap-3 text-gray-400">
-              <svg class="w-5 h-5 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
-              <span>Link click tracking</span>
-            </li>
-            <li class="flex items-center gap-3 text-gray-400">
-              <svg class="w-5 h-5 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
-              <span>Priority support</span>
-            </li>
+
           </ul>
 
           {% if current_user.is_authenticated %}
@@ -154,13 +140,7 @@
               <svg class="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
               </svg>
-              Advanced signature creation
-            </li>
-            <li class="flex items-center gap-3 text-white">
-              <svg class="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-              </svg>
-              Advanced analytics (opens + clicks)
+              Analytics dashboard (opens + clicks)
             </li>
             <li class="flex items-center gap-3 text-white">
               <svg class="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -178,14 +158,9 @@
               <svg class="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
               </svg>
-              Link click tracking
-            </li>
-            <li class="flex items-center gap-3 text-white">
-              <svg class="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-              </svg>
               Priority support
             </li>
+
           </ul>
 
           {% if current_user.is_authenticated and current_user.subscription_tier == 'pro' %}
