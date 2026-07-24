@@ -11,7 +11,7 @@ from flask.testing import FlaskClient
 from app import db
 from app.models.signature import Signature
 from app.services.signature_service import SignatureService
-from tests.conftest import register_via_client
+from tests.conftest import get_user_by_email, register_via_client
 
 
 def _create_signature(
@@ -449,3 +449,138 @@ def test_edit_reescapes_full_name_since_html_is_fully_regenerated(
         assert signature is not None
         assert "<script>" not in signature.html_content
         assert "&lt;script&gt;" in signature.html_content
+
+
+# ---------------------------------------------------------------------------
+# Free-tier watermark
+# ---------------------------------------------------------------------------
+
+WATERMARK_MARKER = "Sent with"
+
+
+def _set_subscription_tier(app: Flask, email: str, tier: str) -> None:
+    """
+    Directly set a user's subscription_tier for test setup (no Stripe call).
+
+    Deliberately does NOT open its own `with app.app_context():` block.
+    The `app` fixture already keeps one app context (and one SQLAlchemy
+    session) active for the whole test. Opening a second one here would
+    create a separate session that never touches the User object already
+    cached in the first session's identity map from registration/login --
+    committing a tier change through that second session would leave the
+    original session (the one every later client.post(...) call reuses)
+    still holding the stale, pre-upgrade value.
+    """
+    user = get_user_by_email(app, email)
+    user.subscription_tier = tier
+    db.session.commit()
+
+
+def test_free_tier_signature_includes_watermark(
+    app: Flask, client: FlaskClient
+) -> None:
+    register_via_client(client, email="watermark1@example.com")
+
+    _create_signature(client, name="Free Sig", full_name="Jane Doe")
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="Free Sig").first()
+        assert signature is not None
+        assert WATERMARK_MARKER in signature.html_content
+
+
+def test_pro_tier_signature_does_not_include_watermark(
+    app: Flask, client: FlaskClient
+) -> None:
+    register_via_client(client, email="watermark2@example.com")
+    _set_subscription_tier(app, "watermark2@example.com", "pro")
+
+    _create_signature(client, name="Pro Sig", full_name="Jane Doe")
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="Pro Sig").first()
+        assert signature is not None
+        assert WATERMARK_MARKER not in signature.html_content
+
+
+def test_watermark_removed_after_edit_following_upgrade_to_pro(
+    app: Flask, client: FlaskClient
+) -> None:
+    """
+    The watermark is only re-evaluated when html_content is regenerated
+    (create/edit) -- not automatically the instant a subscription changes.
+    Confirms that upgrading, then editing, removes it.
+    """
+    signature_id = _create_signature_for_user(app, client, "watermark3@example.com")
+
+    with app.app_context():
+        signature = db.session.get(Signature, signature_id)
+        assert signature is not None
+        assert WATERMARK_MARKER in signature.html_content  # free by default
+
+    _set_subscription_tier(app, "watermark3@example.com", "pro")
+
+    client.post(
+        f"/signatures/{signature_id}/edit",
+        data={"name": "Owned Sig", "full_name": "Owner Name", "website": ""},
+        follow_redirects=False,
+    )
+
+    with app.app_context():
+        signature = db.session.get(Signature, signature_id)
+        assert signature is not None
+        assert WATERMARK_MARKER not in signature.html_content
+
+
+def test_watermark_reappears_after_edit_following_downgrade(
+    app: Flask, client: FlaskClient
+) -> None:
+    """
+    Symmetric case: downgrading from pro back to free, then editing, must
+    bring the watermark back.
+    """
+    register_via_client(client, email="watermark4@example.com")
+    _set_subscription_tier(app, "watermark4@example.com", "pro")
+
+    _create_signature(client, name="Downgrade Sig", full_name="Jane Doe")
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="Downgrade Sig").first()
+        assert signature is not None
+        assert WATERMARK_MARKER not in signature.html_content
+        signature_id = signature.id
+
+    _set_subscription_tier(app, "watermark4@example.com", "free")
+
+    client.post(
+        f"/signatures/{signature_id}/edit",
+        data={"name": "Downgrade Sig", "full_name": "Jane Doe", "website": ""},
+        follow_redirects=False,
+    )
+
+    with app.app_context():
+        signature = db.session.get(Signature, signature_id)
+        assert signature is not None
+        assert WATERMARK_MARKER in signature.html_content
+
+
+def test_watermark_survives_tracking_pixel_stripping_for_preview(
+    app: Flask, client: FlaskClient
+) -> None:
+    """
+    strip_tracking_pixel() targets only the pixel <img> tag via a narrow
+    regex. Confirm it doesn't accidentally also strip the watermark, since
+    the preview page relies on this function for its on-screen render.
+    """
+    register_via_client(client, email="watermark5@example.com")
+    _create_signature(client, name="Preview Sig", full_name="Jane Doe")
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="Preview Sig").first()
+        assert signature is not None
+        signature_id = signature.id
+
+    response = client.get(f"/signatures/{signature_id}/preview")
+
+    assert response.status_code == 200
+    assert WATERMARK_MARKER.encode() in response.data
