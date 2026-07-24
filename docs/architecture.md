@@ -57,7 +57,7 @@ Each Blueprint owns one area of responsibility and enforces ownership checks loc
 ### Services
 Business logic is kept out of routes and lives in `app/services/`:
 
-- **`signature_service.py`** — builds the actual signature `html_content` from user-supplied fields across seven layouts (classic, modern, minimal, ruled, avatar, compact, banner). This is the single source of truth for what a signature looks like; the in-app preview and the copied output both trace back to this function.
+- **`signature_service.py`** — builds the actual signature `html_content` from user-supplied fields across seven layouts (classic, modern, minimal, ruled, avatar, compact, banner). This is the single source of truth for what a signature looks like; the in-app preview and the copied output both trace back to this function. For free-tier accounts, a "Sent with Signature" watermark line is appended at the single `return` point so it applies uniformly across all seven layouts. The check defaults to showing the watermark if tier data is ever missing, failing closed on this retention feature. The watermark is re-evaluated on every create/edit, not automatically on a Stripe tier change, so an upgrade takes effect on the signature's next save rather than instantly.
 - **`analytics_service.py`** — aggregates raw tracking events into the numbers shown on the dashboard, including filtering out known bot and scanner user agents so open/click counts stay meaningful.
 - **`email_service.py`** — wraps Brevo for password resets and any transactional email.
 - **`user_service.py`** — user creation, plan state, and account-level logic shared across routes.

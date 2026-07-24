@@ -22,7 +22,7 @@ A web-based signature generator that creates customized, trackable signatures wi
 1. **SaaS Architecture:** Multi-tier application with clear separation of concerns (routes, services, models)
 2. **Subscription Management:** Stripe Checkout and webhook-driven billing, with automatic signature locking on downgrade
 3. **Web Tracking:** Pixel-based open tracking and redirect-based click tracking, with bot/scanner filtering to keep analytics accurate
-4. **Retention Mechanics:** Technical dependency on hosted assets creates ongoing business value
+4. **Retention Mechanics:** Technical dependency on hosted assets creates ongoing business value. Free-tier signatures also carry a "Sent with Signature" watermark line, appended server-side at generation time, which is removed on upgrade to Pro
 5. **Security:** OWASP Top 10 practices applied throughout, including a remediated stored XSS finding (see Security section below)
 6. **Type-Safe Programming:** Python type hints checked with `ty`, Marshmallow-style validation at the boundary, ownership-based access control enforced consistently across routes
 
@@ -40,7 +40,7 @@ A web-based signature generator that creates customized, trackable signatures wi
 | Database (dev/test) | SQLite (in-memory, StaticPool, for tests) |
 | Database (prod) | Neon Postgres 18 |
 | Hosting | Render.com (Hobby free tier), auto-deploys on push to `main` |
-| Testing | pytest — 41 tests, run in CI and locally before every deploy |
+| Testing | pytest — 62 tests, run in CI and locally before every deploy |
 | CI | GitHub Actions (`.github/workflows/ci.yml`) |
 | Containerization | Docker, scanned with Docker Scout |
 | Type checking | `ty` |
@@ -58,7 +58,7 @@ signature/
 │   ├── templates/       # Jinja2 templates, organized by feature area
 │   └── static/
 ├── scripts/              # One-off/maintenance tooling (documented, not auto-run)
-├── tests/                # pytest suite (41 tests)
+├── tests/                # pytest suite (62 tests)
 └── migrations/           # Flask-Migrate migration history
 ```
 

@@ -1043,9 +1043,9 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
             Works with all email clients
           </li>
 
-          <li class="flex items-start text-gray-400">
+          <li class="flex items-start text-gray-700">
             <svg
-              class="w-6 h-6 text-gray-300 mr-3 flex-shrink-0"
+              class="w-6 h-6 text-green-500 mr-3 flex-shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24">
@@ -1053,10 +1053,11 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"></path>
+                d="M5 13l4 4L19 7"></path>
             </svg>
-            Signature watermark
+            Includes "Sent with Signature" branding
           </li>
+          
         </ul>
 
         {# NEW #} {% if current_user.is_authenticated %}
@@ -1206,7 +1207,7 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
           "Seeing who opens my emails has completely changed how I follow up
           with clients. The analytics are incredible!"
         </p>
-        <p class="text-white/60 text-sm">- Sarah K., Sales Manager</p>
+        <p class="text-white/60 text-sm">- Sarah J., Sales Manager</p>
       </div>
 
       <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6">
