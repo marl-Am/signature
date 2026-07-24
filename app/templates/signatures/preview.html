@@ -235,7 +235,7 @@
     temp.style.top = '-9999px';
     temp.style.left = '-9999px';
     temp.style.opacity = '0';
-    temp.style.backgroundColor = '#ffffff';  // ADD THIS LINE TO FIX BACKGROUND ERROR
+    temp.style.backgroundColor = '#ffffff'; // Prevent page background from being inherited into copied signature
     temp.innerHTML = rawHtml;
     document.body.appendChild(temp);
 
