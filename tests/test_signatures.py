@@ -1,7 +1,8 @@
 # tests/test_signatures.py
 """
 Tests for app/routes/signatures.py: create, edit, delete, preview, and
-ownership enforcement (A01 - Broken Access Control).
+ownership enforcement (A01 - Broken Access Control), plus output escaping
+(A03 - Injection / stored XSS regression coverage).
 """
 
 from flask import Flask
@@ -9,7 +10,9 @@ from flask.testing import FlaskClient
 
 from app import db
 from app.models.signature import Signature
+from app.services.signature_service import SignatureService
 from tests.conftest import register_via_client
+
 
 def _create_signature(
     client: FlaskClient,
@@ -196,3 +199,253 @@ def test_edit_requires_name_and_full_name(app: Flask, client: FlaskClient) -> No
 
     assert response.status_code == 200
     assert b"required" in response.data
+
+
+# ---------------------------------------------------------------------------
+# XSS / Output Escaping (A03) — regression coverage for the stored XSS bug
+# fixed in session 19. A signature saved with HTML-special or quote
+# characters in free-text fields, or a dangerous URL scheme in any URL
+# field, must produce escaped/rejected output in html_content — never live
+# tags or a clickable dangerous href.
+# ---------------------------------------------------------------------------
+
+
+# --- Unit tests: SignatureService._escape() ---------------------------------
+
+
+def test_escape_helper_escapes_angle_brackets_and_quotes() -> None:
+    result = SignatureService._escape('<script>"test"</script>')
+    assert "<script>" not in result
+    assert "&lt;script&gt;" in result
+    assert "&quot;" in result
+
+
+def test_escape_helper_handles_none_and_empty_string() -> None:
+    assert SignatureService._escape(None) == ""
+    assert SignatureService._escape("") == ""
+
+
+# --- Unit tests: SignatureService._sanitize_href() --------------------------
+
+
+def test_sanitize_href_rejects_javascript_scheme() -> None:
+    assert SignatureService._sanitize_href("javascript:alert(1)") is None
+
+
+def test_sanitize_href_rejects_data_scheme() -> None:
+    assert (
+        SignatureService._sanitize_href("data:text/html,<script>alert(1)</script>")
+        is None
+    )
+
+
+def test_sanitize_href_rejects_vbscript_scheme() -> None:
+    assert SignatureService._sanitize_href("vbscript:msgbox(1)") is None
+
+
+def test_sanitize_href_rejects_malformed_url_without_netloc() -> None:
+    assert SignatureService._sanitize_href("not a url") is None
+
+
+def test_sanitize_href_accepts_well_formed_https_url() -> None:
+    assert (
+        SignatureService._sanitize_href("https://example.com") == "https://example.com"
+    )
+
+
+def test_sanitize_href_returns_none_for_empty_or_none() -> None:
+    assert SignatureService._sanitize_href(None) is None
+    assert SignatureService._sanitize_href("") is None
+
+
+# --- End-to-end: create/edit through the route, checking stored html_content -
+
+
+def test_full_name_with_script_tag_is_escaped_in_stored_html(
+    app: Flask, client: FlaskClient
+) -> None:
+    register_via_client(client, email="xss1@example.com")
+
+    _create_signature(
+        client,
+        name="XSS Full Name",
+        full_name="<script>alert(1)</script>",
+    )
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="XSS Full Name").first()
+        assert signature is not None
+        assert "<script>" not in signature.html_content
+        assert "&lt;script&gt;" in signature.html_content
+
+
+def test_quote_and_angle_brackets_in_full_name_cannot_inject_a_live_tag(
+    app: Flask, client: FlaskClient
+) -> None:
+    """
+    full_name is rendered as text content inside a <div>...</div>. If
+    angle brackets and quotes were not escaped, a value like this could
+    inject a live, executable <img onerror=...> tag into the page. Once
+    escaped, the dangerous characters become harmless entities and the
+    raw tag can never appear verbatim, even though the escaped text still
+    visibly contains words like "onerror" and "alert" -- that's expected
+    and harmless once it's inert text rather than a live tag.
+    """
+    register_via_client(client, email="xss2@example.com")
+
+    live_tag = "<img src=x onerror=alert(1)>"
+    _create_signature(client, name="XSS Quote Name", full_name=f'Jane">{live_tag}')
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="XSS Quote Name").first()
+        assert signature is not None
+        # The raw, executable tag must never appear unescaped
+        assert live_tag not in signature.html_content
+        # The dangerous characters must appear as harmless entities instead
+        assert "&quot;" in signature.html_content
+        assert "&lt;img" in signature.html_content
+        assert "&gt;" in signature.html_content
+
+
+def test_company_field_with_html_is_escaped(app: Flask, client: FlaskClient) -> None:
+    register_via_client(client, email="xss3@example.com")
+
+    _create_signature(
+        client,
+        name="XSS Company",
+        full_name="Jane Doe",
+        company="Acme<script>alert(1)</script>",
+    )
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="XSS Company").first()
+        assert signature is not None
+        assert "<script>" not in signature.html_content
+        assert "&lt;script&gt;" in signature.html_content
+
+
+def test_department_field_with_html_is_escaped(app: Flask, client: FlaskClient) -> None:
+    register_via_client(client, email="xss4@example.com")
+
+    live_tag = "<img src=x onerror=alert(1)>"
+    _create_signature(
+        client,
+        name="XSS Department",
+        full_name="Jane Doe",
+        department=live_tag,
+    )
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="XSS Department").first()
+        assert signature is not None
+        assert live_tag not in signature.html_content
+        assert "&lt;img" in signature.html_content
+        assert "&gt;" in signature.html_content
+
+
+def test_website_url_with_empty_host_produces_no_link(
+    app: Flask, client: FlaskClient
+) -> None:
+    """
+    The website contact link's href is always the app's own
+    /track/click/... redirect URL, never the user's raw website value --
+    the raw value only ever appears as escaped display text. So the
+    meaningful thing to test here is that _sanitize_href's netloc check
+    still gates whether the link is shown at all: a URL with a valid
+    scheme but no host must not produce a rendered link.
+    """
+    register_via_client(client, email="xss5@example.com")
+
+    _create_signature(
+        client,
+        name="XSS Empty Host",
+        full_name="Jane Doe",
+        website="https:///",
+    )
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="XSS Empty Host").first()
+        assert signature is not None
+        assert "track/click" not in signature.html_content
+
+
+def test_logo_url_with_quote_cannot_break_out_of_src_attribute(
+    app: Flask, client: FlaskClient
+) -> None:
+    """
+    logo_url is the one field whose raw value lands directly in an
+    src="..." attribute. _normalize_url leaves values that already start
+    with https:// unchanged, so a URL crafted with an embedded double
+    quote must still be safely escaped by _sanitize_href before reaching
+    that attribute -- otherwise it could break out and inject a new one
+    (e.g. onerror=alert(1)).
+    """
+    register_via_client(client, email="xss6@example.com")
+
+    malicious = 'https://evil.example.com/logo.png" onerror="alert(1)'
+    _create_signature(
+        client, name="XSS Logo Attr Breakout", full_name="Jane Doe", logo_url=malicious
+    )
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="XSS Logo Attr Breakout").first()
+        assert signature is not None
+        assert 'onerror="alert(1)"' not in signature.html_content
+        assert "&quot;" in signature.html_content
+
+
+def test_logo_url_with_embedded_script_tag_is_html_escaped(
+    app: Flask, client: FlaskClient
+) -> None:
+    """
+    _normalize_url prepends https:// to any value that doesn't already
+    start with http(s), so a raw dangerous-scheme value like a data: URL
+    actually passes _sanitize_href's scheme check once normalized (its
+    scheme is now "https"). The thing that actually keeps this safe is
+    that the whole value, including any embedded markup, still goes
+    through html.escape -- so it can only ever render as an inert, broken
+    image src, never as executable markup.
+    """
+    register_via_client(client, email="xss7@example.com")
+
+    malicious = "data:text/html,<script>alert(1)</script>"
+    _create_signature(
+        client,
+        name="XSS Logo Data Scheme",
+        full_name="Jane Doe",
+        logo_url=malicious,
+    )
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="XSS Logo Data Scheme").first()
+        assert signature is not None
+        assert "<script>" not in signature.html_content
+        assert "&lt;script&gt;" in signature.html_content
+
+
+def test_edit_reescapes_full_name_since_html_is_fully_regenerated(
+    app: Flask, client: FlaskClient
+) -> None:
+    """
+    html_content is fully regenerated on every edit (see
+    SignatureService.update_signature), so a malicious value introduced
+    through an edit must be escaped exactly like one introduced at
+    creation time.
+    """
+    signature_id = _create_signature_for_user(app, client, "xss7@example.com")
+
+    client.post(
+        f"/signatures/{signature_id}/edit",
+        data={
+            "name": "Owned Sig",
+            "full_name": "<script>alert(1)</script>",
+            "website": "",
+        },
+        follow_redirects=False,
+    )
+
+    with app.app_context():
+        signature = db.session.get(Signature, signature_id)
+        assert signature is not None
+        assert "<script>" not in signature.html_content
+        assert "&lt;script&gt;" in signature.html_content
