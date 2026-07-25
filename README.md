@@ -33,14 +33,14 @@ A web-based signature generator that creates customized, trackable signatures wi
 | Backend | Flask + Gunicorn (Python 3.13.5) |
 | ORM / Migrations | SQLAlchemy + Flask-Migrate |
 | Authentication | Flask-Login + Argon2id (`argon2-cffi`) password hashing |
-| Frontend | Jinja2 + Tailwind CSS (CDN) + Alpine.js (CDN) |
+| Frontend | Jinja2 + Tailwind CSS (compiled at Docker build time) + Alpine.js (CDN) |
 | Charts | Chart.js |
 | Payments | Stripe (Checkout + Webhooks) |
 | Transactional email | Brevo (300 emails/day, free tier, permanent) |
 | Database (dev/test) | SQLite (in-memory, StaticPool, for tests) |
 | Database (prod) | Neon Postgres 18 |
 | Hosting | Render.com (Hobby free tier), auto-deploys on push to `main` |
-| Testing | pytest — 62 tests, run in CI and locally before every deploy |
+| Testing | pytest — 72 tests, run in CI and locally before every deploy |
 | CI | GitHub Actions (`.github/workflows/ci.yml`) |
 | Containerization | Docker, scanned with Docker Scout |
 | Type checking | `ty` |
@@ -58,7 +58,7 @@ signature/
 │   ├── templates/       # Jinja2 templates, organized by feature area
 │   └── static/
 ├── scripts/              # One-off/maintenance tooling (documented, not auto-run)
-├── tests/                # pytest suite (62 tests)
+├── tests/                # pytest suite (72 tests)
 └── migrations/           # Flask-Migrate migration history
 ```
 
@@ -86,7 +86,6 @@ venv\Scripts\activate  # Windows
 3. **Install dependencies:**
 ```bash
 pip install -r requirements.txt
-pip install -r requirements-dev.txt
 ```
 
 4. **Configure environment:**
@@ -137,7 +136,7 @@ Security is treated as a first-class concern rather than an afterthought:
 - **Access Control (A01):** Ownership checks enforced consistently on every signature/analytics route — a user can only view or modify their own data.
 - **Cryptographic Failures (A02):** Passwords hashed with Argon2id; all traffic served over TLS via Render.
 - **Injection (A03):** SQLAlchemy ORM used throughout; no raw string-built queries.
-- **Stored XSS (remediated):** A stored XSS vulnerability in the signature HTML generation pipeline was identified, traced to unescaped user input in the server-side HTML builder, and fixed with proper input escaping and URL scheme validation using Python's standard library. Regression coverage for this bug class is being added to the test suite.
+- **Stored XSS (remediated):** A stored XSS vulnerability in the signature HTML generation pipeline was identified, traced to unescaped user input in the server-side HTML builder, and fixed with proper input escaping and URL scheme validation using Python's standard library. Regression coverage for this bug class (and the same gap later found in Pro-tier accent color and font selection) is in place and passing as part of the 72-test suite.
 - **Dependency & container hygiene:** Docker image scanned with Docker Scout; no fixable critical or high vulnerabilities as of the last scan.
 - **CI enforcement:** Every push runs the full pytest suite, Ruff linting, and `ty` type checking before deploy.
 
