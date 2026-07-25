@@ -99,9 +99,8 @@ class SignatureService:
         Returns:
             Newly created Signature object
         """
-        accent_color = SignatureService._sanitize_accent_color(
-            accent_color, current_user
-        )
+        accent_color = SignatureService._sanitize_accent_color(accent_color, current_user)
+        font_family = SignatureService._sanitize_font_family(font_family, current_user)
         tracking_code = secrets.token_urlsafe(16)
 
         html_content: str = SignatureService._generate_html_content(
@@ -191,6 +190,8 @@ class SignatureService:
             if field in allowed_fields:
                 if field == "accent_color":
                     value = SignatureService._sanitize_accent_color(value, current_user)
+                elif field == "font_family":
+                    value = SignatureService._sanitize_font_family(value, current_user)
                 setattr(signature, field, value)
 
         signature.updated_at = datetime.now(timezone.utc)
@@ -384,6 +385,64 @@ class SignatureService:
             return accent_color
         return SignatureService.DEFAULT_ACCENT_COLOR
 
+    DEFAULT_FONT_FAMILY: str = "Arial, Helvetica, sans-serif"
+
+    # Free tier: a small, safe set of universally-available fonts.
+    FREE_FONT_FAMILIES: frozenset[str] = frozenset(
+        {
+            "Arial, Helvetica, sans-serif",
+            "Calibri, Candara, sans-serif",
+            "'Times New Roman', Times, serif",
+        }
+    )
+
+    # Pro tier: the full set offered in the UI's <select>. Deliberately a
+    # superset of FREE_FONT_FAMILIES rather than a separate list, so a
+    # free font is always valid for a Pro account too.
+    PRO_FONT_FAMILIES: frozenset[str] = FREE_FONT_FAMILIES | frozenset(
+        {
+            "'Century Gothic', CenturyGothic, sans-serif",
+            "'Courier New', Courier, monospace",
+            "Garamond, 'EB Garamond', serif",
+            "Georgia, 'Times New Roman', serif",
+            "Palatino, 'Palatino Linotype', serif",
+            "Tahoma, Geneva, sans-serif",
+            "'Trebuchet MS', Tahoma, sans-serif",
+            "Verdana, Geneva, sans-serif",
+        }
+    )
+
+    @staticmethod
+    def _sanitize_font_family(font_family: str | None, user: object) -> str:
+        """
+        Validate a user-supplied font family before it is embedded in
+        inline style="" attributes across every layout.
+
+        Security: A03 - font_family was previously interpolated directly
+        into style attributes with no escaping or validation. The UI only
+        ever offers a fixed <select> of values, but that's a client-side
+        constraint only; a request built outside the form (curl, dev
+        tools) could submit anything, including a value containing a
+        double-quote character that breaks out of the attribute. A
+        positive allow-list match closes this completely, since every
+        permitted value is a literal string this file defines itself, none
+        of which contain a double quote.
+
+        Free-tier accounts are restricted to FREE_FONT_FAMILIES; Pro-tier
+        accounts may pick from the larger PRO_FONT_FAMILIES set. Anything
+        that doesn't match the caller's allowed set falls back to the
+        default, the same fail-closed pattern as accent color and the
+        free-tier watermark.
+        """
+        allowed: frozenset[str] = (
+            SignatureService.PRO_FONT_FAMILIES
+            if SignatureService._is_pro(user)
+            else SignatureService.FREE_FONT_FAMILIES
+        )
+        if font_family in allowed:
+            return font_family
+        return SignatureService.DEFAULT_FONT_FAMILY
+
     @staticmethod
     def _generate_html_content(
         full_name: str,
@@ -421,18 +480,20 @@ class SignatureService:
         safe_department: str = SignatureService._escape(department)
         safe_accent_color: str = (
             accent_color
-            if accent_color
-            and SignatureService._HEX_COLOR_PATTERN.fullmatch(accent_color)
+            if accent_color and SignatureService._HEX_COLOR_PATTERN.fullmatch(accent_color)
             else SignatureService.DEFAULT_ACCENT_COLOR
+        )
+        safe_font_family: str = (
+            font_family
+            if font_family in SignatureService.PRO_FONT_FAMILIES
+            else SignatureService.DEFAULT_FONT_FAMILY
         )
         safe_website: Optional[str] = SignatureService._sanitize_href(website)
         safe_logo_url: Optional[str] = SignatureService._sanitize_href(logo_url)
         safe_linkedin_url: Optional[str] = SignatureService._sanitize_href(linkedin_url)
         safe_twitter_url: Optional[str] = SignatureService._sanitize_href(twitter_url)
         safe_facebook_url: Optional[str] = SignatureService._sanitize_href(facebook_url)
-        safe_instagram_url: Optional[str] = SignatureService._sanitize_href(
-            instagram_url
-        )
+        safe_instagram_url: Optional[str] = SignatureService._sanitize_href(instagram_url)
 
         # --- Name ---
         name_html: str = (
@@ -586,7 +647,7 @@ class SignatureService:
             )
             html = (
                 f'<table cellpadding="0" cellspacing="0" border="0" '
-                f'style="font-family:{font_family};max-width:520px;">'
+                f'style="font-family:{safe_font_family};max-width:520px;">'
                 "<tr>" + logo_html + content_td + "</tr>"
                 "</table>" + pixel_html
             )
@@ -604,7 +665,7 @@ class SignatureService:
             )
             html = (
                 f'<table cellpadding="0" cellspacing="0" border="0" '
-                f'style="font-family:{font_family};max-width:520px;">'
+                f'style="font-family:{safe_font_family};max-width:520px;">'
                 "<tr>" + logo_html + content_td + "</tr>"
                 "</table>" + pixel_html
             )
@@ -622,7 +683,7 @@ class SignatureService:
             )
             html = (
                 f'<table cellpadding="0" cellspacing="0" border="0" '
-                f'style="font-family:{font_family};max-width:520px;">'
+                f'style="font-family:{safe_font_family};max-width:520px;">'
                 "<tr>" + logo_html + content_td + "</tr>"
                 "</table>" + pixel_html
             )
@@ -659,7 +720,7 @@ class SignatureService:
             )
             html = (
                 f'<table cellpadding="0" cellspacing="0" border="0" '
-                f'style="font-family:{font_family};max-width:520px;">'
+                f'style="font-family:{safe_font_family};max-width:520px;">'
                 "<tr>" + avatar_td + content_td + "</tr>"
                 "</table>" + pixel_html
             )
@@ -708,7 +769,7 @@ class SignatureService:
             )
             html = (
                 f'<table cellpadding="0" cellspacing="0" border="0" '
-                f'style="font-family:{font_family};max-width:520px;">'
+                f'style="font-family:{safe_font_family};max-width:520px;">'
                 "<tr>" + logo_html + content_td + "</tr>"
                 "</table>" + pixel_html
             )
@@ -737,7 +798,7 @@ class SignatureService:
             )
             html = (
                 f'<table cellpadding="0" cellspacing="0" border="0" '
-                f'style="font-family:{font_family};max-width:520px;">'
+                f'style="font-family:{safe_font_family};max-width:520px;">'
                 "<tr>" + logo_html + content_td + "</tr>"
                 "</table>" + pixel_html
             )
@@ -748,7 +809,7 @@ class SignatureService:
             content_td = '<td style="vertical-align:top;">' + body_html + "</td>"
             inner_table: str = (
                 f'<table cellpadding="0" cellspacing="0" border="0" '
-                f'style="font-family:{font_family};max-width:520px;">'
+                f'style="font-family:{safe_font_family};max-width:520px;">'
                 "<tr>" + logo_html + content_td + "</tr>"
                 "</table>"
             )

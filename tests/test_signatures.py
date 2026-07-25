@@ -584,3 +584,267 @@ def test_watermark_survives_tracking_pixel_stripping_for_preview(
 
     assert response.status_code == 200
     assert WATERMARK_MARKER.encode() in response.data
+
+
+# ---------------------------------------------------------------------------
+# Pro-tier accent color (A01 tier gating + A03 output escaping)
+#
+# accent_color is interpolated directly into style="" attributes across
+# every layout. Free-tier submissions must be silently ignored, and any
+# submitted value -- from any tier -- must be rejected unless it is a
+# strict #RRGGBB hex string, since that is what actually prevents a value
+# from breaking out of the surrounding attribute (see
+# SignatureService._sanitize_accent_color).
+# ---------------------------------------------------------------------------
+
+
+def test_free_tier_accent_color_submission_is_ignored(
+    app: Flask, client: FlaskClient
+) -> None:
+    register_via_client(client, email="accent1@example.com")
+
+    _create_signature(
+        client, name="Free Accent Sig", full_name="Jane Doe", accent_color="#ff0000"
+    )
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="Free Accent Sig").first()
+        assert signature is not None
+        assert signature.accent_color == SignatureService.DEFAULT_ACCENT_COLOR
+        assert "#ff0000" not in signature.html_content
+
+
+def test_pro_tier_valid_accent_color_is_applied(
+    app: Flask, client: FlaskClient
+) -> None:
+    register_via_client(client, email="accent2@example.com")
+    _set_subscription_tier(app, "accent2@example.com", "pro")
+
+    _create_signature(
+        client, name="Pro Accent Sig", full_name="Jane Doe", accent_color="#ff0000"
+    )
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="Pro Accent Sig").first()
+        assert signature is not None
+        assert signature.accent_color == "#ff0000"
+        assert "#ff0000" in signature.html_content
+
+
+def test_pro_tier_malformed_accent_color_falls_back_and_cannot_break_out_of_attribute(
+    app: Flask, client: FlaskClient
+) -> None:
+    """
+    A value like this, if interpolated unescaped into
+    style="color:{accent_color};...", would close the style attribute
+    early and inject a new one. The strict #RRGGBB format check is what
+    actually prevents this, for every tier -- not just the tier gate.
+    """
+    register_via_client(client, email="accent3@example.com")
+    _set_subscription_tier(app, "accent3@example.com", "pro")
+
+    malicious = 'red" onmouseover="alert(1)'
+    _create_signature(
+        client,
+        name="Malicious Accent Sig",
+        full_name="Jane Doe",
+        accent_color=malicious,
+    )
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="Malicious Accent Sig").first()
+        assert signature is not None
+        assert signature.accent_color == SignatureService.DEFAULT_ACCENT_COLOR
+        assert "onmouseover" not in signature.html_content
+
+
+def test_pro_tier_accent_color_persists_correctly_through_edit(
+    app: Flask, client: FlaskClient
+) -> None:
+    """
+    html_content is fully regenerated on every edit, so a Pro user's
+    accent color choice must still be honored (not silently reset to
+    default) when a signature is saved again.
+    """
+    signature_id = _create_signature_for_user(app, client, "accent4@example.com")
+    _set_subscription_tier(app, "accent4@example.com", "pro")
+
+    client.post(
+        f"/signatures/{signature_id}/edit",
+        data={
+            "name": "Owned Sig",
+            "full_name": "Owner Name",
+            "website": "",
+            "accent_color": "#00ff00",
+        },
+        follow_redirects=False,
+    )
+
+    with app.app_context():
+        signature = db.session.get(Signature, signature_id)
+        assert signature is not None
+        assert signature.accent_color == "#00ff00"
+        assert "#00ff00" in signature.html_content
+
+
+# ---------------------------------------------------------------------------
+# Free vs. Pro font family (A01 tier gating + A03 output escaping)
+#
+# font_family is interpolated directly into style="" attributes across
+# every layout. The UI only ever offers a fixed <select>, but that's a
+# client-side constraint only -- a request built outside the form could
+# submit anything. A positive allow-list match (not just a format check)
+# is what actually prevents this, since the permitted values are fixed
+# strings this file defines itself.
+# ---------------------------------------------------------------------------
+
+PRO_ONLY_FONT = "'Courier New', Courier, monospace"
+FREE_ALLOWED_FONT = "Calibri, Candara, sans-serif"
+
+
+def test_free_tier_can_use_a_free_font(app: Flask, client: FlaskClient) -> None:
+    register_via_client(client, email="font1@example.com")
+
+    _create_signature(
+        client,
+        name="Free Font Sig",
+        full_name="Jane Doe",
+        font_family=FREE_ALLOWED_FONT,
+    )
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="Free Font Sig").first()
+        assert signature is not None
+        assert signature.font_family == FREE_ALLOWED_FONT
+
+
+def test_free_tier_pro_only_font_submission_falls_back_to_default(
+    app: Flask, client: FlaskClient
+) -> None:
+    register_via_client(client, email="font2@example.com")
+
+    _create_signature(
+        client,
+        name="Free Pro Font Sig",
+        full_name="Jane Doe",
+        font_family=PRO_ONLY_FONT,
+    )
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="Free Pro Font Sig").first()
+        assert signature is not None
+        assert signature.font_family == SignatureService.DEFAULT_FONT_FAMILY
+        assert PRO_ONLY_FONT not in signature.html_content
+
+
+def test_pro_tier_can_use_a_pro_only_font(app: Flask, client: FlaskClient) -> None:
+    register_via_client(client, email="font3@example.com")
+    _set_subscription_tier(app, "font3@example.com", "pro")
+
+    _create_signature(
+        client, name="Pro Font Sig", full_name="Jane Doe", font_family=PRO_ONLY_FONT
+    )
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="Pro Font Sig").first()
+        assert signature is not None
+        assert signature.font_family == PRO_ONLY_FONT
+        assert PRO_ONLY_FONT in signature.html_content
+
+
+def test_pro_tier_malformed_font_family_falls_back_and_cannot_break_out_of_attribute(
+    app: Flask, client: FlaskClient
+) -> None:
+    """
+    A value like this, if interpolated unescaped into
+    style="font-family:{font_family};...", would close the style
+    attribute early and inject a new one. The allow-list match is what
+    actually prevents this, for every tier -- not just the tier gate --
+    since a Pro account has no legitimate way to submit anything outside
+    the fixed set of values this file defines.
+    """
+    register_via_client(client, email="font4@example.com")
+    _set_subscription_tier(app, "font4@example.com", "pro")
+
+    malicious = 'Arial" onmouseover="alert(1)'
+    _create_signature(
+        client, name="Malicious Font Sig", full_name="Jane Doe", font_family=malicious
+    )
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="Malicious Font Sig").first()
+        assert signature is not None
+        assert signature.font_family == SignatureService.DEFAULT_FONT_FAMILY
+        assert "onmouseover" not in signature.html_content
+
+
+def test_pro_tier_font_family_persists_correctly_through_edit(
+    app: Flask, client: FlaskClient
+) -> None:
+    """
+    html_content is fully regenerated on every edit, so a Pro user's font
+    choice must still be honored (not silently reset to default) when a
+    signature is saved again.
+    """
+    signature_id = _create_signature_for_user(app, client, "font5@example.com")
+    _set_subscription_tier(app, "font5@example.com", "pro")
+
+    client.post(
+        f"/signatures/{signature_id}/edit",
+        data={
+            "name": "Owned Sig",
+            "full_name": "Owner Name",
+            "website": "",
+            "font_family": PRO_ONLY_FONT,
+        },
+        follow_redirects=False,
+    )
+
+    with app.app_context():
+        signature = db.session.get(Signature, signature_id)
+        assert signature is not None
+        assert signature.font_family == PRO_ONLY_FONT
+        assert PRO_ONLY_FONT in signature.html_content
+
+
+def test_downgraded_user_editing_signature_with_pro_only_font_falls_back(
+    app: Flask, client: FlaskClient
+) -> None:
+    """
+    Symmetric case to the watermark's downgrade test: a signature saved
+    while Pro (with a Pro-only font) that is later edited after a
+    downgrade to free must have that font replaced with the default, not
+    silently retain a font the account is no longer entitled to.
+    """
+    signature_id = _create_signature_for_user(app, client, "font6@example.com")
+    _set_subscription_tier(app, "font6@example.com", "pro")
+
+    client.post(
+        f"/signatures/{signature_id}/edit",
+        data={
+            "name": "Owned Sig",
+            "full_name": "Owner Name",
+            "website": "",
+            "font_family": PRO_ONLY_FONT,
+        },
+        follow_redirects=False,
+    )
+
+    _set_subscription_tier(app, "font6@example.com", "free")
+
+    client.post(
+        f"/signatures/{signature_id}/edit",
+        data={
+            "name": "Owned Sig",
+            "full_name": "Owner Name",
+            "website": "",
+            "font_family": PRO_ONLY_FONT,
+        },
+        follow_redirects=False,
+    )
+
+    with app.app_context():
+        signature = db.session.get(Signature, signature_id)
+        assert signature is not None
+        assert signature.font_family == SignatureService.DEFAULT_FONT_FAMILY
+        assert PRO_ONLY_FONT not in signature.html_content

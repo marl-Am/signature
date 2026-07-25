@@ -671,6 +671,12 @@ Helvetica, sans-serif') %}
                   Calibri
                 </option>
                 <option
+                  style="font-family: 'Times New Roman', Times, serif"
+                  value="'Times New Roman', Times, serif">
+                  Times New Roman
+                </option>
+                {% if current_user.subscription_tier == 'pro' %}
+                <option
                   style="
                     font-family: 'Century Gothic', CenturyGothic, sans-serif;
                   "
@@ -703,11 +709,6 @@ Helvetica, sans-serif') %}
                   Tahoma
                 </option>
                 <option
-                  style="font-family: 'Times New Roman', Times, serif"
-                  value="'Times New Roman', Times, serif">
-                  Times New Roman
-                </option>
-                <option
                   style="font-family: 'Trebuchet MS', Tahoma, sans-serif"
                   value="'Trebuchet MS', Tahoma, sans-serif">
                   Trebuchet MS
@@ -717,8 +718,15 @@ Helvetica, sans-serif') %}
                   value="Verdana, Geneva, sans-serif">
                   Verdana
                 </option>
+                {% endif %}
               </select>
-            </div>
+              {% if current_user.subscription_tier != 'pro' %}
+              <p class="text-xs text-gray-400 mt-1">
+                <a href="{{ url_for('pricing') }}" class="text-primary font-semibold hover:underline">Upgrade to Pro</a>
+                for 8 more fonts
+              </p>
+             {% endif %}
+          </div>
           </div>
 
           <!-- Submit -->

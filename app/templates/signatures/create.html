@@ -668,75 +668,83 @@ are interpolated.
             {% endif %}
 
             <div>
-              <label
-                for="font_family"
-                class="block text-sm font-semibold text-gray-700 mb-1"
-                >Font</label
-              >
-              <select
-                id="font_family"
-                name="font_family"
-                x-model="fontFamily"
-                class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary outline-none transition-all text-gray-800 text-sm">
-                <option
-                  style="font-family: Arial, Helvetica, sans-serif"
-                  value="Arial, Helvetica, sans-serif">
-                  Arial
-                </option>
-                <option
-                  style="font-family: Calibri, Candara, sans-serif"
-                  value="Calibri, Candara, sans-serif">
-                  Calibri
-                </option>
-                <option
-                  style="
-                    font-family: 'Century Gothic', CenturyGothic, sans-serif;
-                  "
-                  value="'Century Gothic', CenturyGothic, sans-serif">
-                  Century Gothic
-                </option>
-                <option
-                  style="font-family: 'Courier New', Courier, monospace"
-                  value="'Courier New', Courier, monospace">
-                  Courier New
-                </option>
-                <option
-                  style="font-family: Garamond, 'EB Garamond', serif"
-                  value="Garamond, 'EB Garamond', serif">
-                  Garamond
-                </option>
-                <option
-                  style="font-family: Georgia, 'Times New Roman', serif"
-                  value="Georgia, 'Times New Roman', serif">
-                  Georgia
-                </option>
-                <option
-                  style="font-family: Palatino, 'Palatino Linotype', serif"
-                  value="Palatino, 'Palatino Linotype', serif">
-                  Palatino
-                </option>
-                <option
-                  style="font-family: Tahoma, Geneva, sans-serif"
-                  value="Tahoma, Geneva, sans-serif">
-                  Tahoma
-                </option>
-                <option
-                  style="font-family: 'Times New Roman', Times, serif"
-                  value="'Times New Roman', Times, serif">
-                  Times New Roman
-                </option>
-                <option
-                  style="font-family: 'Trebuchet MS', Tahoma, sans-serif"
-                  value="'Trebuchet MS', Tahoma, sans-serif">
-                  Trebuchet MS
-                </option>
-                <option
-                  style="font-family: Verdana, Geneva, sans-serif"
-                  value="Verdana, Geneva, sans-serif">
-                  Verdana
-                </option>
-              </select>
-            </div>
+            <label
+              for="font_family"
+              class="block text-sm font-semibold text-gray-700 mb-1"
+              >Font</label
+            >
+            <select
+              id="font_family"
+              name="font_family"
+              x-model="fontFamily"
+              class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary outline-none transition-all text-gray-800 text-sm">
+              <option
+                style="font-family: Arial, Helvetica, sans-serif"
+                value="Arial, Helvetica, sans-serif">
+                Arial
+              </option>
+              <option
+                style="font-family: Calibri, Candara, sans-serif"
+                value="Calibri, Candara, sans-serif">
+                Calibri
+              </option>
+              <option
+                style="font-family: 'Times New Roman', Times, serif"
+                value="'Times New Roman', Times, serif">
+                Times New Roman
+              </option>
+              {% if current_user.subscription_tier == 'pro' %}
+              <option
+                style="
+                  font-family: 'Century Gothic', CenturyGothic, sans-serif;
+                "
+                value="'Century Gothic', CenturyGothic, sans-serif">
+                Century Gothic
+              </option>
+              <option
+                style="font-family: 'Courier New', Courier, monospace"
+                value="'Courier New', Courier, monospace">
+                Courier New
+              </option>
+              <option
+                style="font-family: Garamond, 'EB Garamond', serif"
+                value="Garamond, 'EB Garamond', serif">
+                Garamond
+              </option>
+              <option
+                style="font-family: Georgia, 'Times New Roman', serif"
+                value="Georgia, 'Times New Roman', serif">
+                Georgia
+              </option>
+              <option
+                style="font-family: Palatino, 'Palatino Linotype', serif"
+                value="Palatino, 'Palatino Linotype', serif">
+                Palatino
+              </option>
+              <option
+                style="font-family: Tahoma, Geneva, sans-serif"
+                value="Tahoma, Geneva, sans-serif">
+                Tahoma
+              </option>
+              <option
+                style="font-family: 'Trebuchet MS', Tahoma, sans-serif"
+                value="'Trebuchet MS', Tahoma, sans-serif">
+                Trebuchet MS
+              </option>
+              <option
+                style="font-family: Verdana, Geneva, sans-serif"
+                value="Verdana, Geneva, sans-serif">
+                Verdana
+              </option>
+              {% endif %}
+            </select>
+            {% if current_user.subscription_tier != 'pro' %}
+            <p class="text-xs text-gray-400 mt-1">
+              <a href="{{ url_for('pricing') }}" class="text-primary font-semibold hover:underline">Upgrade to Pro</a>
+              for 8 more fonts
+            </p>
+           {% endif %}
+          </div>
           </div>
 
           <!-- Submit -->
