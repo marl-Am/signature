@@ -56,10 +56,6 @@ chat.*
 - [ ] `font_family`'s Pro-only set intentionally isn't validated beyond the
       allow-list check — no further action needed, just noting the design
       is deliberate (see Recently Completed below)
-- [ ] Confirm the live production URL renders styling correctly after the
-      Tailwind Docker build migration (verified locally via `docker build` +
-      `docker run` on `localhost:5000`, not yet re-confirmed on the deployed
-      URL)
 - [ ] Decide whether to keep `app/static/css/output.css` committed to git or
       remove it (add to `.gitignore`) now that Docker rebuilds it fresh on
       every image — either is fine, just an open decision
@@ -88,6 +84,11 @@ accent color/font family — form field → route passes through unconditionally
 ---
 
 ## Recently Completed (this section gets replaced, not appended, next session)
+
+**Session: live URL verification (2026-07-25)**
+- Confirmed on the actual deployed URL (not just local `docker build`/`docker
+  run`) that the Tailwind CSS build migration renders correctly — visited
+  the live site and completed a real signature creation, styling intact
 
 **Session: .gitignore/.dockerignore audit (2026-07-25)**
 - Audited `.gitignore` and `.dockerignore`; confirmed `node_modules/` and the
