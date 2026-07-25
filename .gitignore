@@ -52,6 +52,7 @@ PROMPT
 
 docs/*
 !docs/architecture.md
+!docs/PROJECT_STATUS.md
 
 
 requirements-dev.txt
