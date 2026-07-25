@@ -65,3 +65,7 @@ app/templates/email_templates/
 # Stray shell-redirect typos
 tatus
 status
+
+# Node
+node_modules/
+node_modules

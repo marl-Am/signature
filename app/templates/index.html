@@ -1190,48 +1190,221 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
   </div>
 </section>
 
-<!-- Testimonials Section -->
-<section class="bg-primary py-20 px-4">
+<!-- Live Demo Section -->
+<section id="demo" class="bg-primary py-20 px-4">
   <div class="max-w-6xl mx-auto">
-    <h2 class="text-4xl font-bold text-center mb-16">
-      Hear It From Our Clients
+    <h2 class="text-4xl font-bold text-center mb-4">
+      See It In Action
     </h2>
+    <p class="text-center text-white/70 mb-16 max-w-xl mx-auto">
+      Build a signature right here. Change the fields, watch it update — no
+      account needed yet.
+    </p>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-      <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-        <div class="flex mb-3">
-          <span class="text-yellow-400 text-lg">★★★★★</span>
+    <div
+      x-data="{
+        name: 'Alex Rivera',
+        title: 'Product Marketing Manager',
+        company: 'Northwind Co.',
+        phone: '+1 415 555 0100',
+        email: 'alex@northwindco.com',
+        color: '#0c2788'
+      }"
+      class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+
+      <!-- Inputs -->
+      <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-8 space-y-4">
+        <div>
+          <label class="block text-white/70 text-xs font-semibold uppercase tracking-widest mb-1">
+            Full Name
+          </label>
+          <input
+            type="text"
+            x-model="name"
+            maxlength="60"
+            class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-white/50 transition-colors"
+            placeholder="Your name" />
         </div>
-        <div class="text-xl font-bold mb-3">Game Changer! 🚀</div>
-        <p class="text-white/80 mb-4">
-          "Seeing who opens my emails has completely changed how I follow up
-          with clients. The analytics are incredible!"
-        </p>
-        <p class="text-white/60 text-sm">- Sarah J., Sales Manager</p>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-white/70 text-xs font-semibold uppercase tracking-widest mb-1">
+              Job Title
+            </label>
+            <input
+              type="text"
+              x-model="title"
+              maxlength="60"
+              class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-white/50 transition-colors"
+              placeholder="Job title" />
+          </div>
+          <div>
+            <label class="block text-white/70 text-xs font-semibold uppercase tracking-widest mb-1">
+              Company
+            </label>
+            <input
+              type="text"
+              x-model="company"
+              maxlength="60"
+              class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-white/50 transition-colors"
+              placeholder="Company" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-white/70 text-xs font-semibold uppercase tracking-widest mb-1">
+              Phone
+            </label>
+            <input
+              type="text"
+              x-model="phone"
+              maxlength="30"
+              class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-white/50 transition-colors"
+              placeholder="Phone" />
+          </div>
+          <div>
+            <label class="block text-white/70 text-xs font-semibold uppercase tracking-widest mb-1">
+              Email
+            </label>
+            <input
+              type="text"
+              x-model="email"
+              maxlength="80"
+              class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-white/50 transition-colors"
+              placeholder="Email" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-white/70 text-xs font-semibold uppercase tracking-widest mb-1">
+            Accent Color
+            <span class="normal-case font-normal text-white/40">(Pro feature)</span>
+          </label>
+          <div class="flex items-center gap-3">
+            <input
+              type="color"
+              x-model="color"
+              class="w-12 h-10 rounded-lg border border-white/20 bg-transparent cursor-pointer" />
+            <span class="text-white/50 text-xs font-mono" x-text="color"></span>
+          </div>
+        </div>
       </div>
 
-      <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-        <div class="flex mb-3">
-          <span class="text-yellow-400 text-lg">★★★★★</span>
+      <!-- Live preview -->
+      <div class="relative">
+        <span
+          class="absolute -top-3 left-1/2 -translate-x-1/2 bg-white text-primary text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
+          LIVE PREVIEW
+        </span>
+        <div
+          class="bg-white rounded-2xl shadow-xl p-6 max-w-sm mx-auto"
+          style="font-family: Arial, Helvetica, sans-serif;">
+          <p
+            class="text-lg font-bold mb-1"
+            :style="`color: ${color}`"
+            x-text="name || 'Your Name'"></p>
+          <p
+            class="text-xs text-gray-500 mb-2"
+            x-text="[title, company].filter(Boolean).join(' · ') || 'Job Title · Company'"></p>
+          <hr class="mb-2" :style="`border: none; border-top: 2px solid ${color}`" />
+          <p class="text-xs text-gray-600 mb-1" x-text="'📞 ' + (phone || '+1 555 000 0000')"></p>
+          <p class="text-xs text-gray-600" x-text="'✉ ' + (email || 'you@example.com')"></p>
         </div>
-        <div class="text-xl font-bold mb-3">Super Easy Setup ⚡</div>
-        <p class="text-white/80 mb-4">
-          "I had my professional signature live in under 3 minutes. No technical
-          skills needed!"
-        </p>
-        <p class="text-white/60 text-sm">- Mike T., Entrepreneur</p>
       </div>
+    </div>
 
-      <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-        <div class="flex mb-3">
-          <span class="text-yellow-400 text-lg">★★★★★</span>
+    <div class="text-center mt-12">
+      <p class="text-white/70 mb-4 text-sm">
+        This is just a demo — nothing here is saved. Create your free
+        account to get a real, shareable, trackable signature.
+      </p>
+      {% if current_user.is_authenticated %}
+      <a
+        href="{{ url_for('dashboard.index') }}"
+        class="inline-block px-8 py-3 bg-white text-primary rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all">
+        Go to Dashboard
+      </a>
+      {% else %}
+      <a
+        href="{{ url_for('auth.register') }}"
+        class="inline-block px-8 py-3 bg-white text-primary rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all">
+        Create Your Free Signature
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- Analytics Preview Section -->
+<section class="bg-gray-50 py-20 px-4">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-4">
+      <span
+        class="inline-block bg-gray-200 text-gray-500 text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full">
+        Sample Data
+      </span>
+    </div>
+    <h2 class="text-4xl font-bold text-center text-gray-800 mb-4">
+      See Who's Engaging With Your Emails
+    </h2>
+    <p class="text-center text-gray-500 mb-16 max-w-xl mx-auto">
+      Every signature comes with a dashboard like this. The numbers below
+      are illustrative — yours will show your own opens and clicks.
+    </p>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div class="bg-white rounded-2xl shadow p-6">
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Total Opens</p>
+        <p class="text-3xl font-bold text-gray-800">248</p>
+      </div>
+      <div class="bg-white rounded-2xl shadow p-6">
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Total Clicks</p>
+        <p class="text-3xl font-bold text-gray-800">37</p>
+      </div>
+      <div class="bg-white rounded-2xl shadow p-6">
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Click-Through Rate</p>
+        <p class="text-3xl font-bold text-gray-800">14.9%</p>
+      </div>
+      <div class="bg-white rounded-2xl shadow p-6">
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Top Platform</p>
+        <p class="text-3xl font-bold text-gray-800">LinkedIn</p>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow p-8">
+      <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-6">
+        Last 7 Days
+      </h3>
+      <div class="flex items-end gap-3 h-40">
+        <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+          <div class="w-full bg-primary/20 rounded-t-md" style="height: 40%"></div>
+          <span class="text-xs text-gray-400">Mon</span>
         </div>
-        <div class="text-xl font-bold mb-3">Worth Every Penny 💰</div>
-        <p class="text-white/80 mb-4">
-          "The tracking alone is worth the price. I know exactly when prospects
-          engage with my emails."
-        </p>
-        <p class="text-white/60 text-sm">- Jenny L., Consultant</p>
+        <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+          <div class="w-full bg-primary/20 rounded-t-md" style="height: 65%"></div>
+          <span class="text-xs text-gray-400">Tue</span>
+        </div>
+        <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+          <div class="w-full bg-primary/20 rounded-t-md" style="height: 50%"></div>
+          <span class="text-xs text-gray-400">Wed</span>
+        </div>
+        <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+          <div class="w-full bg-primary/40 rounded-t-md" style="height: 80%"></div>
+          <span class="text-xs text-gray-400">Thu</span>
+        </div>
+        <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+          <div class="w-full bg-primary/20 rounded-t-md" style="height: 55%"></div>
+          <span class="text-xs text-gray-400">Fri</span>
+        </div>
+        <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+          <div class="w-full bg-primary/40 rounded-t-md" style="height: 90%"></div>
+          <span class="text-xs text-gray-400">Sat</span>
+        </div>
+        <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+          <div class="w-full bg-primary/20 rounded-t-md" style="height: 70%"></div>
+          <span class="text-xs text-gray-400">Sun</span>
+        </div>
       </div>
     </div>
   </div>

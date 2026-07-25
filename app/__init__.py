@@ -25,7 +25,7 @@ def create_app(config_class: Type[object] = DevelopmentConfig) -> Flask:
             or TestingConfig from app.config). Defaults to DevelopmentConfig so
             every existing call site (wsgi.py) keeps working unchanged.
     """
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder="static")
 
     # Load config object — caller decides which environment this is.
     app.config.from_object(config_class)
