@@ -28,7 +28,26 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ---------------------------------------------------------------------------
-# Stage 2: runtime
+# Stage 2: frontend-builder
+# Compiles Tailwind CSS from source. Node/npm never make it into the final
+# image, only the compiled output.css is copied out (same discard-the-
+# toolchain pattern as Stage 1).
+# ---------------------------------------------------------------------------
+FROM node:20-slim AS frontend-builder
+
+WORKDIR /frontend
+
+COPY package.json package-lock.json* ./
+RUN npm ci --no-audit --no-fund
+
+COPY tailwind.config.js ./
+COPY app/templates ./app/templates
+COPY app/static/css/input.css ./app/static/css/input.css
+
+RUN npm run build:css
+
+# ---------------------------------------------------------------------------
+# Stage 3: runtime
 # Slim final image, no compilers, no build tooling, non-root user.
 # ---------------------------------------------------------------------------
 FROM python:3.13-slim AS runtime
@@ -45,6 +64,10 @@ COPY --from=builder /opt/venv /opt/venv
 # Copy application code. .dockerignore controls what actually lands here -
 # secrets, local DB files, tests, and dev tooling are excluded.
 COPY . .
+
+# Overwrite whatever static/css/output.css came from the repo (if any)
+# with the freshly compiled one from the frontend-builder stage.
+COPY --from=frontend-builder /frontend/app/static/css/output.css ./app/static/css/output.css
 
 # OWASP A05: run as a non-root, unprivileged user rather than the image default (root).
 RUN groupadd --system appgroup \
