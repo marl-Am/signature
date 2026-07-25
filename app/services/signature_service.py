@@ -99,6 +99,9 @@ class SignatureService:
         Returns:
             Newly created Signature object
         """
+        accent_color = SignatureService._sanitize_accent_color(
+            accent_color, current_user
+        )
         tracking_code = secrets.token_urlsafe(16)
 
         html_content: str = SignatureService._generate_html_content(
@@ -186,6 +189,8 @@ class SignatureService:
 
         for field, value in kwargs.items():
             if field in allowed_fields:
+                if field == "accent_color":
+                    value = SignatureService._sanitize_accent_color(value, current_user)
                 setattr(signature, field, value)
 
         signature.updated_at = datetime.now(timezone.utc)
@@ -342,6 +347,43 @@ class SignatureService:
             return None
         return html.escape(url, quote=True)
 
+    DEFAULT_ACCENT_COLOR: str = "#0c2788"
+    _HEX_COLOR_PATTERN = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+    @staticmethod
+    def _is_pro(user: object) -> bool:
+        """
+        Security: fails closed. Any missing or unexpected subscription_tier
+        value is treated as free tier, never as pro.
+        """
+        return getattr(user, "subscription_tier", "free") == "pro"
+
+    @staticmethod
+    def _sanitize_accent_color(accent_color: str | None, user: object) -> str:
+        """
+        Validate a user-supplied accent color before it is embedded in
+        inline style="" attributes across every layout.
+
+        Security: A03 - accent_color was previously interpolated directly
+        into style attributes with no escaping or format check, so a value
+        containing a double-quote character could break out of the
+        attribute and inject arbitrary HTML (stored XSS). Requiring a
+        strict #RRGGBB match closes that gap entirely, since a valid match
+        cannot contain a quote character.
+
+        Also enforces that only Pro-tier accounts may override the default
+        accent color at all — free-tier submissions are silently ignored
+        rather than rejected, consistent with how the free-tier watermark
+        fails closed elsewhere in this file.
+        """
+        if (
+            SignatureService._is_pro(user)
+            and accent_color
+            and SignatureService._HEX_COLOR_PATTERN.fullmatch(accent_color)
+        ):
+            return accent_color
+        return SignatureService.DEFAULT_ACCENT_COLOR
+
     @staticmethod
     def _generate_html_content(
         full_name: str,
@@ -377,12 +419,20 @@ class SignatureService:
         safe_job_title: str = SignatureService._escape(job_title)
         safe_company: str = SignatureService._escape(company)
         safe_department: str = SignatureService._escape(department)
+        safe_accent_color: str = (
+            accent_color
+            if accent_color
+            and SignatureService._HEX_COLOR_PATTERN.fullmatch(accent_color)
+            else SignatureService.DEFAULT_ACCENT_COLOR
+        )
         safe_website: Optional[str] = SignatureService._sanitize_href(website)
         safe_logo_url: Optional[str] = SignatureService._sanitize_href(logo_url)
         safe_linkedin_url: Optional[str] = SignatureService._sanitize_href(linkedin_url)
         safe_twitter_url: Optional[str] = SignatureService._sanitize_href(twitter_url)
         safe_facebook_url: Optional[str] = SignatureService._sanitize_href(facebook_url)
-        safe_instagram_url: Optional[str] = SignatureService._sanitize_href(instagram_url)
+        safe_instagram_url: Optional[str] = SignatureService._sanitize_href(
+            instagram_url
+        )
 
         # --- Name ---
         name_html: str = (
@@ -395,7 +445,7 @@ class SignatureService:
         title_html: str = ""
         if title_parts:
             title_html = (
-                f'<div style="font-size:13px;color:{accent_color};margin-bottom:2px;">'
+                f'<div style="font-size:13px;color:{safe_accent_color};margin-bottom:2px;">'
                 + " &middot; ".join(title_parts)
                 + "</div>"
             )
@@ -432,7 +482,7 @@ class SignatureService:
                 f"{request.host_url.rstrip('/')}/track/click/{tracking_code}/website"
             )
             contact_parts.append(
-                f'<a href="{tracked_website}" style="color:{accent_color};text-decoration:none;font-size:12px;">'
+                f'<a href="{tracked_website}" style="color:{safe_accent_color};text-decoration:none;font-size:12px;">'
                 f"{display}</a>"
             )
         contact_html: str = ""
@@ -458,7 +508,7 @@ class SignatureService:
                 )
                 social_parts.append(
                     f'<a href="{tracked}" title="{label}" '
-                    f'style="display:inline-block;background:{accent_color};color:#ffffff;'
+                    f'style="display:inline-block;background:{safe_accent_color};color:#ffffff;'
                     f"font-size:11px;font-weight:bold;text-decoration:none;"
                     f'padding:3px 7px;border-radius:4px;margin-right:4px;">'
                     f"{badge}</a>"
@@ -513,7 +563,7 @@ class SignatureService:
         if layout == "modern":
             # Colored header band containing name + title, white body below
             header_html: str = (
-                f'<div style="background:{accent_color};padding:10px 14px;border-radius:6px 6px 0 0;">'
+                f'<div style="background:{safe_accent_color};padding:10px 14px;border-radius:6px 6px 0 0;">'
                 f'<div style="font-size:17px;font-weight:bold;color:#ffffff;margin-bottom:3px;">{safe_full_name}</div>'
             )
             if title_parts:
@@ -562,7 +612,7 @@ class SignatureService:
         elif layout == "ruled":
             # Top accent rule instead of left border
             content_td = (
-                f'<td style="vertical-align:top;border-top:3px solid {accent_color};padding-top:8px;">'
+                f'<td style="vertical-align:top;border-top:3px solid {safe_accent_color};padding-top:8px;">'
                 + name_html
                 + title_html
                 + dept_html
@@ -592,7 +642,7 @@ class SignatureService:
             else:
                 avatar_td = (
                     f'<td style="padding-right:16px;vertical-align:middle;">'
-                    f'<div style="width:52px;height:52px;border-radius:50%;background:{accent_color};'
+                    f'<div style="width:52px;height:52px;border-radius:50%;background:{safe_accent_color};'
                     f'text-align:center;line-height:52px;display:inline-block;">'
                     f'<span style="color:#ffffff;font-size:16px;font-weight:bold;line-height:52px;">'
                     f"{initials}</span></div></td>"
@@ -617,7 +667,7 @@ class SignatureService:
         elif layout == "compact":
             # Single-line contact row: Job · Company | phone | website
             job_span: str = (
-                f'<span style="color:{accent_color};font-weight:500;font-size:12px;">{safe_job_title}</span>'
+                f'<span style="color:{safe_accent_color};font-weight:500;font-size:12px;">{safe_job_title}</span>'
                 if safe_job_title
                 else ""
             )
@@ -666,7 +716,7 @@ class SignatureService:
         elif layout == "banner":
             # Left-bordered name block; department as uppercase secondary label
             name_block: str = (
-                f'<div style="border-left:4px solid {accent_color};padding-left:12px;margin-bottom:8px;">'
+                f'<div style="border-left:4px solid {safe_accent_color};padding-left:12px;margin-bottom:8px;">'
                 + name_html
                 + title_html
                 + "</div>"
@@ -703,7 +753,7 @@ class SignatureService:
                 "</table>"
             )
             html = (
-                f'<div style="border-left:3px solid {accent_color};padding-left:14px;">'
+                f'<div style="border-left:3px solid {safe_accent_color};padding-left:14px;">'
                 + inner_table
                 + "</div>"
                 + pixel_html

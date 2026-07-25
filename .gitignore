@@ -50,8 +50,8 @@ HANDOFF
 PROMPT/
 PROMPT
 
-_docs/
-_docs
+docs/
+docs
 
 
 requirements-dev.txt
@@ -61,3 +61,7 @@ test_outputs/
 test_outputs
 
 app/templates/email_templates/
+
+# Stray shell-redirect typos
+tatus
+status
