@@ -50,8 +50,8 @@ HANDOFF
 PROMPT/
 PROMPT
 
-docs/
-docs
+docs/*
+!docs/architecture.md
 
 
 requirements-dev.txt
