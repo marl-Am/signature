@@ -473,10 +473,11 @@ Helvetica, sans-serif') %}
                   name="layout"
                   value="modern"
                   x-model="layout"
+                  {% if current_user.subscription_tier != 'pro' %}disabled{% endif %}
                   class="sr-only" />
                 <div
                   :class="layout === 'modern' ? 'border-primary bg-primary/5' : 'border-gray-200'"
-                  class="border-2 rounded-lg p-3 text-center transition-all">
+                  class="border-2 rounded-lg p-3 text-center transition-all{% if current_user.subscription_tier != 'pro' %} opacity-50 cursor-not-allowed{% endif %}">
                   <div class="w-full h-8 mb-1 space-y-1">
                     <div class="h-3 bg-gray-400 rounded w-full"></div>
                     <div class="h-1.5 bg-gray-200 rounded w-3/4"></div>
@@ -485,6 +486,9 @@ Helvetica, sans-serif') %}
                   <span class="text-xs font-semibold text-gray-600"
                     >Modern</span
                   >
+                  {% if current_user.subscription_tier != 'pro' %}
+                  <span class="block text-[10px] text-primary font-semibold mt-0.5">Pro</span>
+                  {% endif %}
                 </div>
               </label>
 
@@ -495,10 +499,11 @@ Helvetica, sans-serif') %}
                   name="layout"
                   value="minimal"
                   x-model="layout"
+                  {% if current_user.subscription_tier != 'pro' %}disabled{% endif %}
                   class="sr-only" />
                 <div
                   :class="layout === 'minimal' ? 'border-primary bg-primary/5' : 'border-gray-200'"
-                  class="border-2 rounded-lg p-3 text-center transition-all">
+                  class="border-2 rounded-lg p-3 text-center transition-all{% if current_user.subscription_tier != 'pro' %} opacity-50 cursor-not-allowed{% endif %}">
                   <div class="w-full h-8 flex items-center mb-1 pl-1">
                     <div class="space-y-1 flex-1">
                       <div class="h-2 bg-gray-300 rounded w-3/4"></div>
@@ -508,6 +513,9 @@ Helvetica, sans-serif') %}
                   <span class="text-xs font-semibold text-gray-600"
                     >Minimal</span
                   >
+                  {% if current_user.subscription_tier != 'pro' %}
+                  <span class="block text-[10px] text-primary font-semibold mt-0.5">Pro</span>
+                  {% endif %}
                 </div>
               </label>
 
@@ -518,10 +526,11 @@ Helvetica, sans-serif') %}
                   name="layout"
                   value="ruled"
                   x-model="layout"
+                  {% if current_user.subscription_tier != 'pro' %}disabled{% endif %}
                   class="sr-only" />
                 <div
                   :class="layout === 'ruled' ? 'border-primary bg-primary/5' : 'border-gray-200'"
-                  class="border-2 rounded-lg p-3 text-center transition-all">
+                  class="border-2 rounded-lg p-3 text-center transition-all{% if current_user.subscription_tier != 'pro' %} opacity-50 cursor-not-allowed{% endif %}">
                   <div class="w-full h-8 mb-1">
                     <div class="h-0.5 bg-gray-400 rounded w-full mb-1.5"></div>
                     <div class="space-y-1">
@@ -530,6 +539,9 @@ Helvetica, sans-serif') %}
                     </div>
                   </div>
                   <span class="text-xs font-semibold text-gray-600">Ruled</span>
+                  {% if current_user.subscription_tier != 'pro' %}
+                  <span class="block text-[10px] text-primary font-semibold mt-0.5">Pro</span>
+                  {% endif %}
                 </div>
               </label>
 
@@ -540,10 +552,11 @@ Helvetica, sans-serif') %}
                   name="layout"
                   value="avatar"
                   x-model="layout"
+                  {% if current_user.subscription_tier != 'pro' %}disabled{% endif %}
                   class="sr-only" />
                 <div
                   :class="layout === 'avatar' ? 'border-primary bg-primary/5' : 'border-gray-200'"
-                  class="border-2 rounded-lg p-3 text-center transition-all">
+                  class="border-2 rounded-lg p-3 text-center transition-all{% if current_user.subscription_tier != 'pro' %} opacity-50 cursor-not-allowed{% endif %}">
                   <div class="w-full h-8 flex items-center gap-1.5 mb-1">
                     <div
                       class="w-5 h-5 bg-gray-400 rounded-full flex-shrink-0"></div>
@@ -555,6 +568,9 @@ Helvetica, sans-serif') %}
                   <span class="text-xs font-semibold text-gray-600"
                     >Avatar</span
                   >
+                  {% if current_user.subscription_tier != 'pro' %}
+                  <span class="block text-[10px] text-primary font-semibold mt-0.5">Pro</span>
+                  {% endif %}
                 </div>
               </label>
 
@@ -565,10 +581,11 @@ Helvetica, sans-serif') %}
                   name="layout"
                   value="compact"
                   x-model="layout"
+                  {% if current_user.subscription_tier != 'pro' %}disabled{% endif %}
                   class="sr-only" />
                 <div
                   :class="layout === 'compact' ? 'border-primary bg-primary/5' : 'border-gray-200'"
-                  class="border-2 rounded-lg p-3 text-center transition-all">
+                  class="border-2 rounded-lg p-3 text-center transition-all{% if current_user.subscription_tier != 'pro' %} opacity-50 cursor-not-allowed{% endif %}">
                   <div class="w-full h-8 flex flex-col justify-center mb-1">
                     <div class="h-2 bg-gray-300 rounded w-2/3 mb-1.5"></div>
                     <div class="h-1.5 bg-gray-200 rounded w-full"></div>
@@ -576,6 +593,9 @@ Helvetica, sans-serif') %}
                   <span class="text-xs font-semibold text-gray-600"
                     >Compact</span
                   >
+                  {% if current_user.subscription_tier != 'pro' %}
+                  <span class="block text-[10px] text-primary font-semibold mt-0.5">Pro</span>
+                  {% endif %}
                 </div>
               </label>
 
@@ -586,10 +606,11 @@ Helvetica, sans-serif') %}
                   name="layout"
                   value="banner"
                   x-model="layout"
+                  {% if current_user.subscription_tier != 'pro' %}disabled{% endif %}
                   class="sr-only" />
                 <div
                   :class="layout === 'banner' ? 'border-primary bg-primary/5' : 'border-gray-200'"
-                  class="border-2 rounded-lg p-3 text-center transition-all">
+                  class="border-2 rounded-lg p-3 text-center transition-all{% if current_user.subscription_tier != 'pro' %} opacity-50 cursor-not-allowed{% endif %}">
                   <div class="w-full h-8 flex items-start mb-1">
                     <div
                       class="w-1 h-full bg-gray-400 mr-1.5 flex-shrink-0"></div>
@@ -602,9 +623,22 @@ Helvetica, sans-serif') %}
                   <span class="text-xs font-semibold text-gray-600"
                     >Banner</span
                   >
+                  {% if current_user.subscription_tier != 'pro' %}
+                  <span class="block text-[10px] text-primary font-semibold mt-0.5">Pro</span>
+                  {% endif %}
                 </div>
               </label>
             </div>
+            {% if current_user.subscription_tier != 'pro' %}
+            <p class="text-xs text-gray-500 mt-2">
+              Modern, Minimal, Ruled, Avatar, Compact, and Banner layouts are
+              Pro features.
+              <a href="{{ url_for('pricing') }}"
+                class="text-primary font-semibold hover:underline">
+                Upgrade to unlock
+              </a>
+            </p>
+            {% endif %}
           </div>
 
           <!-- Accent Color + Font -->

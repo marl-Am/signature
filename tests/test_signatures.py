@@ -848,3 +848,170 @@ def test_downgraded_user_editing_signature_with_pro_only_font_falls_back(
         assert signature is not None
         assert signature.font_family == SignatureService.DEFAULT_FONT_FAMILY
         assert PRO_ONLY_FONT not in signature.html_content
+
+
+# ---------------------------------------------------------------------------
+# Free vs. Pro layout (A01 tier gating)
+#
+# layout selects which if/elif branch _generate_html_content renders. Unlike
+# accent_color and font_family, layout is never interpolated directly into
+# HTML output -- it only chooses a rendering branch -- so there is no XSS
+# angle here. The concern is purely business logic: before
+# SignatureService._sanitize_layout existed, a free-tier account could
+# select any of the six Pro-only layouts directly in the UI (no crafted
+# request required) and it would save and render normally.
+# ---------------------------------------------------------------------------
+
+PRO_ONLY_LAYOUT = "avatar"
+# Unique to the avatar layout's circular avatar/initials block -- no other
+# layout produces a border-radius:50% element, so its presence/absence in
+# html_content confirms which branch actually rendered.
+PRO_ONLY_LAYOUT_MARKER = "border-radius:50%"
+FREE_ALLOWED_LAYOUT = "classic"
+
+
+def test_free_tier_can_use_classic_layout(app: Flask, client: FlaskClient) -> None:
+    register_via_client(client, email="layout1@example.com")
+
+    _create_signature(
+        client,
+        name="Free Layout Sig",
+        full_name="Jane Doe",
+        layout=FREE_ALLOWED_LAYOUT,
+    )
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="Free Layout Sig").first()
+        assert signature is not None
+        assert signature.layout == FREE_ALLOWED_LAYOUT
+
+
+def test_free_tier_pro_only_layout_submission_falls_back_to_default(
+    app: Flask, client: FlaskClient
+) -> None:
+    register_via_client(client, email="layout2@example.com")
+
+    _create_signature(
+        client,
+        name="Free Pro Layout Sig",
+        full_name="Jane Doe",
+        layout=PRO_ONLY_LAYOUT,
+    )
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="Free Pro Layout Sig").first()
+        assert signature is not None
+        assert signature.layout == SignatureService.DEFAULT_LAYOUT
+        assert PRO_ONLY_LAYOUT_MARKER not in signature.html_content
+
+
+def test_pro_tier_can_use_a_pro_only_layout(app: Flask, client: FlaskClient) -> None:
+    register_via_client(client, email="layout3@example.com")
+    _set_subscription_tier(app, "layout3@example.com", "pro")
+
+    _create_signature(
+        client, name="Pro Layout Sig", full_name="Jane Doe", layout=PRO_ONLY_LAYOUT
+    )
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="Pro Layout Sig").first()
+        assert signature is not None
+        assert signature.layout == PRO_ONLY_LAYOUT
+        assert PRO_ONLY_LAYOUT_MARKER in signature.html_content
+
+
+def test_unknown_layout_value_falls_back_to_default_even_for_pro(
+    app: Flask, client: FlaskClient
+) -> None:
+    """
+    A layout name outside the fixed set this file defines (PRO_LAYOUTS)
+    must fall back to the default for every tier, not just free -- there is
+    no legitimate way to submit anything else, since the UI only ever
+    offers these seven values.
+    """
+    register_via_client(client, email="layout4@example.com")
+    _set_subscription_tier(app, "layout4@example.com", "pro")
+
+    _create_signature(
+        client,
+        name="Bogus Layout Sig",
+        full_name="Jane Doe",
+        layout="not-a-real-layout",
+    )
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="Bogus Layout Sig").first()
+        assert signature is not None
+        assert signature.layout == SignatureService.DEFAULT_LAYOUT
+
+
+def test_pro_tier_layout_persists_correctly_through_edit(
+    app: Flask, client: FlaskClient
+) -> None:
+    """
+    html_content is fully regenerated on every edit, so a Pro user's layout
+    choice must still be honored (not silently reset to default) when a
+    signature is saved again.
+    """
+    signature_id = _create_signature_for_user(app, client, "layout5@example.com")
+    _set_subscription_tier(app, "layout5@example.com", "pro")
+
+    client.post(
+        f"/signatures/{signature_id}/edit",
+        data={
+            "name": "Owned Sig",
+            "full_name": "Owner Name",
+            "website": "",
+            "layout": PRO_ONLY_LAYOUT,
+        },
+        follow_redirects=False,
+    )
+
+    with app.app_context():
+        signature = db.session.get(Signature, signature_id)
+        assert signature is not None
+        assert signature.layout == PRO_ONLY_LAYOUT
+        assert PRO_ONLY_LAYOUT_MARKER in signature.html_content
+
+
+def test_downgraded_user_editing_signature_with_pro_only_layout_falls_back(
+    app: Flask, client: FlaskClient
+) -> None:
+    """
+    Symmetric case to the font-family downgrade test: a signature saved
+    while Pro (with a Pro-only layout) that is later edited after a
+    downgrade to free must have that layout replaced with the default, not
+    silently retain a layout the account is no longer entitled to.
+    """
+    signature_id = _create_signature_for_user(app, client, "layout6@example.com")
+    _set_subscription_tier(app, "layout6@example.com", "pro")
+
+    client.post(
+        f"/signatures/{signature_id}/edit",
+        data={
+            "name": "Owned Sig",
+            "full_name": "Owner Name",
+            "website": "",
+            "layout": PRO_ONLY_LAYOUT,
+        },
+        follow_redirects=False,
+    )
+
+    _set_subscription_tier(app, "layout6@example.com", "free")
+
+    client.post(
+        f"/signatures/{signature_id}/edit",
+        data={
+            "name": "Owned Sig",
+            "full_name": "Owner Name",
+            "website": "",
+            "layout": PRO_ONLY_LAYOUT,
+        },
+        follow_redirects=False,
+    )
+
+    with app.app_context():
+        signature = db.session.get(Signature, signature_id)
+        assert signature is not None
+        assert signature.layout == SignatureService.DEFAULT_LAYOUT
+        assert PRO_ONLY_LAYOUT_MARKER not in signature.html_content

@@ -99,8 +99,11 @@ class SignatureService:
         Returns:
             Newly created Signature object
         """
-        accent_color = SignatureService._sanitize_accent_color(accent_color, current_user)
+        accent_color = SignatureService._sanitize_accent_color(
+            accent_color, current_user
+        )
         font_family = SignatureService._sanitize_font_family(font_family, current_user)
+        layout = SignatureService._sanitize_layout(layout, current_user)
         tracking_code = secrets.token_urlsafe(16)
 
         html_content: str = SignatureService._generate_html_content(
@@ -192,6 +195,8 @@ class SignatureService:
                     value = SignatureService._sanitize_accent_color(value, current_user)
                 elif field == "font_family":
                     value = SignatureService._sanitize_font_family(value, current_user)
+                elif field == "layout":
+                    value = SignatureService._sanitize_layout(value, current_user)
                 setattr(signature, field, value)
 
         signature.updated_at = datetime.now(timezone.utc)
@@ -412,6 +417,60 @@ class SignatureService:
         }
     )
 
+    DEFAULT_LAYOUT: str = "classic"
+
+    # Free tier: the original single layout. Kept as its own frozenset
+    # (rather than a bare string) so it matches the same type and calling
+    # convention as FREE_FONT_FAMILIES, and so a future free-tier layout
+    # addition is a one-line change here rather than a signature change.
+    FREE_LAYOUTS: frozenset[str] = frozenset({"classic"})
+
+    # Pro tier: every layout _generate_html_content knows how to render.
+    # Deliberately a superset of FREE_LAYOUTS rather than a separate list,
+    # so a free layout is always valid for a Pro account too.
+    PRO_LAYOUTS: frozenset[str] = FREE_LAYOUTS | frozenset(
+        {
+            "modern",
+            "minimal",
+            "ruled",
+            "avatar",
+            "compact",
+            "banner",
+        }
+    )
+
+    @staticmethod
+    def _sanitize_layout(layout: str | None, user: object) -> str:
+        """
+        Validate a user-supplied layout name before it is used to select a
+        rendering branch in _generate_html_content.
+
+        Security/Business logic: layout was previously passed straight
+        through from the form to storage and rendering with no tier check
+        at all — unlike accent_color and font_family, a free-tier account
+        could select any of the six Pro-only layouts (modern, minimal,
+        ruled, avatar, compact, banner) directly in the UI, no crafted
+        request required, and it would save and render normally. This
+        closes that gap using the same fail-closed allow-list pattern as
+        _sanitize_accent_color and _sanitize_font_family: anything not in
+        the caller's tier-appropriate set silently falls back to the
+        default rather than being rejected outright.
+
+        Note: unlike accent_color/font_family, layout is never interpolated
+        into HTML output directly — it only selects an if/elif branch in
+        _generate_html_content, so this function's job is tier enforcement,
+        not XSS prevention. That's already handled by the escaping applied
+        to every field used within each branch.
+        """
+        allowed: frozenset[str] = (
+            SignatureService.PRO_LAYOUTS
+            if SignatureService._is_pro(user)
+            else SignatureService.FREE_LAYOUTS
+        )
+        if layout in allowed:
+            return layout
+        return SignatureService.DEFAULT_LAYOUT
+
     @staticmethod
     def _sanitize_font_family(font_family: str | None, user: object) -> str:
         """
@@ -480,7 +539,8 @@ class SignatureService:
         safe_department: str = SignatureService._escape(department)
         safe_accent_color: str = (
             accent_color
-            if accent_color and SignatureService._HEX_COLOR_PATTERN.fullmatch(accent_color)
+            if accent_color
+            and SignatureService._HEX_COLOR_PATTERN.fullmatch(accent_color)
             else SignatureService.DEFAULT_ACCENT_COLOR
         )
         safe_font_family: str = (
@@ -493,7 +553,9 @@ class SignatureService:
         safe_linkedin_url: Optional[str] = SignatureService._sanitize_href(linkedin_url)
         safe_twitter_url: Optional[str] = SignatureService._sanitize_href(twitter_url)
         safe_facebook_url: Optional[str] = SignatureService._sanitize_href(facebook_url)
-        safe_instagram_url: Optional[str] = SignatureService._sanitize_href(instagram_url)
+        safe_instagram_url: Optional[str] = SignatureService._sanitize_href(
+            instagram_url
+        )
 
         # --- Name ---
         name_html: str = (
