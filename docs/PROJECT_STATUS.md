@@ -20,10 +20,10 @@ chat.*
   "works locally" and "works in prod" test the same database engine. See
   `WORKFLOW.md` for the full feature workflow.
 - Free tier: 1 signature, 3 fonts (Arial, Calibri, Times New Roman),
-  fixed accent color, watermark included.
-- Pro tier: unlimited signatures, all 11 fonts, custom accent color, no
-  watermark, priority support.
-- Test suite: 72 tests, all passing. `ruff check .` and `ty check .` both
+  fixed accent color, classic layout only, watermark included.
+- Pro tier: unlimited signatures, all 11 fonts, custom accent color, all 7
+  layout templates, no watermark, priority support.
+- Test suite: 78 tests, all passing. `ruff check .` and `ty check .` both
   clean as of the last run.
 - CI: GitHub Actions, runs on every push to `main`, confirmed passing via
   `gh run list`.
@@ -61,11 +61,10 @@ chat.*
       every image — either is fine, just an open decision
 
 **Cheap Pro-tier design features not yet built** (same gating pattern as
-accent color/font family — form field → route passes through unconditionally
-→ service layer enforces tier + validates input):
+accent color/font family/layout — form field → route passes through
+unconditionally → service layer enforces tier + validates input):
 - [ ] Divider/border style options (easiest)
 - [ ] Avatar shape variants (easy)
-- [ ] More layout templates (moderate effort, no new dependencies)
 - [ ] Social icon row (needs Simple Icons SVG assets, free/CC0)
 - [ ] QR code / vCard button (needs the `qrcode` Python package, free)
 
@@ -85,58 +84,26 @@ accent color/font family — form field → route passes through unconditionally
 
 ## Recently Completed (this section gets replaced, not appended, next session)
 
-**Session: live URL verification (2026-07-25)**
-- Confirmed on the actual deployed URL (not just local `docker build`/`docker
-  run`) that the Tailwind CSS build migration renders correctly — visited
-  the live site and completed a real signature creation, styling intact
+**Session: Pro-tier layout template gating (2026-07-25)**
+- Found that all seven signature layouts were already fully built and
+  rendering correctly, but had zero tier enforcement — any free-tier
+  account could select any Pro-only layout directly in the UI. Added
+  `FREE_LAYOUTS`/`PRO_LAYOUTS` and `_sanitize_layout()` to
+  `SignatureService`, mirroring the existing `font_family` gating pattern
+  exactly; free tier is now locked to `classic`
+- Locked the six Pro-only tiles in `create.html` and `edit.html` with a
+  disabled state, "Pro" badge, and "Upgrade to unlock" note, matching the
+  existing accent-color lock UI
+- Added six tests to `test_signatures.py` covering free/Pro submission,
+  unknown-value fallback, edit persistence, and the downgrade case. Test
+  suite: 72 → 78, all passing. Deployed and confirmed live
+- Also fixed along the way: `.gitignore`'s `docs/` pattern was silently
+  disabling re-inclusion of files inside it (see `CHANGELOG.md` for detail),
+  confirmed the Tailwind build renders correctly on the actual deployed URL,
+  and tracked `docs/PROJECT_STATUS.md` in git for the first time
 
-**Session: .gitignore/.dockerignore audit (2026-07-25)**
-- Audited `.gitignore` and `.dockerignore`; confirmed `node_modules/` and the
-  stray shell-redirect filenames (`tatus`, `status`) were already correctly
-  excluded in both files — no action needed there
-- Found and fixed a real bug: `.gitignore`'s `docs/` and bare `docs` patterns
-  excluded the directory itself, which silently disables any later `!`
-  negation pattern for files inside it (a documented Git limitation — parent
-  directory exclusions are never traversed, so re-inclusion rules never
-  evaluate). `docs/architecture.md` happened to already be tracked so this
-  hadn't caused a problem yet, but a future `git rm --cached` + re-add, or a
-  fresh clone attempt, would have silently failed to re-include it. Fixed by
-  changing the pattern to `docs/*` (excludes contents, not the directory
-  itself) paired with `!docs/architecture.md`, and removing the bare `docs`
-  line, which had the same problem
-- Confirmed via `git ls-files` that `docs/architecture.md` is tracked and
-  safe
-
-**Session: landing page overhaul, Tailwind build migration, Outlook doc accuracy, repo cleanup (2026-07-25)**
-- Replaced the fake testimonials section on the landing page with a live
-  interactive signature demo (name/title/company/phone/email/accent color,
-  Alpine.js `x-model`/`x-text` only — no `x-html`, no injection surface) and
-  a clearly-labeled "sample data" analytics preview matching the real
-  `/analytics` page's card and chart styling
-- Migrated Tailwind CSS off the CDN's in-browser JIT compiler: added
-  `tailwind.config.js`, `input.css`, and `package.json` (`build:css` /
-  `watch:css` scripts); updated `base.html` to link the compiled stylesheet
-  instead of the CDN `<script>` + inline config block
-- Added a third Docker build stage (`frontend-builder`, `node:20-slim`) that
-  runs `npm ci` + `npm run build:css` during the image build and copies only
-  the compiled `output.css` into the runtime stage — Node/npm never ship in
-  the final image, same discard-the-toolchain pattern as the existing Python
-  builder stage
-- Verified locally: `docker build` completed clean (33/33 steps), `docker
-  run` on `localhost:5000` confirmed correct styling end to end
-- Checked the Outlook and Apple Mail install instructions on the preview
-  page against current documentation; Apple Mail and Classic Outlook desktop
-  were already accurate, New Outlook/web was updated to branch for both
-  menu paths Microsoft's ongoing UI rollout currently produces
-- Repo cleanup: confirmed the stale `test-workflow` branch no longer exists
-  locally or on the remote (already deleted); deleted unused
-  `requirements-dev.txt` after confirming nothing in code, CI, or the
-  Dockerfile referenced it; discovered `ty` had only ever been installed via
-  that now-deleted file and added `ty==0.0.61` to `requirements.txt` so a
-  fresh clone still has everything `README.md`'s setup instructions promise;
-  fixed `README.md`'s stale test count (62 → 72), stale XSS-coverage wording,
-  stale Tailwind/CDN description, and removed the now-invalid
-  `requirements-dev.txt` install step
+*Earlier sessions' full detail now lives in `CHANGELOG.md` — this section
+was trimmed back per the ~150-line guideline below.*
 
 ---
 
