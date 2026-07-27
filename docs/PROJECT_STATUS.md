@@ -21,10 +21,13 @@ chat.*
   `WORKFLOW.md` for the full feature workflow.
 - Free tier: 1 signature, 3 fonts (Arial, Calibri, Times New Roman),
   fixed accent color, classic layout only, watermark included.
-- Pro tier: unlimited signatures, all 11 fonts, custom accent color, all 7
-  layout templates, no watermark, priority support.
-- Test suite: 78 tests, all passing. `ruff check .` and `ty check .` both
-  clean as of the last run.
+- Pro tier: unlimited signatures, all 11 fonts, custom accent color, all 9
+  layout templates (added `solid` and `split` this session), no watermark,
+  priority support.
+- Test suite: 86 tests, all passing. `ruff check .` clean. `ty check .`
+  surfaces 4 warnings (Flask-SQLAlchemy `db.Model` MRO resolution — see
+  Open Issues); confirmed unrelated to `ty` version and to this session's
+  changes.
 - CI: GitHub Actions, runs on every push to `main`, confirmed passing via
   `gh run list`.
 - Landing page's testimonials section (fake client quotes) has been replaced
@@ -43,6 +46,18 @@ chat.*
 
 ## Open Issues
 
+- [ ] **Not yet deployed** — the Solid/Split layout work (2026-07-26) passed
+      all local tests but hasn't been pushed/deployed yet.
+- [ ] **`ty` MRO warnings on `db.Model` subclasses** — `ty check .` surfaces
+      4 warnings (`analytics.py` x2, `signature.py`, `user.py`) about an
+      unresolved MRO for classes inheriting Flask-SQLAlchemy's
+      dynamically-generated `db.Model` base. Confirmed NOT a version-drift
+      issue (`pip show ty` = `0.0.61`, matching the pin). Most likely a
+      known false-positive class with Flask-SQLAlchemy's declarative
+      metaclass that predates this session and simply wasn't noticed
+      before, since it's a warning, not a failing check. No code change
+      caused this. Decide whether to silence it (inline `# ty: ignore` or
+      config exclusion) or leave as background noise.
 - [ ] **Outlook/Apple Mail delivery test** — the create → copy → paste →
       send → receive flow has only been validated in Gmail. UI install
       instructions exist for all three clients, but Outlook/Apple Mail
@@ -84,23 +99,22 @@ unconditionally → service layer enforces tier + validates input):
 
 ## Recently Completed (this section gets replaced, not appended, next session)
 
-**Session: Pro-tier layout template gating (2026-07-25)**
-- Found that all seven signature layouts were already fully built and
-  rendering correctly, but had zero tier enforcement — any free-tier
-  account could select any Pro-only layout directly in the UI. Added
-  `FREE_LAYOUTS`/`PRO_LAYOUTS` and `_sanitize_layout()` to
-  `SignatureService`, mirroring the existing `font_family` gating pattern
-  exactly; free tier is now locked to `classic`
-- Locked the six Pro-only tiles in `create.html` and `edit.html` with a
-  disabled state, "Pro" badge, and "Upgrade to unlock" note, matching the
-  existing accent-color lock UI
-- Added six tests to `test_signatures.py` covering free/Pro submission,
-  unknown-value fallback, edit persistence, and the downgrade case. Test
-  suite: 72 → 78, all passing. Deployed and confirmed live
-- Also fixed along the way: `.gitignore`'s `docs/` pattern was silently
-  disabling re-inclusion of files inside it (see `CHANGELOG.md` for detail),
-  confirmed the Tailwind build renders correctly on the actual deployed URL,
-  and tracked `docs/PROJECT_STATUS.md` in git for the first time
+**Session: Solid and Split layout templates (2026-07-26)**
+- Added two new Pro-tier layouts: `solid` (full solid-color card, white
+  text) and `split` (colored avatar rail + white content column). Both
+  added to `SignatureService.PRO_LAYOUTS` and given their own
+  `_generate_html_content` branches, mirrored into the Alpine.js live
+  preview in `create.html`/`edit.html`, and given matching layout-picker
+  tiles
+- Found and fixed two small pre-existing bugs in `edit.html`'s `avatar`
+  layout preview (missing department line; logo `<img>` missing sizing/
+  object-fit) while working in that file — unrelated to the new layouts
+- Added 8 tests to `test_signatures.py` (free-tier fallback, Pro-tier
+  access, edit persistence, downgrade case — for both new layouts). Test
+  suite: 78 → 86, all passing. `ruff check .` clean
+- `ty check .` surfaced 4 pre-existing warnings unrelated to this session
+  (see Open Issues) — not yet investigated or resolved
+- Not yet deployed
 
 *Earlier sessions' full detail now lives in `CHANGELOG.md` — this section
 was trimmed back per the ~150-line guideline below.*

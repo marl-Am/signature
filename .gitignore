@@ -53,6 +53,7 @@ PROMPT
 docs/*
 !docs/architecture.md
 !docs/PROJECT_STATUS.md
+!docs/CHANGELOG.md
 
 
 requirements-dev.txt

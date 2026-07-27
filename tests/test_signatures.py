@@ -1015,3 +1015,231 @@ def test_downgraded_user_editing_signature_with_pro_only_layout_falls_back(
         assert signature is not None
         assert signature.layout == SignatureService.DEFAULT_LAYOUT
         assert PRO_ONLY_LAYOUT_MARKER not in signature.html_content
+
+
+# ---------------------------------------------------------------------------
+# Solid and Split layouts (2026-07-26 addition)
+#
+# Same tier-gating mechanism as the six layouts above (_sanitize_layout
+# doesn't distinguish between Pro-only layouts, so the free-tier-fallback,
+# unknown-value-fallback, and free-tier-classic-still-works cases are
+# already covered generically by the avatar tests). What's new here and
+# genuinely untested is that these two specific rendering branches exist,
+# produce their own distinct markup, and are wired into the same
+# create/edit/downgrade paths correctly -- not just that *some* Pro layout
+# is blocked for free tier.
+# ---------------------------------------------------------------------------
+
+SOLID_LAYOUT = "solid"
+# Unique to the solid layout's single full-color content cell -- no other
+# layout uses this exact padding value, so its presence/absence in
+# html_content confirms the solid branch actually rendered.
+SOLID_LAYOUT_MARKER = "padding:18px 20px"
+
+SPLIT_LAYOUT = "split"
+# Unique to the split layout's colored left rail -- no other layout
+# produces this exact border-radius pairing, so its presence/absence in
+# html_content confirms the split branch actually rendered.
+SPLIT_LAYOUT_MARKER = "border-radius:8px 0 0 8px"
+
+
+def test_free_tier_solid_layout_submission_falls_back_to_default(
+    app: Flask, client: FlaskClient
+) -> None:
+    register_via_client(client, email="layout7@example.com")
+
+    _create_signature(
+        client,
+        name="Free Solid Layout Sig",
+        full_name="Jane Doe",
+        layout=SOLID_LAYOUT,
+    )
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="Free Solid Layout Sig").first()
+        assert signature is not None
+        assert signature.layout == SignatureService.DEFAULT_LAYOUT
+        assert SOLID_LAYOUT_MARKER not in signature.html_content
+
+
+def test_free_tier_split_layout_submission_falls_back_to_default(
+    app: Flask, client: FlaskClient
+) -> None:
+    register_via_client(client, email="layout8@example.com")
+
+    _create_signature(
+        client,
+        name="Free Split Layout Sig",
+        full_name="Jane Doe",
+        layout=SPLIT_LAYOUT,
+    )
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="Free Split Layout Sig").first()
+        assert signature is not None
+        assert signature.layout == SignatureService.DEFAULT_LAYOUT
+        assert SPLIT_LAYOUT_MARKER not in signature.html_content
+
+
+def test_pro_tier_can_use_solid_layout(app: Flask, client: FlaskClient) -> None:
+    register_via_client(client, email="layout9@example.com")
+    _set_subscription_tier(app, "layout9@example.com", "pro")
+
+    _create_signature(
+        client, name="Pro Solid Layout Sig", full_name="Jane Doe", layout=SOLID_LAYOUT
+    )
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="Pro Solid Layout Sig").first()
+        assert signature is not None
+        assert signature.layout == SOLID_LAYOUT
+        assert SOLID_LAYOUT_MARKER in signature.html_content
+
+
+def test_pro_tier_can_use_split_layout(app: Flask, client: FlaskClient) -> None:
+    register_via_client(client, email="layout10@example.com")
+    _set_subscription_tier(app, "layout10@example.com", "pro")
+
+    _create_signature(
+        client, name="Pro Split Layout Sig", full_name="Jane Doe", layout=SPLIT_LAYOUT
+    )
+
+    with app.app_context():
+        signature = Signature.query.filter_by(name="Pro Split Layout Sig").first()
+        assert signature is not None
+        assert signature.layout == SPLIT_LAYOUT
+        assert SPLIT_LAYOUT_MARKER in signature.html_content
+
+
+def test_solid_layout_persists_correctly_through_edit(
+    app: Flask, client: FlaskClient
+) -> None:
+    signature_id = _create_signature_for_user(app, client, "layout11@example.com")
+    _set_subscription_tier(app, "layout11@example.com", "pro")
+
+    client.post(
+        f"/signatures/{signature_id}/edit",
+        data={
+            "name": "Owned Sig",
+            "full_name": "Owner Name",
+            "website": "",
+            "layout": SOLID_LAYOUT,
+        },
+        follow_redirects=False,
+    )
+
+    with app.app_context():
+        signature = db.session.get(Signature, signature_id)
+        assert signature is not None
+        assert signature.layout == SOLID_LAYOUT
+        assert SOLID_LAYOUT_MARKER in signature.html_content
+
+
+def test_split_layout_persists_correctly_through_edit(
+    app: Flask, client: FlaskClient
+) -> None:
+    signature_id = _create_signature_for_user(app, client, "layout12@example.com")
+    _set_subscription_tier(app, "layout12@example.com", "pro")
+
+    client.post(
+        f"/signatures/{signature_id}/edit",
+        data={
+            "name": "Owned Sig",
+            "full_name": "Owner Name",
+            "website": "",
+            "layout": SPLIT_LAYOUT,
+        },
+        follow_redirects=False,
+    )
+
+    with app.app_context():
+        signature = db.session.get(Signature, signature_id)
+        assert signature is not None
+        assert signature.layout == SPLIT_LAYOUT
+        assert SPLIT_LAYOUT_MARKER in signature.html_content
+
+
+def test_downgraded_user_editing_signature_with_solid_layout_falls_back(
+    app: Flask, client: FlaskClient
+) -> None:
+    """
+    Symmetric case to the avatar-layout downgrade test: a signature saved
+    while Pro (with the solid layout) that is later edited after a
+    downgrade to free must have that layout replaced with the default, not
+    silently retain a layout the account is no longer entitled to.
+    """
+    signature_id = _create_signature_for_user(app, client, "layout13@example.com")
+    _set_subscription_tier(app, "layout13@example.com", "pro")
+
+    client.post(
+        f"/signatures/{signature_id}/edit",
+        data={
+            "name": "Owned Sig",
+            "full_name": "Owner Name",
+            "website": "",
+            "layout": SOLID_LAYOUT,
+        },
+        follow_redirects=False,
+    )
+
+    _set_subscription_tier(app, "layout13@example.com", "free")
+
+    client.post(
+        f"/signatures/{signature_id}/edit",
+        data={
+            "name": "Owned Sig",
+            "full_name": "Owner Name",
+            "website": "",
+            "layout": SOLID_LAYOUT,
+        },
+        follow_redirects=False,
+    )
+
+    with app.app_context():
+        signature = db.session.get(Signature, signature_id)
+        assert signature is not None
+        assert signature.layout == SignatureService.DEFAULT_LAYOUT
+        assert SOLID_LAYOUT_MARKER not in signature.html_content
+
+
+def test_downgraded_user_editing_signature_with_split_layout_falls_back(
+    app: Flask, client: FlaskClient
+) -> None:
+    """
+    Symmetric case to the avatar-layout downgrade test: a signature saved
+    while Pro (with the split layout) that is later edited after a
+    downgrade to free must have that layout replaced with the default, not
+    silently retain a layout the account is no longer entitled to.
+    """
+    signature_id = _create_signature_for_user(app, client, "layout14@example.com")
+    _set_subscription_tier(app, "layout14@example.com", "pro")
+
+    client.post(
+        f"/signatures/{signature_id}/edit",
+        data={
+            "name": "Owned Sig",
+            "full_name": "Owner Name",
+            "website": "",
+            "layout": SPLIT_LAYOUT,
+        },
+        follow_redirects=False,
+    )
+
+    _set_subscription_tier(app, "layout14@example.com", "free")
+
+    client.post(
+        f"/signatures/{signature_id}/edit",
+        data={
+            "name": "Owned Sig",
+            "full_name": "Owner Name",
+            "website": "",
+            "layout": SPLIT_LAYOUT,
+        },
+        follow_redirects=False,
+    )
+
+    with app.app_context():
+        signature = db.session.get(Signature, signature_id)
+        assert signature is not None
+        assert signature.layout == SignatureService.DEFAULT_LAYOUT
+        assert SPLIT_LAYOUT_MARKER not in signature.html_content

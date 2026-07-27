@@ -12,6 +12,32 @@ backfilled accurately instead of guessed at.*
 
 ---
 
+## 2026-07-26 — Solid and Split layout templates
+Added two new Pro-tier signature layouts: `solid` (entire signature on a
+solid accent-colored card, white text throughout, white social badges with
+accent-colored text for contrast) and `split` (colored left rail with
+avatar/initials, white right column reusing the existing on-white
+name/title/contact/social blocks unchanged). Added both to
+`SignatureService.PRO_LAYOUTS` and two new `_generate_html_content` branches
+following the existing per-layout pattern. Mirrored both into the Alpine.js
+live-preview logic and added matching layout-picker tiles in `create.html`
+and `edit.html`. While in `edit.html`, found and fixed two small
+pre-existing bugs in its `avatar` layout preview (missing department line;
+logo `<img>` missing `width`/`height`/`object-fit`, unlike the same branch
+in `create.html`). Added 8 new tests to `test_signatures.py` covering
+free-tier fallback, Pro-tier access, edit persistence, and the downgrade
+case for both new layouts (didn't repeat the unknown-value and
+free-tier-classic-still-works cases, since `_sanitize_layout` handles those
+generically and they're already covered by the existing `avatar` tests).
+Test suite: 78 → 86, all passing. `ruff check .` clean. `ty check .` surfaced
+4 warnings (Flask-SQLAlchemy `db.Model` base-class MRO resolution in
+`analytics.py`, `signature.py`, `user.py` — none of which were touched
+today). Confirmed via `pip show ty` that the installed version (`0.0.61`)
+matches the pin, ruling out version drift as the cause; most likely a
+pre-existing false-positive inherent to Flask-SQLAlchemy's dynamically
+generated declarative base, not a real type error. Not yet deployed —
+pending a decision on whether to silence the `ty` warnings or ship as-is.
+
 ## 2026-07-25 — Pro-tier layout template gating
 Discovered that all seven signature layouts (`classic`, `modern`, `minimal`,
 `ruled`, `avatar`, `compact`, `banner`) were already fully built and

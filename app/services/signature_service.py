@@ -436,6 +436,8 @@ class SignatureService:
             "avatar",
             "compact",
             "banner",
+            "solid",
+            "split",
         }
     )
 
@@ -522,8 +524,8 @@ class SignatureService:
     ) -> str:
         """
         Generate email-client-compatible HTML for the signature.
-        Supports seven layouts: classic, modern, minimal, ruled, avatar,
-        compact, banner.
+        Supports nine layouts: classic, modern, minimal, ruled, avatar,
+        compact, banner, solid, split.
 
         Free-tier accounts get a small "Sent with Signature" watermark
         appended after the signature body; Pro accounts do not. This is
@@ -862,6 +864,152 @@ class SignatureService:
                 f'<table cellpadding="0" cellspacing="0" border="0" '
                 f'style="font-family:{safe_font_family};max-width:520px;">'
                 "<tr>" + logo_html + content_td + "</tr>"
+                "</table>" + pixel_html
+            )
+
+        elif layout == "solid":
+            # Full solid-color card, white text throughout. Built as its own
+            # self-contained block rather than reusing name_html/title_html/
+            # dept_html/contact_html/social_html, since those bake in dark,
+            # on-white colors (e.g. color:#111111, accent-colored links)
+            # that would be unreadable, or invisible, against a solid
+            # accent-colored background.
+            solid_logo_html: str = ""
+            if safe_logo_url:
+                solid_logo_html = (
+                    f'<img src="{safe_logo_url}" alt="Logo" width="48" height="48" '
+                    f'style="border-radius:6px;display:block;margin-bottom:10px;" />'
+                )
+            solid_name_html: str = (
+                f'<div style="font-size:18px;font-weight:bold;color:#ffffff;margin-bottom:3px;">'
+                f"{safe_full_name}</div>"
+            )
+            solid_title_html: str = ""
+            if title_parts:
+                solid_title_html = (
+                    '<div style="font-size:13px;color:rgba(255,255,255,0.85);margin-bottom:2px;">'
+                    + " &middot; ".join(title_parts)
+                    + "</div>"
+                )
+            solid_dept_html: str = ""
+            if safe_department:
+                solid_dept_html = (
+                    '<div style="font-size:12px;color:rgba(255,255,255,0.7);margin-bottom:2px;">'
+                    f"{safe_department}</div>"
+                )
+            solid_divider_html: str = (
+                '<div style="border-top:1px solid rgba(255,255,255,0.3);margin:8px 0;"></div>'
+            )
+            solid_contact_parts: list[str] = []
+            if safe_formatted_phone:
+                solid_contact_parts.append(
+                    f'<a href="tel:{safe_formatted_phone}" style="color:#ffffff;text-decoration:none;font-size:12px;">'
+                    f"{safe_formatted_phone}</a>"
+                )
+            if safe_website:
+                solid_display: str = SignatureService._escape(
+                    website.replace("https://", "").replace("http://", "").rstrip("/")
+                    if website
+                    else ""
+                )
+                solid_tracked_website: str = (
+                    f"{request.host_url.rstrip('/')}/track/click/{tracking_code}/website"
+                )
+                solid_contact_parts.append(
+                    f'<a href="{solid_tracked_website}" style="color:#ffffff;text-decoration:underline;font-size:12px;">'
+                    f"{solid_display}</a>"
+                )
+            solid_contact_html: str = ""
+            if solid_contact_parts:
+                solid_contact_html = (
+                    '<div style="margin-bottom:6px;">'
+                    + ' <span style="color:rgba(255,255,255,0.5);">|</span> '.join(
+                        solid_contact_parts
+                    )
+                    + "</div>"
+                )
+            solid_social_parts: list[str] = []
+            for url, label, badge, platform in social_map:
+                if url:
+                    tracked = f"{request.host_url.rstrip('/')}/track/click/{tracking_code}/{platform}"
+                    solid_social_parts.append(
+                        f'<a href="{tracked}" title="{label}" '
+                        f'style="display:inline-block;background:#ffffff;color:{safe_accent_color};'
+                        f"font-size:11px;font-weight:bold;text-decoration:none;"
+                        f'padding:3px 7px;border-radius:4px;margin-right:4px;">'
+                        f"{badge}</a>"
+                    )
+            solid_social_html: str = ""
+            if solid_social_parts:
+                solid_social_html = (
+                    '<div style="margin-top:4px;">'
+                    + "".join(solid_social_parts)
+                    + "</div>"
+                )
+            content_td = (
+                f'<td style="background:{safe_accent_color};padding:18px 20px;'
+                f'border-radius:8px;vertical-align:top;">'
+                + solid_logo_html
+                + solid_name_html
+                + solid_title_html
+                + solid_dept_html
+                + solid_divider_html
+                + solid_contact_html
+                + solid_social_html
+                + "</td>"
+            )
+            html = (
+                f'<table cellpadding="0" cellspacing="0" border="0" '
+                f'style="font-family:{safe_font_family};max-width:520px;">'
+                "<tr>" + content_td + "</tr>"
+                "</table>" + pixel_html
+            )
+
+        elif layout == "split":
+            # Two-column card: solid-color left rail with avatar/initials,
+            # white right column with standard on-white text. The right
+            # column reuses name_html/title_html/dept_html/divider_html/
+            # contact_html/social_html as-is, since that side has the same
+            # white background as the classic layout.
+            split_words: list[str] = full_name.strip().split() if full_name else []
+            split_initials: str = SignatureService._escape(
+                "".join(w[0] for w in split_words[:2]).upper() if split_words else "YN"
+            )
+            if safe_logo_url:
+                avatar_block: str = (
+                    f'<img src="{safe_logo_url}" alt="{split_initials}" width="56" height="56" '
+                    f'style="width:56px;height:56px;border-radius:50%;object-fit:cover;'
+                    f'display:block;border:2px solid #ffffff;margin:0 auto;" />'
+                )
+            else:
+                avatar_block = (
+                    '<div style="width:56px;height:56px;border-radius:50%;'
+                    "background:rgba(255,255,255,0.15);text-align:center;"
+                    'line-height:56px;margin:0 auto;">'
+                    '<span style="color:#ffffff;font-size:18px;font-weight:bold;line-height:56px;">'
+                    f"{split_initials}</span></div>"
+                )
+            rail_td: str = (
+                f'<td style="background:{safe_accent_color};padding:16px;text-align:center;'
+                f'border-radius:8px 0 0 8px;vertical-align:middle;width:88px;">'
+                + avatar_block
+                + "</td>"
+            )
+            content_td = (
+                '<td style="vertical-align:top;background:#ffffff;padding:16px 18px;'
+                'border:1px solid #e0e0e0;border-left:none;border-radius:0 8px 8px 0;">'
+                + name_html
+                + title_html
+                + dept_html
+                + divider_html
+                + contact_html
+                + social_html
+                + "</td>"
+            )
+            html = (
+                f'<table cellpadding="0" cellspacing="0" border="0" '
+                f'style="font-family:{safe_font_family};max-width:520px;">'
+                "<tr>" + rail_td + content_td + "</tr>"
                 "</table>" + pixel_html
             )
 
