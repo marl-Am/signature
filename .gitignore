@@ -71,3 +71,6 @@ status
 # Node
 node_modules/
 node_modules
+
+file_paths.txt
+file_paths.txt
