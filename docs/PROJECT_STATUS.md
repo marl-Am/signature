@@ -46,6 +46,15 @@ chat.*
 
 ## Open Issues
 
+- [ ] **No CSRF protection anywhere in the app** — confirmed via
+      `requirements.txt`: no Flask-WTF, no Flask-SeaSurf, nothing
+      CSRF-specific. Found while auditing the auth templates. Two real
+      fixes once ready: add `Flask-WTF` (gives `{{ form.hidden_tag() }}`
+      + automatic validation), or hand-roll it with `itsdangerous`
+      (already a dependency) — generate a session-bound token, check it
+      in each POST route. Needs `app/__init__.py` (app factory) and the
+      route files, not just templates.
+
 - [ ] **Solid/Split live visual verification** — pushed, CI green, deploy
       green (2026-07-26), but not yet visually confirmed on the live URL.
       Same verification gap as prior sessions closed by actually visiting
@@ -105,30 +114,30 @@ unconditionally → service layer enforces tier + validates input):
 
 ## Recently Completed (this section gets replaced, not appended, next session)
 
-**Session: Solid and Split layout templates (2026-07-26)**
-- Added two new Pro-tier layouts: `solid` (full solid-color card, white
-  text) and `split` (colored avatar rail + white content column). Both
-  added to `SignatureService.PRO_LAYOUTS` and given their own
-  `_generate_html_content` branches, mirrored into the Alpine.js live
-  preview in `create.html`/`edit.html`, and given matching layout-picker
-  tiles
-- Found and fixed two small pre-existing bugs in `edit.html`'s `avatar`
-  layout preview (missing department line; logo `<img>` missing sizing/
-  object-fit) while working in that file — unrelated to the new layouts
-- Added 8 tests to `test_signatures.py` (free-tier fallback, Pro-tier
-  access, edit persistence, downgrade case — for both new layouts). Test
-  suite: 78 → 86, all passing. `ruff check .` clean
-- `ty check .` surfaced 4 pre-existing warnings unrelated to this session
-  (see Open Issues) — not yet investigated or resolved
-- Pushed to `main`. CI green, Render deploy green. Live visual check of the
-  two new layouts still outstanding (see Open Issues)
-- Also untracked `tests/__pycache__/*.pyc` (was accidentally committed) and
-  added `!docs/CHANGELOG.md` to `.gitignore`'s `docs/*` negation pattern,
-  same fix as the `PROJECT_STATUS.md` one from the prior session
-
-*Earlier sessions' full detail now lives in `CHANGELOG.md` — this section
-was trimmed back per the ~150-line guideline below.*
-
+**Session: Auth template audit (2026-07-30)**
+- Ran the code-audit workflow (Pass 1 flag-only, Pass 2 fix-one-at-a-time)
+  against `login.html`, `register.html`, `forgot_password.html`,
+  `reset_password.html` using `signs-of-llm-generated-code.md`
+- Fixed title collision — `forgot_password.html` was titled "Reset
+  Password" (duplicate of `reset_password.html`'s actual title); now
+  "Forgot Password"
+- `register.html`'s password/confirm_password fields were missing
+  `minlength="12"` and `autocomplete="new-password"` despite the on-page
+  hint describing a 12-character policy; added both
+- `reset_password.html` used a different design system (plain gray
+  background, indigo button) from the other three auth screens; restyled
+  to match the shared gradient background / white card / primary button
+  pattern, and added the security trust badge it was missing
+- Extracted the repeated Tailwind input markup into
+  `app/templates/auth/_form_macros.html` (`form_input` macro), used by
+  all four auth templates
+- Fixed a stray double blank line in `login.html`
+- All 86 tests passing, `ruff check .` clean, confirmed locally
+  (`pytest`, then manual click-through of all four pages via
+  `python wsgi.py`)
+- [Pushed to `main` via `code-audit-auth-templates` branch. CI green,
+  Render deploy green, live visual check done — OR — pending, see Open
+  Issues]
 ---
 
 ## How This Project Talks to Claude Now

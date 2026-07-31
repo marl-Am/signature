@@ -11,6 +11,11 @@ If you want them added, paste the old handoff files in and they can be
 backfilled accurately instead of guessed at.*
 
 ---
+## 2026-07-30: Auth template audit 
+— fixed title collision (forgot/reset password), missing minlength/autocomplete on register.html, restyled
+reset_password.html to match shared design, extracted repeated input
+markup into app/templates/auth/_form_macros.html. Flagged CSRF as
+unimplemented — tracked as Open Issue.
 
 ## 2026-07-26 — Solid and Split layout templates
 Added two new Pro-tier signature layouts: `solid` (entire signature on a
