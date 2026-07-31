@@ -23,7 +23,6 @@ class Config:
         "pool_recycle": 300,
     }
 
-
     REMEMBER_COOKIE_DURATION: timedelta = timedelta(days=30)
     REMEMBER_COOKIE_HTTPONLY: bool = True
     REMEMBER_COOKIE_SAMESITE: str = "Lax"
@@ -66,3 +65,9 @@ class TestingConfig(Config):
     TESTING: bool = True
     SQLALCHEMY_DATABASE_URI: str = "sqlite:///test.db"
     REMEMBER_COOKIE_SECURE: bool = False
+    # Test client posts raw form dicts directly to routes without first
+    # fetching a page to read csrf_token() out of, so CSRF checks are
+    # disabled for this config. conftest.py's `app` fixture already forces
+    # this at the fixture level; setting it here too means anything else
+    # that runs under TestingConfig (outside pytest) gets the same behavior.
+    WTF_CSRF_ENABLED: bool = False

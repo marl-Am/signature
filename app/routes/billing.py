@@ -37,7 +37,7 @@ from werkzeug.wrappers import Response
 from flask_login import login_required, current_user
 from datetime import datetime, timezone
 
-from app import db
+from app import db, csrf
 from app.models.user import User
 from app.models.signature import Signature
 
@@ -52,7 +52,6 @@ def _stripe_client() -> ModuleType:
     """Return a configured Stripe client using the secret key from config."""
     stripe.api_key = current_app.config["STRIPE_SECRET_KEY"]
     return stripe
-
 
 
 @billing_bp.route("/upgrade")
@@ -107,7 +106,6 @@ def upgrade() -> Response:
     return redirect(checkout_session.url, code=303)
 
 
-
 @billing_bp.route("/success")
 @login_required
 def success() -> Response:
@@ -125,7 +123,6 @@ def success() -> Response:
     return redirect(url_for("dashboard.index"))
 
 
-
 @billing_bp.route("/cancel")
 @login_required
 def cancel() -> Response:
@@ -134,8 +131,8 @@ def cancel() -> Response:
     return redirect(url_for("pricing"))
 
 
-
 @billing_bp.route("/webhook", methods=["POST"])
+@csrf.exempt
 def webhook() -> Response:
     """
     Receive and process Stripe webhook events.
@@ -145,7 +142,10 @@ def webhook() -> Response:
     signature returns 400 immediately.
 
     This endpoint intentionally does NOT require @login_required —
-    it is called by Stripe's servers, not by a browser session.
+    it is called by Stripe's servers, not by a browser session, so it
+    also carries no CSRF token. The Stripe-Signature check above is the
+    real authenticity guarantee for this route; @csrf.exempt just stops
+    Flask-WTF from rejecting it before that check ever runs.
     """
     payload: bytes = request.get_data()
     sig_header: str | None = request.headers.get("Stripe-Signature")
@@ -181,7 +181,6 @@ def webhook() -> Response:
 
     # Return 200 for all unhandled events so Stripe does not retry them.
     return make_response("Success", 200)
-
 
 
 def _handle_checkout_completed(session: stripe.checkout.Session) -> None:

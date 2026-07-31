@@ -7,227 +7,227 @@ are interpolated.
 ───────────────────────────────────────────────────────────────────────────── #}
 
 <script>
-    function escapeHtml(value) {
-      if (value === null || value === undefined) return '';
-      return String(value)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
+  function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
 
-    function sanitizeUrl(value) {
-      if (!value) return '';
-      let trimmed = String(value).trim();
-      if (!trimmed) return '';
-      // Mirror the server-side normalization in _normalize_url(): a bare
-      // domain like "link.com" is not a valid absolute URL on its own, so
-      // assume https:// if no scheme was typed, same as the form does on submit.
-      if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
-        trimmed = 'https://' + trimmed;
+  function sanitizeUrl(value) {
+    if (!value) return '';
+    let trimmed = String(value).trim();
+    if (!trimmed) return '';
+    // Mirror the server-side normalization in _normalize_url(): a bare
+    // domain like "link.com" is not a valid absolute URL on its own, so
+    // assume https:// if no scheme was typed, same as the form does on submit.
+    if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
+      trimmed = 'https://' + trimmed;
+    }
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'mailto:') {
+        return escapeHtml(parsed.href);
       }
-      try {
-        const parsed = new URL(trimmed);
-        if (parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'mailto:') {
-          return escapeHtml(parsed.href);
+    } catch (e) {
+      // Not a valid absolute URL — reject rather than guess at intent.
+    }
+    return '';
+  }
+
+  function sanitizeColor(value) {
+    const trimmed = String(value || '').trim();
+    return /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(trimmed) ? trimmed : '#0c2788';
+  }
+
+  function initCreate() {
+    return {
+      label:        {{ (form_data.get('name', '')         if form_data else '')                              | tojson }},
+      fullName:     {{ (form_data.get('full_name', '')    if form_data else current_user.name)                | tojson }},
+      jobTitle:     {{ (form_data.get('job_title', '')    if form_data else '')                               | tojson }},
+      company:      {{ (form_data.get('company', '')      if form_data else '')                               | tojson }},
+      department:   {{ (form_data.get('department', '')   if form_data else '')                               | tojson }},
+      phone:        {{ (form_data.get('phone', '')        if form_data else '')                               | tojson }},
+      website:      {{ (form_data.get('website', '')      if form_data else '')                               | tojson }},
+      linkedinUrl:  {{ (form_data.get('linkedin_url', '') if form_data else '')                               | tojson }},
+      twitterUrl:   {{ (form_data.get('twitter_url', '')  if form_data else '')                               | tojson }},
+      facebookUrl:  {{ (form_data.get('facebook_url', '') if form_data else '')                               | tojson }},
+      instagramUrl: {{ (form_data.get('instagram_url', '')if form_data else '')                               | tojson }},
+      logoUrl:      {{ (form_data.get('logo_url', '')     if form_data else '')                               | tojson }},
+      accentColor:  {{ (form_data.get('accent_color', '#0c2788') if form_data else '#0c2788')                 | tojson }},
+      layout:       {{ (form_data.get('layout', 'classic') if form_data else 'classic')                       | tojson }},
+      fontFamily:   {{ (form_data.get('font_family', 'Arial, Helvetica, sans-serif') if form_data else 'Arial, Helvetica, sans-serif') | tojson }},
+      copied: false,
+
+      get formattedPhone() {
+        const digits = this.phone.replace(/\D/g, '');
+        if (digits.length === 11 && digits[0] === '1')
+          return `+1 ${digits.slice(1,4)} ${digits.slice(4,7)} ${digits.slice(7)}`;
+        if (digits.length === 10)
+          return `+1 ${digits.slice(0,3)} ${digits.slice(3,6)} ${digits.slice(6)}`;
+        return this.phone;
+      },
+
+      get previewHtml() {
+        const brand = sanitizeColor(this.accentColor);
+        const font  = this.fontFamily  || 'Arial, Helvetica, sans-serif';
+
+        const safeFullName = escapeHtml(this.fullName);
+        const safeJobTitle = escapeHtml(this.jobTitle);
+        const safeCompany  = escapeHtml(this.company);
+        const safeDept     = escapeHtml(this.department);
+
+        const namePart = this.fullName
+          ? `<div style='font-size:17px;font-weight:bold;color:#111;margin-bottom:3px;'>${safeFullName}</div>`
+          : `<div style='font-size:17px;font-weight:bold;color:#ccc;margin-bottom:3px;'>Your Name</div>`;
+
+        const titleParts = [safeJobTitle, safeCompany].filter(Boolean);
+        const titlePart  = titleParts.length
+          ? `<div style='font-size:13px;color:${brand};margin-bottom:2px;'>${titleParts.join(' · ')}</div>`
+          : '';
+        const deptPart = this.department
+          ? `<div style='font-size:12px;color:#777;margin-bottom:2px;'>${safeDept}</div>`
+          : '';
+
+        const divider = `<div style='border-top:1px solid #e0e0e0;margin:8px 0;'></div>`;
+
+        const safeWebsite = sanitizeUrl(this.website);
+        const contactParts = [];
+        if (this.formattedPhone) contactParts.push(`<span style='color:#555;font-size:12px;'>${this.formattedPhone}</span>`);
+        if (safeWebsite) {
+          const d = escapeHtml(this.website.replace('https://','').replace('http://','').replace(/\/$/,''));
+          contactParts.push(`<a href='${safeWebsite}' style='color:${brand};font-size:12px;text-decoration:none;'>${d}</a>`);
         }
-      } catch (e) {
-        // Not a valid absolute URL — reject rather than guess at intent.
-      }
-      return '';
-    }
+        const contactPart = contactParts.length
+          ? `<div style='margin-bottom:6px;'>${contactParts.join(' <span style=\'color:#ccc;\'>|</span> ')}</div>`
+          : '';
 
-    function sanitizeColor(value) {
-      const trimmed = String(value || '').trim();
-      return /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(trimmed) ? trimmed : '#0c2788';
-    }
+        const socials = [
+          [sanitizeUrl(this.linkedinUrl),'in'],[sanitizeUrl(this.twitterUrl),'𝕏'],
+          [sanitizeUrl(this.facebookUrl),'f'],[sanitizeUrl(this.instagramUrl),'IG'],
+        ];
+        const socialBadges = socials.filter(([u]) => u)
+          .map(([u,b]) => `<a href='${u}' style='display:inline-block;background:${brand};color:#fff;font-size:11px;font-weight:bold;text-decoration:none;padding:3px 7px;border-radius:4px;margin-right:4px;'>${b}</a>`)
+          .join('');
+        const socialPart = socialBadges ? `<div style='margin-top:4px;'>${socialBadges}</div>` : '';
 
-    function initCreate() {
-      return {
-        label:        {{ (form_data.get('name', '')         if form_data else '')                              | tojson }},
-        fullName:     {{ (form_data.get('full_name', '')    if form_data else current_user.name)                | tojson }},
-        jobTitle:     {{ (form_data.get('job_title', '')    if form_data else '')                               | tojson }},
-        company:      {{ (form_data.get('company', '')      if form_data else '')                               | tojson }},
-        department:   {{ (form_data.get('department', '')   if form_data else '')                               | tojson }},
-        phone:        {{ (form_data.get('phone', '')        if form_data else '')                               | tojson }},
-        website:      {{ (form_data.get('website', '')      if form_data else '')                               | tojson }},
-        linkedinUrl:  {{ (form_data.get('linkedin_url', '') if form_data else '')                               | tojson }},
-        twitterUrl:   {{ (form_data.get('twitter_url', '')  if form_data else '')                               | tojson }},
-        facebookUrl:  {{ (form_data.get('facebook_url', '') if form_data else '')                               | tojson }},
-        instagramUrl: {{ (form_data.get('instagram_url', '')if form_data else '')                               | tojson }},
-        logoUrl:      {{ (form_data.get('logo_url', '')     if form_data else '')                               | tojson }},
-        accentColor:  {{ (form_data.get('accent_color', '#0c2788') if form_data else '#0c2788')                 | tojson }},
-        layout:       {{ (form_data.get('layout', 'classic') if form_data else 'classic')                       | tojson }},
-        fontFamily:   {{ (form_data.get('font_family', 'Arial, Helvetica, sans-serif') if form_data else 'Arial, Helvetica, sans-serif') | tojson }},
-        copied: false,
+        const safeLogoUrl = sanitizeUrl(this.logoUrl);
+        const logoPart = safeLogoUrl
+          ? `<td style='padding-right:16px;vertical-align:top;'><img src='${safeLogoUrl}' width='64' height='64' style='border-radius:6px;display:block;' /></td>`
+          : '';
 
-        get formattedPhone() {
-          const digits = this.phone.replace(/\D/g, '');
-          if (digits.length === 11 && digits[0] === '1')
-            return `+1 ${digits.slice(1,4)} ${digits.slice(4,7)} ${digits.slice(7)}`;
-          if (digits.length === 10)
-            return `+1 ${digits.slice(0,3)} ${digits.slice(3,6)} ${digits.slice(6)}`;
-          return this.phone;
-        },
+        // --- Avatar layout: returns its own table early ---
+        if (this.layout === 'avatar') {
+          const initials = this.fullName
+            ? escapeHtml(this.fullName.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase())
+            : 'YN';
+          const avatarCol = safeLogoUrl
+            ? `<td style='padding-right:16px;vertical-align:middle;'><img src='${safeLogoUrl}' width='52' height='52' style='width:52px;height:52px;border-radius:50%;object-fit:cover;display:block;' /></td>`
+            : `<td style='padding-right:16px;vertical-align:middle;'><div style='width:52px;height:52px;border-radius:50%;background:${brand};text-align:center;line-height:52px;display:inline-block;'><span style='color:#fff;font-size:16px;font-weight:bold;line-height:52px;'>${initials}</span></div></td>`;
+          return `<table cellpadding='0' cellspacing='0' border='0' style="font-family:${font};max-width:520px;"><tr>${avatarCol}<td style='vertical-align:middle;'>${namePart}${titlePart}${deptPart}${divider}${contactPart}${socialPart}</td></tr></table>`;
+        }
 
-        get previewHtml() {
-          const brand = sanitizeColor(this.accentColor);
-          const font  = this.fontFamily  || 'Arial, Helvetica, sans-serif';
-
-          const safeFullName = escapeHtml(this.fullName);
-          const safeJobTitle = escapeHtml(this.jobTitle);
-          const safeCompany  = escapeHtml(this.company);
-          const safeDept     = escapeHtml(this.department);
-
-          const namePart = this.fullName
-            ? `<div style='font-size:17px;font-weight:bold;color:#111;margin-bottom:3px;'>${safeFullName}</div>`
-            : `<div style='font-size:17px;font-weight:bold;color:#ccc;margin-bottom:3px;'>Your Name</div>`;
-
-          const titleParts = [safeJobTitle, safeCompany].filter(Boolean);
-          const titlePart  = titleParts.length
-            ? `<div style='font-size:13px;color:${brand};margin-bottom:2px;'>${titleParts.join(' · ')}</div>`
+        // --- Solid layout: full-color card, returns its own table early ---
+        if (this.layout === 'solid') {
+          const solidLogo = safeLogoUrl
+            ? `<img src='${safeLogoUrl}' width='48' height='48' style='border-radius:6px;display:block;margin-bottom:10px;' />`
             : '';
-          const deptPart = this.department
-            ? `<div style='font-size:12px;color:#777;margin-bottom:2px;'>${safeDept}</div>`
+          const solidName = this.fullName
+            ? `<div style='font-size:18px;font-weight:bold;color:#fff;margin-bottom:3px;'>${safeFullName}</div>`
+            : `<div style='font-size:18px;font-weight:bold;color:rgba(255,255,255,0.6);margin-bottom:3px;'>Your Name</div>`;
+          const solidTitle = titleParts.length
+            ? `<div style='font-size:13px;color:rgba(255,255,255,0.85);margin-bottom:2px;'>${titleParts.join(' · ')}</div>`
             : '';
-
-          const divider = `<div style='border-top:1px solid #e0e0e0;margin:8px 0;'></div>`;
-
-          const safeWebsite = sanitizeUrl(this.website);
-          const contactParts = [];
-          if (this.formattedPhone) contactParts.push(`<span style='color:#555;font-size:12px;'>${this.formattedPhone}</span>`);
+          const solidDept = this.department
+            ? `<div style='font-size:12px;color:rgba(255,255,255,0.7);margin-bottom:2px;'>${safeDept}</div>`
+            : '';
+          const solidDivider = `<div style='border-top:1px solid rgba(255,255,255,0.3);margin:8px 0;'></div>`;
+          const solidContactParts = [];
+          if (this.formattedPhone) solidContactParts.push(`<span style='color:#fff;font-size:12px;'>${this.formattedPhone}</span>`);
           if (safeWebsite) {
             const d = escapeHtml(this.website.replace('https://','').replace('http://','').replace(/\/$/,''));
-            contactParts.push(`<a href='${safeWebsite}' style='color:${brand};font-size:12px;text-decoration:none;'>${d}</a>`);
+            solidContactParts.push(`<a href='${safeWebsite}' style='color:#fff;font-size:12px;text-decoration:underline;'>${d}</a>`);
           }
-          const contactPart = contactParts.length
-            ? `<div style='margin-bottom:6px;'>${contactParts.join(' <span style=\'color:#ccc;\'>|</span> ')}</div>`
+          const solidContact = solidContactParts.length
+            ? `<div style='margin-bottom:6px;'>${solidContactParts.join(` <span style='color:rgba(255,255,255,0.5);'>|</span> `)}</div>`
             : '';
-
-          const socials = [
-            [sanitizeUrl(this.linkedinUrl),'in'],[sanitizeUrl(this.twitterUrl),'𝕏'],
-            [sanitizeUrl(this.facebookUrl),'f'],[sanitizeUrl(this.instagramUrl),'IG'],
-          ];
-          const socialBadges = socials.filter(([u]) => u)
-            .map(([u,b]) => `<a href='${u}' style='display:inline-block;background:${brand};color:#fff;font-size:11px;font-weight:bold;text-decoration:none;padding:3px 7px;border-radius:4px;margin-right:4px;'>${b}</a>`)
+          const solidSocials = socials.filter(([u]) => u)
+            .map(([u,b]) => `<a href='${u}' style='display:inline-block;background:#fff;color:${brand};font-size:11px;font-weight:bold;text-decoration:none;padding:3px 7px;border-radius:4px;margin-right:4px;'>${b}</a>`)
             .join('');
-          const socialPart = socialBadges ? `<div style='margin-top:4px;'>${socialBadges}</div>` : '';
-
-          const safeLogoUrl = sanitizeUrl(this.logoUrl);
-          const logoPart = safeLogoUrl
-            ? `<td style='padding-right:16px;vertical-align:top;'><img src='${safeLogoUrl}' width='64' height='64' style='border-radius:6px;display:block;' /></td>`
-            : '';
-
-          // --- Avatar layout: returns its own table early ---
-          if (this.layout === 'avatar') {
-            const initials = this.fullName
-              ? escapeHtml(this.fullName.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase())
-              : 'YN';
-            const avatarCol = safeLogoUrl
-              ? `<td style='padding-right:16px;vertical-align:middle;'><img src='${safeLogoUrl}' width='52' height='52' style='width:52px;height:52px;border-radius:50%;object-fit:cover;display:block;' /></td>`
-              : `<td style='padding-right:16px;vertical-align:middle;'><div style='width:52px;height:52px;border-radius:50%;background:${brand};text-align:center;line-height:52px;display:inline-block;'><span style='color:#fff;font-size:16px;font-weight:bold;line-height:52px;'>${initials}</span></div></td>`;
-            return `<table cellpadding='0' cellspacing='0' border='0' style="font-family:${font};max-width:520px;"><tr>${avatarCol}<td style='vertical-align:middle;'>${namePart}${titlePart}${deptPart}${divider}${contactPart}${socialPart}</td></tr></table>`;
-          }
-
-          // --- Solid layout: full-color card, returns its own table early ---
-          if (this.layout === 'solid') {
-            const solidLogo = safeLogoUrl
-              ? `<img src='${safeLogoUrl}' width='48' height='48' style='border-radius:6px;display:block;margin-bottom:10px;' />`
-              : '';
-            const solidName = this.fullName
-              ? `<div style='font-size:18px;font-weight:bold;color:#fff;margin-bottom:3px;'>${safeFullName}</div>`
-              : `<div style='font-size:18px;font-weight:bold;color:rgba(255,255,255,0.6);margin-bottom:3px;'>Your Name</div>`;
-            const solidTitle = titleParts.length
-              ? `<div style='font-size:13px;color:rgba(255,255,255,0.85);margin-bottom:2px;'>${titleParts.join(' · ')}</div>`
-              : '';
-            const solidDept = this.department
-              ? `<div style='font-size:12px;color:rgba(255,255,255,0.7);margin-bottom:2px;'>${safeDept}</div>`
-              : '';
-            const solidDivider = `<div style='border-top:1px solid rgba(255,255,255,0.3);margin:8px 0;'></div>`;
-            const solidContactParts = [];
-            if (this.formattedPhone) solidContactParts.push(`<span style='color:#fff;font-size:12px;'>${this.formattedPhone}</span>`);
-            if (safeWebsite) {
-              const d = escapeHtml(this.website.replace('https://','').replace('http://','').replace(/\/$/,''));
-              solidContactParts.push(`<a href='${safeWebsite}' style='color:#fff;font-size:12px;text-decoration:underline;'>${d}</a>`);
-            }
-            const solidContact = solidContactParts.length
-              ? `<div style='margin-bottom:6px;'>${solidContactParts.join(` <span style='color:rgba(255,255,255,0.5);'>|</span> `)}</div>`
-              : '';
-            const solidSocials = socials.filter(([u]) => u)
-              .map(([u,b]) => `<a href='${u}' style='display:inline-block;background:#fff;color:${brand};font-size:11px;font-weight:bold;text-decoration:none;padding:3px 7px;border-radius:4px;margin-right:4px;'>${b}</a>`)
-              .join('');
-            const solidSocialPart = solidSocials ? `<div style='margin-top:4px;'>${solidSocials}</div>` : '';
-            const solidTd = `<td style='background:${brand};padding:18px 20px;border-radius:8px;vertical-align:top;'>${solidLogo}${solidName}${solidTitle}${solidDept}${solidDivider}${solidContact}${solidSocialPart}</td>`;
-            return `<table cellpadding='0' cellspacing='0' border='0' style="font-family:${font};max-width:520px;"><tr>${solidTd}</tr></table>`;
-          }
-
-          // --- Split layout: colored rail + white content, returns its own table early ---
-          if (this.layout === 'split') {
-            const splitInitials = this.fullName
-              ? escapeHtml(this.fullName.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase())
-              : 'YN';
-            const avatarBlock = safeLogoUrl
-              ? `<img src='${safeLogoUrl}' width='56' height='56' style='width:56px;height:56px;border-radius:50%;object-fit:cover;display:block;border:2px solid #fff;margin:0 auto;' />`
-              : `<div style='width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.15);text-align:center;line-height:56px;margin:0 auto;'><span style='color:#fff;font-size:18px;font-weight:bold;line-height:56px;'>${splitInitials}</span></div>`;
-            const railTd = `<td style='background:${brand};padding:16px;text-align:center;border-radius:8px 0 0 8px;vertical-align:middle;width:88px;'>${avatarBlock}</td>`;
-            const splitContentTd = `<td style='vertical-align:top;background:#fff;padding:16px 18px;border:1px solid #e0e0e0;border-left:none;border-radius:0 8px 8px 0;'>${namePart}${titlePart}${deptPart}${divider}${contactPart}${socialPart}</td>`;
-            return `<table cellpadding='0' cellspacing='0' border='0' style="font-family:${font};max-width:520px;"><tr>${railTd}${splitContentTd}</tr></table>`;
-          }
-
-          let contentTd = '';
-          if (this.layout === 'modern') {
-            const headerBg = `<div style='background:${brand};padding:10px 14px;border-radius:6px 6px 0 0;'><div style='font-size:17px;font-weight:bold;color:#fff;margin-bottom:3px;'>${safeFullName || 'Your Name'}</div>${titleParts.length ? `<div style='font-size:13px;color:rgba(255,255,255,0.8);'>${titleParts.join(' · ')}</div>` : ''}</div>`;
-            const subBg    = `<div style='background:#f9f9f9;padding:10px 14px;border-radius:0 0 6px 6px;border:1px solid #e0e0e0;border-top:none;'>${deptPart}${contactPart}${socialPart}</div>`;
-            contentTd = `<td style='vertical-align:top;'>${headerBg}${subBg}</td>`;
-
-          } else if (this.layout === 'minimal') {
-            contentTd = `<td style='vertical-align:top;padding:4px 0;'>${namePart}${titlePart}${deptPart}${contactPart}${socialPart}</td>`;
-
-          } else if (this.layout === 'ruled') {
-            // Option A: top accent rule instead of left border
-            contentTd = `<td style='vertical-align:top;border-top:3px solid ${brand};padding-top:8px;'>${namePart}${titlePart}${deptPart}${contactPart}${socialPart}</td>`;
-
-          } else if (this.layout === 'compact') {
-            // Option C: single-line contact row
-            const jobSpan  = this.jobTitle ? `<span style='color:${brand};font-weight:500;font-size:12px;'>${safeJobTitle}</span>` : '';
-            const compSpan = this.company  ? `<span style='color:#555;font-size:12px;'>${safeCompany}</span>` : '';
-            const sep1 = jobSpan && compSpan ? `<span style='color:#ccc;margin:0 5px;'>·</span>` : '';
-            const sep2 = (jobSpan || compSpan) && contactParts.length ? `<span style='color:#ccc;margin:0 8px;'>|</span>` : '';
-            const inlineContact = contactParts.join(`<span style='color:#ccc;margin:0 5px;'>|</span>`);
-            const compactRow = `<div style='font-size:12px;margin-bottom:5px;'>${jobSpan}${sep1}${compSpan}${sep2}${inlineContact}</div>`;
-            contentTd = `<td style='vertical-align:top;padding:4px 0;'>${namePart}${deptPart}${compactRow}${socialPart}</td>`;
-
-          } else if (this.layout === 'banner') {
-            // Option D: left-bordered name block, dept as uppercase label
-            const nameBlock = `<div style='border-left:4px solid ${brand};padding-left:12px;margin-bottom:8px;'>${namePart}${titlePart}</div>`;
-            const deptLabel = this.department
-              ? `<div style='font-size:11px;color:#888;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:4px;'>${safeDept}</div>`
-              : '';
-            contentTd = `<td style='vertical-align:top;'>${nameBlock}${deptLabel}${contactPart}${socialPart}</td>`;
-
-          } else {
-            // Classic (default) — border goes on the outer wrapper, not the td,
-            // so it always sits on the far left edge even when a logo is present.
-            contentTd = `<td style='vertical-align:top;'>${namePart}${titlePart}${deptPart}${divider}${contactPart}${socialPart}</td>`;
-            return `<div style='border-left:3px solid ${brand};padding-left:14px;'><table cellpadding='0' cellspacing='0' border='0' style="font-family:${font};max-width:520px;"><tr>${logoPart}${contentTd}</tr></table></div>`;
-          }
-
-          return `<table cellpadding='0' cellspacing='0' border='0' style="font-family:${font};max-width:520px;"><tr>${logoPart}${contentTd}</tr></table>`;
-        },
-
-        copyHtml() {
-          const tmp = document.createElement('textarea');
-          tmp.value = this.previewHtml;
-          document.body.appendChild(tmp);
-          tmp.select();
-          document.execCommand('copy');
-          document.body.removeChild(tmp);
-          this.copied = true;
-          setTimeout(() => this.copied = false, 2500);
+          const solidSocialPart = solidSocials ? `<div style='margin-top:4px;'>${solidSocials}</div>` : '';
+          const solidTd = `<td style='background:${brand};padding:18px 20px;border-radius:8px;vertical-align:top;'>${solidLogo}${solidName}${solidTitle}${solidDept}${solidDivider}${solidContact}${solidSocialPart}</td>`;
+          return `<table cellpadding='0' cellspacing='0' border='0' style="font-family:${font};max-width:520px;"><tr>${solidTd}</tr></table>`;
         }
-      };
-    }
+
+        // --- Split layout: colored rail + white content, returns its own table early ---
+        if (this.layout === 'split') {
+          const splitInitials = this.fullName
+            ? escapeHtml(this.fullName.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase())
+            : 'YN';
+          const avatarBlock = safeLogoUrl
+            ? `<img src='${safeLogoUrl}' width='56' height='56' style='width:56px;height:56px;border-radius:50%;object-fit:cover;display:block;border:2px solid #fff;margin:0 auto;' />`
+            : `<div style='width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.15);text-align:center;line-height:56px;margin:0 auto;'><span style='color:#fff;font-size:18px;font-weight:bold;line-height:56px;'>${splitInitials}</span></div>`;
+          const railTd = `<td style='background:${brand};padding:16px;text-align:center;border-radius:8px 0 0 8px;vertical-align:middle;width:88px;'>${avatarBlock}</td>`;
+          const splitContentTd = `<td style='vertical-align:top;background:#fff;padding:16px 18px;border:1px solid #e0e0e0;border-left:none;border-radius:0 8px 8px 0;'>${namePart}${titlePart}${deptPart}${divider}${contactPart}${socialPart}</td>`;
+          return `<table cellpadding='0' cellspacing='0' border='0' style="font-family:${font};max-width:520px;"><tr>${railTd}${splitContentTd}</tr></table>`;
+        }
+
+        let contentTd = '';
+        if (this.layout === 'modern') {
+          const headerBg = `<div style='background:${brand};padding:10px 14px;border-radius:6px 6px 0 0;'><div style='font-size:17px;font-weight:bold;color:#fff;margin-bottom:3px;'>${safeFullName || 'Your Name'}</div>${titleParts.length ? `<div style='font-size:13px;color:rgba(255,255,255,0.8);'>${titleParts.join(' · ')}</div>` : ''}</div>`;
+          const subBg    = `<div style='background:#f9f9f9;padding:10px 14px;border-radius:0 0 6px 6px;border:1px solid #e0e0e0;border-top:none;'>${deptPart}${contactPart}${socialPart}</div>`;
+          contentTd = `<td style='vertical-align:top;'>${headerBg}${subBg}</td>`;
+
+        } else if (this.layout === 'minimal') {
+          contentTd = `<td style='vertical-align:top;padding:4px 0;'>${namePart}${titlePart}${deptPart}${contactPart}${socialPart}</td>`;
+
+        } else if (this.layout === 'ruled') {
+          // Option A: top accent rule instead of left border
+          contentTd = `<td style='vertical-align:top;border-top:3px solid ${brand};padding-top:8px;'>${namePart}${titlePart}${deptPart}${contactPart}${socialPart}</td>`;
+
+        } else if (this.layout === 'compact') {
+          // Option C: single-line contact row
+          const jobSpan  = this.jobTitle ? `<span style='color:${brand};font-weight:500;font-size:12px;'>${safeJobTitle}</span>` : '';
+          const compSpan = this.company  ? `<span style='color:#555;font-size:12px;'>${safeCompany}</span>` : '';
+          const sep1 = jobSpan && compSpan ? `<span style='color:#ccc;margin:0 5px;'>·</span>` : '';
+          const sep2 = (jobSpan || compSpan) && contactParts.length ? `<span style='color:#ccc;margin:0 8px;'>|</span>` : '';
+          const inlineContact = contactParts.join(`<span style='color:#ccc;margin:0 5px;'>|</span>`);
+          const compactRow = `<div style='font-size:12px;margin-bottom:5px;'>${jobSpan}${sep1}${compSpan}${sep2}${inlineContact}</div>`;
+          contentTd = `<td style='vertical-align:top;padding:4px 0;'>${namePart}${deptPart}${compactRow}${socialPart}</td>`;
+
+        } else if (this.layout === 'banner') {
+          // Option D: left-bordered name block, dept as uppercase label
+          const nameBlock = `<div style='border-left:4px solid ${brand};padding-left:12px;margin-bottom:8px;'>${namePart}${titlePart}</div>`;
+          const deptLabel = this.department
+            ? `<div style='font-size:11px;color:#888;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:4px;'>${safeDept}</div>`
+            : '';
+          contentTd = `<td style='vertical-align:top;'>${nameBlock}${deptLabel}${contactPart}${socialPart}</td>`;
+
+        } else {
+          // Classic (default) — border goes on the outer wrapper, not the td,
+          // so it always sits on the far left edge even when a logo is present.
+          contentTd = `<td style='vertical-align:top;'>${namePart}${titlePart}${deptPart}${divider}${contactPart}${socialPart}</td>`;
+          return `<div style='border-left:3px solid ${brand};padding-left:14px;'><table cellpadding='0' cellspacing='0' border='0' style="font-family:${font};max-width:520px;"><tr>${logoPart}${contentTd}</tr></table></div>`;
+        }
+
+        return `<table cellpadding='0' cellspacing='0' border='0' style="font-family:${font};max-width:520px;"><tr>${logoPart}${contentTd}</tr></table>`;
+      },
+
+      copyHtml() {
+        const tmp = document.createElement('textarea');
+        tmp.value = this.previewHtml;
+        document.body.appendChild(tmp);
+        tmp.select();
+        document.execCommand('copy');
+        document.body.removeChild(tmp);
+        this.copied = true;
+        setTimeout(() => this.copied = false, 2500);
+      }
+    };
+  }
 </script>
 
 <div x-data="initCreate()" class="min-h-screen bg-gray-50">
@@ -257,6 +257,7 @@ are interpolated.
           method="POST"
           action="{{ url_for('signatures.create') }}"
           class="space-y-6">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
           <!-- Signature Label -->
           <div>
             <label
@@ -536,7 +537,13 @@ are interpolated.
                   name="layout"
                   value="modern"
                   x-model="layout"
-                  {% if current_user.subscription_tier != 'pro' %}disabled{% endif %}
+                  {%
+                  if
+                  current_user.subscription_tier
+                  !="pro"
+                  %}disabled{%
+                  endif
+                  %}
                   class="sr-only" />
                 <div
                   :class="layout === 'modern' ? 'border-primary bg-primary/5' : 'border-gray-200'"
@@ -550,7 +557,10 @@ are interpolated.
                     >Modern</span
                   >
                   {% if current_user.subscription_tier != 'pro' %}
-                  <span class="block text-[10px] text-primary font-semibold mt-0.5">Pro</span>
+                  <span
+                    class="block text-[10px] text-primary font-semibold mt-0.5"
+                    >Pro</span
+                  >
                   {% endif %}
                 </div>
               </label>
@@ -562,7 +572,13 @@ are interpolated.
                   name="layout"
                   value="minimal"
                   x-model="layout"
-                  {% if current_user.subscription_tier != 'pro' %}disabled{% endif %}
+                  {%
+                  if
+                  current_user.subscription_tier
+                  !="pro"
+                  %}disabled{%
+                  endif
+                  %}
                   class="sr-only" />
                 <div
                   :class="layout === 'minimal' ? 'border-primary bg-primary/5' : 'border-gray-200'"
@@ -577,7 +593,10 @@ are interpolated.
                     >Minimal</span
                   >
                   {% if current_user.subscription_tier != 'pro' %}
-                  <span class="block text-[10px] text-primary font-semibold mt-0.5">Pro</span>
+                  <span
+                    class="block text-[10px] text-primary font-semibold mt-0.5"
+                    >Pro</span
+                  >
                   {% endif %}
                 </div>
               </label>
@@ -589,7 +608,13 @@ are interpolated.
                   name="layout"
                   value="ruled"
                   x-model="layout"
-                  {% if current_user.subscription_tier != 'pro' %}disabled{% endif %}
+                  {%
+                  if
+                  current_user.subscription_tier
+                  !="pro"
+                  %}disabled{%
+                  endif
+                  %}
                   class="sr-only" />
                 <div
                   :class="layout === 'ruled' ? 'border-primary bg-primary/5' : 'border-gray-200'"
@@ -603,7 +628,10 @@ are interpolated.
                   </div>
                   <span class="text-xs font-semibold text-gray-600">Ruled</span>
                   {% if current_user.subscription_tier != 'pro' %}
-                  <span class="block text-[10px] text-primary font-semibold mt-0.5">Pro</span>
+                  <span
+                    class="block text-[10px] text-primary font-semibold mt-0.5"
+                    >Pro</span
+                  >
                   {% endif %}
                 </div>
               </label>
@@ -615,7 +643,13 @@ are interpolated.
                   name="layout"
                   value="avatar"
                   x-model="layout"
-                  {% if current_user.subscription_tier != 'pro' %}disabled{% endif %}
+                  {%
+                  if
+                  current_user.subscription_tier
+                  !="pro"
+                  %}disabled{%
+                  endif
+                  %}
                   class="sr-only" />
                 <div
                   :class="layout === 'avatar' ? 'border-primary bg-primary/5' : 'border-gray-200'"
@@ -632,7 +666,10 @@ are interpolated.
                     >Avatar</span
                   >
                   {% if current_user.subscription_tier != 'pro' %}
-                  <span class="block text-[10px] text-primary font-semibold mt-0.5">Pro</span>
+                  <span
+                    class="block text-[10px] text-primary font-semibold mt-0.5"
+                    >Pro</span
+                  >
                   {% endif %}
                 </div>
               </label>
@@ -644,7 +681,13 @@ are interpolated.
                   name="layout"
                   value="compact"
                   x-model="layout"
-                  {% if current_user.subscription_tier != 'pro' %}disabled{% endif %}
+                  {%
+                  if
+                  current_user.subscription_tier
+                  !="pro"
+                  %}disabled{%
+                  endif
+                  %}
                   class="sr-only" />
                 <div
                   :class="layout === 'compact' ? 'border-primary bg-primary/5' : 'border-gray-200'"
@@ -657,7 +700,10 @@ are interpolated.
                     >Compact</span
                   >
                   {% if current_user.subscription_tier != 'pro' %}
-                  <span class="block text-[10px] text-primary font-semibold mt-0.5">Pro</span>
+                  <span
+                    class="block text-[10px] text-primary font-semibold mt-0.5"
+                    >Pro</span
+                  >
                   {% endif %}
                 </div>
               </label>
@@ -669,7 +715,13 @@ are interpolated.
                   name="layout"
                   value="banner"
                   x-model="layout"
-                  {% if current_user.subscription_tier != 'pro' %}disabled{% endif %}
+                  {%
+                  if
+                  current_user.subscription_tier
+                  !="pro"
+                  %}disabled{%
+                  endif
+                  %}
                   class="sr-only" />
                 <div
                   :class="layout === 'banner' ? 'border-primary bg-primary/5' : 'border-gray-200'"
@@ -687,7 +739,10 @@ are interpolated.
                     >Banner</span
                   >
                   {% if current_user.subscription_tier != 'pro' %}
-                  <span class="block text-[10px] text-primary font-semibold mt-0.5">Pro</span>
+                  <span
+                    class="block text-[10px] text-primary font-semibold mt-0.5"
+                    >Pro</span
+                  >
                   {% endif %}
                 </div>
               </label>
@@ -699,20 +754,28 @@ are interpolated.
                   name="layout"
                   value="solid"
                   x-model="layout"
-                  {% if current_user.subscription_tier != 'pro' %}disabled{% endif %}
+                  {%
+                  if
+                  current_user.subscription_tier
+                  !="pro"
+                  %}disabled{%
+                  endif
+                  %}
                   class="sr-only" />
                 <div
                   :class="layout === 'solid' ? 'border-primary bg-primary/5' : 'border-gray-200'"
                   class="border-2 rounded-lg p-3 text-center transition-all{% if current_user.subscription_tier != 'pro' %} opacity-50 cursor-not-allowed{% endif %}">
-                  <div class="w-full h-8 bg-gray-400 rounded mb-1 flex flex-col justify-center px-2 space-y-1">
+                  <div
+                    class="w-full h-8 bg-gray-400 rounded mb-1 flex flex-col justify-center px-2 space-y-1">
                     <div class="h-1.5 bg-white/70 rounded w-3/4"></div>
                     <div class="h-1 bg-white/50 rounded w-1/2"></div>
                   </div>
-                  <span class="text-xs font-semibold text-gray-600"
-                    >Solid</span
-                  >
+                  <span class="text-xs font-semibold text-gray-600">Solid</span>
                   {% if current_user.subscription_tier != 'pro' %}
-                  <span class="block text-[10px] text-primary font-semibold mt-0.5">Pro</span>
+                  <span
+                    class="block text-[10px] text-primary font-semibold mt-0.5"
+                    >Pro</span
+                  >
                   {% endif %}
                 </div>
               </label>
@@ -724,34 +787,44 @@ are interpolated.
                   name="layout"
                   value="split"
                   x-model="layout"
-                  {% if current_user.subscription_tier != 'pro' %}disabled{% endif %}
+                  {%
+                  if
+                  current_user.subscription_tier
+                  !="pro"
+                  %}disabled{%
+                  endif
+                  %}
                   class="sr-only" />
                 <div
                   :class="layout === 'split' ? 'border-primary bg-primary/5' : 'border-gray-200'"
                   class="border-2 rounded-lg p-3 text-center transition-all{% if current_user.subscription_tier != 'pro' %} opacity-50 cursor-not-allowed{% endif %}">
                   <div class="w-full h-8 flex mb-1 rounded overflow-hidden">
-                    <div class="w-1/3 bg-gray-400 flex items-center justify-center">
+                    <div
+                      class="w-1/3 bg-gray-400 flex items-center justify-center">
                       <div class="w-3 h-3 rounded-full bg-white/60"></div>
                     </div>
-                    <div class="w-2/3 bg-gray-100 flex flex-col justify-center px-1.5 space-y-1">
+                    <div
+                      class="w-2/3 bg-gray-100 flex flex-col justify-center px-1.5 space-y-1">
                       <div class="h-1.5 bg-gray-300 rounded w-full"></div>
                       <div class="h-1 bg-gray-200 rounded w-2/3"></div>
                     </div>
                   </div>
-                  <span class="text-xs font-semibold text-gray-600"
-                    >Split</span
-                  >
+                  <span class="text-xs font-semibold text-gray-600">Split</span>
                   {% if current_user.subscription_tier != 'pro' %}
-                  <span class="block text-[10px] text-primary font-semibold mt-0.5">Pro</span>
+                  <span
+                    class="block text-[10px] text-primary font-semibold mt-0.5"
+                    >Pro</span
+                  >
                   {% endif %}
                 </div>
               </label>
             </div>
             {% if current_user.subscription_tier != 'pro' %}
             <p class="text-xs text-gray-500 mt-2">
-              Modern, Minimal, Ruled, Avatar, Compact, Banner, Solid, and
-              Split layouts are Pro features.
-              <a href="{{ url_for('pricing') }}"
+              Modern, Minimal, Ruled, Avatar, Compact, Banner, Solid, and Split
+              layouts are Pro features.
+              <a
+                href="{{ url_for('pricing') }}"
                 class="text-primary font-semibold hover:underline">
                 Upgrade to unlock
               </a>
@@ -761,7 +834,6 @@ are interpolated.
 
           <!-- Accent Color + Font -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
             {% if current_user.subscription_tier == 'pro' %}
             <div>
               <label
@@ -783,17 +855,19 @@ are interpolated.
             </div>
             {% else %}
             <div class="opacity-60">
-              <label
-                class="block text-sm font-semibold text-gray-700 mb-1"
+              <label class="block text-sm font-semibold text-gray-700 mb-1"
                 >Change Accent Color
-                <span class="text-xs font-normal text-primary ml-1">Pro feature</span>
+                <span class="text-xs font-normal text-primary ml-1"
+                  >Pro feature</span
+                >
               </label>
               <div class="flex items-center gap-3">
                 <div
                   class="w-10 h-10 rounded-lg border-2 border-gray-200 bg-gray-100 cursor-not-allowed"
                   title="Upgrade to Pro to customize"></div>
-                
-                <a href="{{ url_for('pricing') }}"
+
+                <a
+                  href="{{ url_for('pricing') }}"
                   class="text-sm text-primary font-semibold hover:underline">
                   Upgrade to unlock
                 </a>
@@ -802,83 +876,87 @@ are interpolated.
             {% endif %}
 
             <div>
-            <label
-              for="font_family"
-              class="block text-sm font-semibold text-gray-700 mb-1"
-              >Font</label
-            >
-            <select
-              id="font_family"
-              name="font_family"
-              x-model="fontFamily"
-              class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary outline-none transition-all text-gray-800 text-sm">
-              <option
-                style="font-family: Arial, Helvetica, sans-serif"
-                value="Arial, Helvetica, sans-serif">
-                Arial
-              </option>
-              <option
-                style="font-family: Calibri, Candara, sans-serif"
-                value="Calibri, Candara, sans-serif">
-                Calibri
-              </option>
-              <option
-                style="font-family: 'Times New Roman', Times, serif"
-                value="'Times New Roman', Times, serif">
-                Times New Roman
-              </option>
-              {% if current_user.subscription_tier == 'pro' %}
-              <option
-                style="
-                  font-family: 'Century Gothic', CenturyGothic, sans-serif;
-                "
-                value="'Century Gothic', CenturyGothic, sans-serif">
-                Century Gothic
-              </option>
-              <option
-                style="font-family: 'Courier New', Courier, monospace"
-                value="'Courier New', Courier, monospace">
-                Courier New
-              </option>
-              <option
-                style="font-family: Garamond, 'EB Garamond', serif"
-                value="Garamond, 'EB Garamond', serif">
-                Garamond
-              </option>
-              <option
-                style="font-family: Georgia, 'Times New Roman', serif"
-                value="Georgia, 'Times New Roman', serif">
-                Georgia
-              </option>
-              <option
-                style="font-family: Palatino, 'Palatino Linotype', serif"
-                value="Palatino, 'Palatino Linotype', serif">
-                Palatino
-              </option>
-              <option
-                style="font-family: Tahoma, Geneva, sans-serif"
-                value="Tahoma, Geneva, sans-serif">
-                Tahoma
-              </option>
-              <option
-                style="font-family: 'Trebuchet MS', Tahoma, sans-serif"
-                value="'Trebuchet MS', Tahoma, sans-serif">
-                Trebuchet MS
-              </option>
-              <option
-                style="font-family: Verdana, Geneva, sans-serif"
-                value="Verdana, Geneva, sans-serif">
-                Verdana
-              </option>
+              <label
+                for="font_family"
+                class="block text-sm font-semibold text-gray-700 mb-1"
+                >Font</label
+              >
+              <select
+                id="font_family"
+                name="font_family"
+                x-model="fontFamily"
+                class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary outline-none transition-all text-gray-800 text-sm">
+                <option
+                  style="font-family: Arial, Helvetica, sans-serif"
+                  value="Arial, Helvetica, sans-serif">
+                  Arial
+                </option>
+                <option
+                  style="font-family: Calibri, Candara, sans-serif"
+                  value="Calibri, Candara, sans-serif">
+                  Calibri
+                </option>
+                <option
+                  style="font-family: 'Times New Roman', Times, serif"
+                  value="'Times New Roman', Times, serif">
+                  Times New Roman
+                </option>
+                {% if current_user.subscription_tier == 'pro' %}
+                <option
+                  style="
+                    font-family: 'Century Gothic', CenturyGothic, sans-serif;
+                  "
+                  value="'Century Gothic', CenturyGothic, sans-serif">
+                  Century Gothic
+                </option>
+                <option
+                  style="font-family: 'Courier New', Courier, monospace"
+                  value="'Courier New', Courier, monospace">
+                  Courier New
+                </option>
+                <option
+                  style="font-family: Garamond, 'EB Garamond', serif"
+                  value="Garamond, 'EB Garamond', serif">
+                  Garamond
+                </option>
+                <option
+                  style="font-family: Georgia, 'Times New Roman', serif"
+                  value="Georgia, 'Times New Roman', serif">
+                  Georgia
+                </option>
+                <option
+                  style="font-family: Palatino, 'Palatino Linotype', serif"
+                  value="Palatino, 'Palatino Linotype', serif">
+                  Palatino
+                </option>
+                <option
+                  style="font-family: Tahoma, Geneva, sans-serif"
+                  value="Tahoma, Geneva, sans-serif">
+                  Tahoma
+                </option>
+                <option
+                  style="font-family: 'Trebuchet MS', Tahoma, sans-serif"
+                  value="'Trebuchet MS', Tahoma, sans-serif">
+                  Trebuchet MS
+                </option>
+                <option
+                  style="font-family: Verdana, Geneva, sans-serif"
+                  value="Verdana, Geneva, sans-serif">
+                  Verdana
+                </option>
+                {% endif %}
+              </select>
+              {% if current_user.subscription_tier != 'pro' %}
+              <p class="text-xs text-gray-400 mt-1">
+                <a
+                  href="{{ url_for('pricing') }}"
+                  class="text-primary font-semibold hover:underline"
+                  >Upgrade to Pro</a
+                >
+                for 8 more fonts
+              </p>
               {% endif %}
-            </select>
-            {% if current_user.subscription_tier != 'pro' %}
-            <p class="text-xs text-gray-400 mt-1">
-              <a href="{{ url_for('pricing') }}" class="text-primary font-semibold hover:underline">Upgrade to Pro</a>
-              for 8 more fonts
-            </p>
-           {% endif %}
-          </div>
+            </div>
           </div>
 
           <!-- Submit -->

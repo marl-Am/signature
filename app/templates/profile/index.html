@@ -1,21 +1,19 @@
-{% extends "base.html" %}
-{% block title %}Profile — Signature{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Profile — Signature{% endblock %} {%
+block content %}
 <div class="min-h-screen bg-primary py-12 px-4">
   <div class="max-w-2xl mx-auto space-y-6">
-
     <!-- Page heading -->
     <div class="mb-8">
       <h1 class="text-3xl font-bold text-white">Profile Settings</h1>
-      <p class="text-white/60 mt-1">Manage your account details and security.</p>
+      <p class="text-white/60 mt-1">
+        Manage your account details and security.
+      </p>
     </div>
 
     <!-- ── Change Email ───────────────────────────────────────────── -->
     <div
       x-data="{ open: false }"
       class="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
-
       <button
         @click="open = !open"
         class="w-full flex items-center justify-between px-6 py-5 text-left hover:bg-white/5 transition-colors">
@@ -24,24 +22,43 @@
           <p class="text-white/50 text-sm mt-0.5">
             Current: <span class="text-white/80">{{ current_user.email }}</span>
             {% if current_user.email_verified %}
-              <span class="ml-2 text-green-400 text-xs font-medium">✓ Verified</span>
+            <span class="ml-2 text-green-400 text-xs font-medium"
+              >✓ Verified</span
+            >
             {% else %}
-              <span class="ml-2 text-yellow-400 text-xs font-medium">⚠ Unverified</span>
+            <span class="ml-2 text-yellow-400 text-xs font-medium"
+              >⚠ Unverified</span
+            >
             {% endif %}
           </p>
         </div>
         <svg
           class="w-5 h-5 text-white/40 transition-transform"
           :class="open ? 'rotate-180' : ''"
-          fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
-      <div x-show="open" x-cloak class="px-6 pb-6 border-t border-white/10 pt-5">
-        <form action="{{ url_for('profile.change_email') }}" method="POST" class="space-y-4">
+      <div
+        x-show="open"
+        x-cloak
+        class="px-6 pb-6 border-t border-white/10 pt-5">
+        <form
+          action="{{ url_for('profile.change_email') }}"
+          method="POST"
+          class="space-y-4">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
           <div>
-            <label for="ce_new_email" class="block text-sm font-medium text-white/80 mb-1">
+            <label
+              for="ce_new_email"
+              class="block text-sm font-medium text-white/80 mb-1">
               New Email Address
             </label>
             <input
@@ -50,10 +67,12 @@
               name="new_email"
               required
               autocomplete="email"
-              class="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/50 focus:ring-1 focus:ring-white/50"/>
+              class="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/50 focus:ring-1 focus:ring-white/50" />
           </div>
           <div>
-            <label for="ce_current_password" class="block text-sm font-medium text-white/80 mb-1">
+            <label
+              for="ce_current_password"
+              class="block text-sm font-medium text-white/80 mb-1">
               Confirm with Current Password
             </label>
             <input
@@ -62,7 +81,7 @@
               name="current_password"
               required
               autocomplete="current-password"
-              class="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/50 focus:ring-1 focus:ring-white/50"/>
+              class="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/50 focus:ring-1 focus:ring-white/50" />
           </div>
           <button
             type="submit"
@@ -77,26 +96,42 @@
     <div
       x-data="{ open: false }"
       class="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
-
       <button
         @click="open = !open"
         class="w-full flex items-center justify-between px-6 py-5 text-left hover:bg-white/5 transition-colors">
         <div>
           <h2 class="text-lg font-semibold text-white">Change Password</h2>
-          <p class="text-white/50 text-sm mt-0.5">Choose a strong password with 12+ characters.</p>
+          <p class="text-white/50 text-sm mt-0.5">
+            Choose a strong password with 12+ characters.
+          </p>
         </div>
         <svg
           class="w-5 h-5 text-white/40 transition-transform"
           :class="open ? 'rotate-180' : ''"
-          fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
-      <div x-show="open" x-cloak class="px-6 pb-6 border-t border-white/10 pt-5">
-        <form action="{{ url_for('profile.change_password') }}" method="POST" class="space-y-4">
+      <div
+        x-show="open"
+        x-cloak
+        class="px-6 pb-6 border-t border-white/10 pt-5">
+        <form
+          action="{{ url_for('profile.change_password') }}"
+          method="POST"
+          class="space-y-4">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
           <div>
-            <label for="cp_current" class="block text-sm font-medium text-white/80 mb-1">
+            <label
+              for="cp_current"
+              class="block text-sm font-medium text-white/80 mb-1">
               Current Password
             </label>
             <input
@@ -105,10 +140,12 @@
               name="current_password"
               required
               autocomplete="current-password"
-              class="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/50 focus:ring-1 focus:ring-white/50"/>
+              class="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/50 focus:ring-1 focus:ring-white/50" />
           </div>
           <div>
-            <label for="cp_new" class="block text-sm font-medium text-white/80 mb-1">
+            <label
+              for="cp_new"
+              class="block text-sm font-medium text-white/80 mb-1">
               New Password
             </label>
             <input
@@ -117,10 +154,12 @@
               name="new_password"
               required
               autocomplete="new-password"
-              class="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/50 focus:ring-1 focus:ring-white/50"/>
+              class="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/50 focus:ring-1 focus:ring-white/50" />
           </div>
           <div>
-            <label for="cp_confirm" class="block text-sm font-medium text-white/80 mb-1">
+            <label
+              for="cp_confirm"
+              class="block text-sm font-medium text-white/80 mb-1">
               Confirm New Password
             </label>
             <input
@@ -129,7 +168,7 @@
               name="confirm_password"
               required
               autocomplete="new-password"
-              class="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/50 focus:ring-1 focus:ring-white/50"/>
+              class="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/50 focus:ring-1 focus:ring-white/50" />
           </div>
           <button
             type="submit"
@@ -144,26 +183,36 @@
     <div
       x-data="{ open: false, confirmed: false }"
       class="bg-red-500/10 border border-red-500/30 rounded-xl overflow-hidden">
-
       <button
         @click="open = !open"
         class="w-full flex items-center justify-between px-6 py-5 text-left hover:bg-red-500/10 transition-colors">
         <div>
           <h2 class="text-lg font-semibold text-red-400">Delete Account</h2>
-          <p class="text-white/50 text-sm mt-0.5">Permanently remove your account and all data.</p>
+          <p class="text-white/50 text-sm mt-0.5">
+            Permanently remove your account and all data.
+          </p>
         </div>
         <svg
           class="w-5 h-5 text-red-400/60 transition-transform"
           :class="open ? 'rotate-180' : ''"
-          fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
-      <div x-show="open" x-cloak class="px-6 pb-6 border-t border-red-500/20 pt-5">
+      <div
+        x-show="open"
+        x-cloak
+        class="px-6 pb-6 border-t border-red-500/20 pt-5">
         <p class="text-white/60 text-sm mb-4">
-          This action is irreversible. All signatures, analytics data, and billing
-          information will be permanently deleted.
+          This action is irreversible. All signatures, analytics data, and
+          billing information will be permanently deleted.
         </p>
 
         <!-- Confirmation checkbox -->
@@ -171,15 +220,18 @@
           <input
             type="checkbox"
             x-model="confirmed"
-            class="w-4 h-4 rounded border-white/30 bg-white/10 accent-red-500"/>
+            class="w-4 h-4 rounded border-white/30 bg-white/10 accent-red-500" />
           <span class="text-white/70 text-sm">
             I understand this cannot be undone.
           </span>
         </label>
 
         <form action="{{ url_for('profile.delete_account') }}" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
           <div class="mb-4">
-            <label for="da_password" class="block text-sm font-medium text-white/80 mb-1">
+            <label
+              for="da_password"
+              class="block text-sm font-medium text-white/80 mb-1">
               Confirm with Current Password
             </label>
             <input
@@ -188,7 +240,7 @@
               name="current_password"
               required
               autocomplete="current-password"
-              class="w-full px-4 py-2.5 bg-white/10 border border-red-500/30 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400"/>
+              class="w-full px-4 py-2.5 bg-white/10 border border-red-500/30 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400" />
           </div>
           <button
             type="submit"
@@ -199,7 +251,6 @@
         </form>
       </div>
     </div>
-
   </div>
 </div>
 {% endblock %}
