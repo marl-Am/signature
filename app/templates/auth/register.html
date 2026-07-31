@@ -15,8 +15,6 @@
 
       <!-- Registration Form -->
       <form method="POST" action="{{ url_for('auth.register') }}" class="space-y-6">
-        <!-- CSRF Token (Flask-WTF will add this) -->
-        {{ form.hidden_tag() if form else '' }}
 
         <!-- Full Name -->
         <div>

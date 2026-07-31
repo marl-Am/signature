@@ -1,11 +1,6 @@
 # app/services/analytics_service.py
 """
 Analytics service — queries open/click history for the current user.
-
-Security:
-- A01: All queries are scoped to current_user.id via a JOIN on signatures.
-  A user can never retrieve data belonging to another user's signatures.
-- A05: SQLAlchemy ORM only, no raw SQL.
 """
 
 from datetime import datetime, timezone, timedelta
@@ -85,11 +80,10 @@ class AnalyticsService:
     def get_summary() -> AnalyticsSummary:
         """
         Return all analytics data scoped to the current logged-in user.
-        A01: Every query joins through signatures.user_id = current_user.id.
         """
         user_id: int = current_user.id
 
-        # ── All signatures owned by this user ──────────────────────────────
+        
         signatures: list[Signature] = (
             Signature.query.filter_by(user_id=user_id)
             .order_by(Signature.created_at.desc())
@@ -108,14 +102,14 @@ class AnalyticsService:
                 top_platform=None,
             )
 
-        # ── Totals ─────────────────────────────────────────────────────────
+        
         total_opens: int = sum(s.total_opens for s in signatures)
         total_clicks: int = sum(s.total_clicks for s in signatures)
         overall_ctr: float = (
             round((total_clicks / total_opens) * 100, 1) if total_opens > 0 else 0.0
         )
 
-        # ── Per-signature stats ────────────────────────────────────────────
+        
         per_signature: list[SignatureStat] = []
         for sig in signatures:
             ctr = (
@@ -136,7 +130,7 @@ class AnalyticsService:
                 )
             )
 
-        # ── Daily breakdown — last 30 days ─────────────────────────────────
+        
         cutoff: datetime = datetime.now(timezone.utc) - timedelta(days=29)
 
         opens_by_day: list[tuple[str, int]] = (
@@ -180,7 +174,7 @@ class AnalyticsService:
                 )
             )
 
-        # ── Top clicked platform ───────────────────────────────────────────
+        
         top_row = (
             db.session.query(
                 SignatureClick.platform,
@@ -207,7 +201,6 @@ class AnalyticsService:
     def get_signature_detail(signature_id: int) -> SignatureDetail:
         """
         Return full analytics detail for a single signature.
-        A01: ownership verified — 404 if not owned by current_user.
         """
         user_id: int = current_user.id
 
@@ -221,7 +214,7 @@ class AnalyticsService:
             else 0.0
         )
 
-        # ── Daily last 30 days ────────────────────────────────────────────
+
         cutoff: datetime = datetime.now(timezone.utc) - timedelta(days=29)
 
         opens_by_day: list = (
@@ -265,7 +258,6 @@ class AnalyticsService:
                 )
             )
 
-        # ── Platform breakdown ────────────────────────────────────────────
         platform_rows: list = (
             db.session.query(
                 SignatureClick.platform,
@@ -291,7 +283,7 @@ class AnalyticsService:
             for row in platform_rows
         ]
 
-        # ── Device breakdown from opens user_agent ────────────────────────
+
         all_opens_ua: list = (
             db.session.query(SignatureOpen.user_agent)
             .filter(SignatureOpen.signature_id == signature_id)
@@ -307,7 +299,7 @@ class AnalyticsService:
             else None
         )
 
-        # ── Recent opens (last 20) ────────────────────────────────────────
+
         recent_open_rows: list = (
             SignatureOpen.query.filter_by(signature_id=signature_id)
             .order_by(SignatureOpen.opened_at.desc())
@@ -322,7 +314,7 @@ class AnalyticsService:
             for row in recent_open_rows
         ]
 
-        # ── Recent clicks (last 20) ───────────────────────────────────────
+
         recent_click_rows: list = (
             SignatureClick.query.filter_by(signature_id=signature_id)
             .order_by(SignatureClick.clicked_at.desc())

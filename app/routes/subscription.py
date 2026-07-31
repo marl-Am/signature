@@ -6,11 +6,6 @@ Routes:
   GET  /subscription/manage  — Show current plan details fetched live from Stripe.
   POST /subscription/cancel  — Cancel at period end; webhook handles the downgrade.
 
-Security notes:
-  - A01: @login_required on every route; cancellation verifies the subscription
-         belongs to the current user via stripe_customer_id, not a user-supplied id.
-  - A02: No secrets handled here — Stripe key loaded from config in _stripe_client().
-  - A10: No outbound URL constructed from user input.
 """
 
 import logging
@@ -37,10 +32,6 @@ def _init_stripe() -> None:
     """Configure Stripe with the secret key from app config."""
     stripe.api_key = current_app.config["STRIPE_SECRET_KEY"]
 
-
-# ---------------------------------------------------------------------------
-# Manage page
-# ---------------------------------------------------------------------------
 
 
 @subscription_bp.route("/manage")
@@ -92,10 +83,6 @@ def manage() -> str:
     )
 
 
-# ---------------------------------------------------------------------------
-# Cancel subscription
-# ---------------------------------------------------------------------------
-
 
 @subscription_bp.route("/cancel", methods=["POST"])
 @login_required
@@ -106,9 +93,6 @@ def cancel() -> Response:
     Sets cancel_at_period_end=True on the Stripe subscription so the user
     retains Pro access until their paid period expires.  The webhook
     customer.subscription.deleted fires at period end and downgrades the DB.
-
-    A01: We only cancel the subscription stored on current_user — never a
-         caller-supplied subscription id.
     """
     if current_user.subscription_tier != "pro":
         flash("You do not have an active Pro subscription to cancel.", "warning")

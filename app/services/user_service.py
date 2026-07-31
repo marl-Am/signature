@@ -34,11 +34,8 @@ class UserService:
     Handles registration, login, and password management with OWASP security.
     """
 
-    # Password requirements (A07: Authentication Failures)
+    # Password requirements
     MIN_PASSWORD_LENGTH = 12
-    PASSWORD_PATTERN = re.compile(
-        r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
-    )
 
     @staticmethod
     def validate_password(password: str) -> Tuple[bool, Optional[str]]:
@@ -106,7 +103,7 @@ class UserService:
             return None, password_error
 
         user = User(email=email.lower(), name=name)
-        user.set_password(password)  # A04: Secure password hashing
+        user.set_password(password)
 
         user.trial_ends_at = datetime.now(timezone.utc) + timedelta(days=14)
         user.subscription_status = "trial"
@@ -123,18 +120,17 @@ class UserService:
             if not success:
                 # Non-fatal: registration succeeded, email failed
                 logger.warning("Welcome email failed for user %s: %s", user.id, err)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.exception(
                 "Unexpected error sending welcome email for user %s: %s", user.id, exc
             )
 
         return user, None
 
-
     @staticmethod
     def authenticate_user(
         email: str, password: str
-    ) -> Tuple[Optional[User], Optional[str], Optional["AuthFailureReason"]]:
+    ) -> Tuple[Optional[User], Optional[str], Optional[AuthFailureReason]]:
         """
         Authenticate user login.
 
@@ -144,7 +140,11 @@ class UserService:
         user = User.query.filter_by(email=email.lower()).first()
 
         if not user:
-            return None, "Invalid email or password", AuthFailureReason.ACCOUNT_NOT_FOUND
+            return (
+                None,
+                "Invalid email or password",
+                AuthFailureReason.ACCOUNT_NOT_FOUND,
+            )
 
         if user.is_locked():
             return (
@@ -162,7 +162,11 @@ class UserService:
 
         if not user.check_password(password):
             user.record_failed_login()
-            return None, "Invalid email or password", AuthFailureReason.INVALID_CREDENTIALS
+            return (
+                None,
+                "Invalid email or password",
+                AuthFailureReason.INVALID_CREDENTIALS,
+            )
 
         ip_address: Optional[str] = request.remote_addr if request else None
         user.record_successful_login(ip_address)
@@ -263,7 +267,7 @@ class UserService:
 
     @staticmethod
     def change_email(
-        user: "User", current_password: str, new_email: str
+        user: User, current_password: str, new_email: str
     ) -> Tuple[bool, Optional[str]]:
         """
         Change the user's email address.
@@ -300,9 +304,7 @@ class UserService:
         return True, token
 
     @staticmethod
-    def delete_account(
-        user: "User", current_password: str
-    ) -> Tuple[bool, Optional[str]]:
+    def delete_account(user: User, current_password: str) -> Tuple[bool, Optional[str]]:
         """
         Permanently delete a user account and all associated data.
 
@@ -321,7 +323,7 @@ class UserService:
 
     @staticmethod
     def get_user_by_id(user_id: int) -> Optional[User]:
-        return User.query.get(user_id)
+        return db.session.get(User, user_id)
 
     @staticmethod
     def get_user_by_email(email: str) -> Optional[User]:

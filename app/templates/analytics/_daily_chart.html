@@ -1,0 +1,62 @@
+{#
+  Shared "Opens vs Clicks, last 30 days" bar chart.
+  Usage: {{ render_daily_chart(summary.daily_last_30) }}
+         {{ render_daily_chart(detail.daily_last_30, canvas_id='dailyChart') }}
+
+  daily_data: list of objects/dicts, each with .date, .opens, .clicks
+  canvas_id:  id of the <canvas> element this chart should attach to
+#}
+{% macro render_daily_chart(daily_data, canvas_id='dailyChart') %}
+<script>
+  (function () {
+    const labels = {{ daily_data | map(attribute='date') | list | tojson }};
+    const opensData = {{ daily_data | map(attribute='opens') | list | tojson }};
+    const clicksData = {{ daily_data | map(attribute='clicks') | list | tojson }};
+
+    new Chart(document.getElementById('{{ canvas_id }}'), {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Opens',
+            data: opensData,
+            backgroundColor: 'rgba(12, 39, 136, 0.15)',
+            borderColor: 'rgba(12, 39, 136, 0.8)',
+            borderWidth: 1,
+            borderRadius: 4,
+          },
+          {
+            label: 'Clicks',
+            data: clicksData,
+            backgroundColor: 'rgba(12, 39, 136, 0.5)',
+            borderColor: 'rgba(12, 39, 136, 1)',
+            borderWidth: 1,
+            borderRadius: 4,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'top' },
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: {
+              maxTicksLimit: 10,
+              font: { size: 11 },
+            },
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { stepSize: 1 },
+            grid: { color: 'rgba(0,0,0,0.05)' },
+          },
+        },
+      },
+    });
+  })();
+</script>
+{% endmacro %}

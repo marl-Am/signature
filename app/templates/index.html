@@ -1,21 +1,15 @@
-{% extends "base.html" %} {% block title %}Signature - Professional Email
-Signatures with Analytics{% endblock %} {% block extra_css %}
+{% extends "base.html" %}
+{% block title %}Signature - Professional Email Signatures with Analytics{% endblock %}
+
+{% block extra_css %}
 <style>
-  /* Custom animations for landing page */
   @keyframes scrollUp {
-    0% {
-      transform: translateY(0);
-    }
-    100% {
-      transform: translateY(-50%);
-    }
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-50%); }
   }
 
   @keyframes pulse {
-    0%,
-    100% {
-      transform: scale(1);
-    }
+    0%, 100% { transform: scale(1); }
     50% {
       transform: scale(1.02);
       box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
@@ -26,15 +20,9 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
     animation: scrollUp 25s linear infinite;
   }
 
-  .column-1 .scrolling-content {
-    animation-duration: 30s;
-  }
-  .column-2 .scrolling-content {
-    animation-duration: 20s;
-  }
-  .column-3 .scrolling-content {
-    animation-duration: 25s;
-  }
+  .column-1 .scrolling-content { animation-duration: 30s; }
+  .column-2 .scrolling-content { animation-duration: 20s; }
+  .column-3 .scrolling-content { animation-duration: 25s; }
 
   .cta-pulse {
     animation: pulse 2s infinite ease-in-out;
@@ -44,20 +32,127 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
     animation: none;
   }
 </style>
-{% endblock %} {% block content %}
+{% endblock %}
+
+{% block content %}
+
+{# ---------- Reusable pieces ---------- #}
+
+{% macro checkmark(color_class) %}
+<svg class="w-6 h-6 {{ color_class }} mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+</svg>
+{% endmacro %}
+
+{% macro signature_card_classic(person) %}
+<div
+  class="bg-white rounded-xl p-4 shadow-sm{% if person.style == 'bordered' %} border border-white/20{% endif %}"
+  style="font-family: Arial, Helvetica, sans-serif;{% if person.style == 'accent' %} border-left: 4px solid #0c2788;{% endif %}">
+  <p style="font-size: 15px; font-weight: 700; color: #0c2788; margin: 0 0 2px;">{{ person.name }}</p>
+  <p style="font-size: 12px; color: #555; margin: 0 0 8px;">{{ person.title }}</p>
+  {% if person.style == 'bordered' %}
+  <hr style="border: none; border-top: 2px solid #0c2788; margin: 0 0 8px;" />
+  {% endif %}
+  {% if person.phone %}
+  <p style="font-size: 11px; color: #444; margin: 0 0 2px;">📞 {{ person.phone }}</p>
+  {% endif %}
+  <p style="font-size: 11px; color: #444; margin: 0;">✉ {{ person.email }}</p>
+  {% if person.website %}
+  <a style="font-size: 11px; color: #0c2788;">{{ person.website }}</a>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% macro signature_card_avatar(person) %}
+<div class="bg-white rounded-xl p-4 shadow-sm" style="font-family: Arial, Helvetica, sans-serif;">
+  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+    <div style="width: 38px; height: 38px; border-radius: 50%; background: {{ person.avatar_color }}; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 700; flex-shrink: 0;">
+      {{ person.initials }}
+    </div>
+    <div>
+      <p style="font-size: 14px; font-weight: 700; color: #111; margin: 0;">{{ person.name }}</p>
+      <p style="font-size: 11px; color: #666; margin: 0;">{{ person.title }}</p>
+    </div>
+  </div>
+  {% if person.phone %}
+  <p style="font-size: 11px; color: #444; margin: 0 0 2px;">📞 {{ person.phone }}</p>
+  {% endif %}
+  <p style="font-size: 11px; color: #444; margin: 0;">✉ {{ person.email }}</p>
+  {% if person.website %}
+  <a style="font-size: 11px; color: #0c2788;">{{ person.website }}</a>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% macro signature_card_minimal(person) %}
+<div class="bg-white rounded-xl p-4 shadow-sm" style="border-top: 3px solid #0c2788; font-family: Arial, Helvetica, sans-serif;">
+  <p style="font-size: 14px; font-weight: 700; color: #111; margin: 0 0 2px;">{{ person.name }}</p>
+  <p style="font-size: 11px; color: #666; margin: 0 0 6px;">{{ person.title }}</p>
+  <p style="font-size: 11px; color: #444; margin: 0;">{{ person.contact }}</p>
+</div>
+{% endmacro %}
+
+{# ---------- Sample signature data for the scrolling preview columns ---------- #}
+
+{% set column_1_people = [
+  {"name": "James Harlow", "title": "Senior Account Executive · Meridian", "phone": "+1 212 555 0182", "email": "j.harlow@meridian.io", "style": "bordered"},
+  {"name": "Priya Nair", "title": "Product Designer · Freelance", "email": "priya@nairdesign.co", "website": "nairdesign.co", "style": "accent"},
+  {"name": "Carlos Medina", "title": "VP of Engineering · Vaultex", "phone": "+1 415 555 0034", "email": "c.medina@vaultex.com", "style": "bordered"},
+  {"name": "Dana Park", "title": "Recruiting Lead · TalentFlow", "email": "dana@talentflow.io", "website": "talentflow.io", "style": "accent"}
+] %}
+
+{% set column_2_people = [
+  {"initials": "RL", "avatar_color": "#0c2788", "name": "Rachel Lim", "title": "Business Development · Arcline", "phone": "+1 646 555 0091", "email": "r.lim@arcline.com"},
+  {"initials": "TW", "avatar_color": "#1a3a6b", "name": "Tom Wren", "title": "Financial Advisor · WealthPoint", "email": "t.wren@wealthpoint.com", "website": "wealthpoint.com"},
+  {"initials": "SO", "avatar_color": "#0c2788", "name": "Sasha Obi", "title": "Lead Consultant · Coreway", "phone": "+1 929 555 0017", "email": "s.obi@coreway.io"},
+  {"initials": "MK", "avatar_color": "#1a3a6b", "name": "Mia Kessler", "title": "Marketing Director · Lumio", "email": "m.kessler@lumio.co"}
+] %}
+
+{% set column_3_people = [
+  {"name": "Ethan Brooke", "title": "Operations Manager · Nexfield", "contact": "ethan@nexfield.com · +1 305 555 0058"},
+  {"name": "Yuki Tanaka", "title": "UX Researcher · Fieldstone Labs", "contact": "y.tanaka@fieldstone.io"},
+  {"name": "Leila Rashid", "title": "Legal Counsel · Axiom Partners", "contact": "l.rashid@axiompartners.com · +1 212 555 0044"},
+  {"name": "Ben Ortega", "title": "Founder · Clearpath Studio", "contact": "ben@clearpathstudio.com"}
+] %}
+
+{% set built_for = [
+  {"emoji": "💼", "title": "Sales Teams", "text": "Track opens and follow up at exactly the right moment."},
+  {"emoji": "🎯", "title": "Recruiters", "text": "Know when candidates engage so you can reach out first."},
+  {"emoji": "📊", "title": "Consultants", "text": "Project a polished brand on every client communication."},
+  {"emoji": "🚀", "title": "Freelancers", "text": "Look professional from day one without any design skills."}
+] %}
+
+{% set feature_highlights = [
+  {"emoji": "⚡", "title": "Rapid Setup", "text": "Create your signature in under 5 minutes. No coding required."},
+  {"emoji": "📊", "title": "Track Analytics", "text": "See who opens your emails and clicks your links in real-time."},
+  {"emoji": "🔄", "title": "Update Instantly", "text": "Change your signature once, updates everywhere automatically."},
+  {"emoji": "📱", "title": "Mobile Ready", "text": "Perfect display on all devices and email clients."}
+] %}
+
+{% set free_plan_features = [
+  "1 Email Signature",
+  "Analytics dashboard (opens + clicks)",
+  "Works with all email clients",
+  "Includes \"Sent with Signature\" branding"
+] %}
+
+{% set pro_plan_features = [
+  "Unlimited Signatures",
+  "Analytics dashboard (opens + clicks)",
+  "Works with all email clients",
+  "No watermark",
+  "Priority support"
+] %}
+
 <!-- Hero Section -->
 <section class="min-h-screen bg-primary pt-24 pb-16 px-4">
   <div class="max-w-7xl mx-auto">
     <div class="flex flex-col lg:flex-row items-center justify-between gap-12">
       <!-- Left Content -->
       <div class="flex-1 max-w-xl">
-        <h1
-          class="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6">
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6">
           BEAUTIFUL &
-          <span
-            class="italic bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent"
-            >HIGH CONVERTING</span
-          ><br />
+          <span class="italic bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">HIGH CONVERTING</span><br />
           EMAIL SIGNATURES
         </h1>
 
@@ -68,817 +163,40 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
           <li class="text-white/90 text-lg">✓ Works with All Email Clients</li>
         </ul>
 
-        {# NEW #} {% if current_user.is_authenticated %}
-        <a
-          href="{{ url_for('dashboard.index') }}"
-          class="inline-block px-8 py-4 bg-white text-primary rounded-lg font-semibold text-lg hover:shadow-xl hover:shadow-white/20 hover:scale-105 transition-all cta-pulse">
+        {% if current_user.is_authenticated %}
+        <a href="{{ url_for('dashboard.index') }}" class="inline-block px-8 py-4 bg-white text-primary rounded-lg font-semibold text-lg hover:shadow-xl hover:shadow-white/20 hover:scale-105 transition-all cta-pulse">
           Go to Dashboard
         </a>
         {% else %}
-        <a
-          href="{{ url_for('auth.register') }}"
-          class="inline-block px-8 py-4 bg-white text-primary rounded-lg font-semibold text-lg hover:shadow-xl hover:shadow-white/20 hover:scale-105 transition-all cta-pulse">
+        <a href="{{ url_for('auth.register') }}" class="inline-block px-8 py-4 bg-white text-primary rounded-lg font-semibold text-lg hover:shadow-xl hover:shadow-white/20 hover:scale-105 transition-all cta-pulse">
           Start Free Trial
         </a>
         {% endif %}
       </div>
 
       <!-- Right Image Grid (Hidden on Mobile) -->
-      <div
-        class="hidden lg:grid grid-cols-3 gap-4 flex-1 h-[70vh] overflow-hidden">
-        <!-- Column 1: Classic -->
+      <div class="hidden lg:grid grid-cols-3 gap-4 flex-1 h-[70vh] overflow-hidden">
         <div class="column-1 overflow-hidden rounded-lg">
           <div class="scrolling-content space-y-4">
-            <div
-              class="bg-white rounded-xl p-4 shadow-sm border border-white/20"
-              style="font-family: Arial, Helvetica, sans-serif">
-              <p
-                style="
-                  font-size: 15px;
-                  font-weight: 700;
-                  color: #0c2788;
-                  margin: 0 0 2px;
-                ">
-                James Harlow
-              </p>
-              <p style="font-size: 12px; color: #555; margin: 0 0 8px">
-                Senior Account Executive · Meridian
-              </p>
-              <hr
-                style="
-                  border: none;
-                  border-top: 2px solid #0c2788;
-                  margin: 0 0 8px;
-                " />
-              <p style="font-size: 11px; color: #444; margin: 0 0 2px">
-                📞 +1 212 555 0182
-              </p>
-              <p style="font-size: 11px; color: #444; margin: 0">
-                ✉ j.harlow@meridian.io
-              </p>
-            </div>
-
-            <div
-              class="bg-white rounded-xl shadow-sm p-4"
-              style="
-                border-left: 4px solid #0c2788;
-                font-family: Arial, Helvetica, sans-serif;
-              ">
-              <p
-                style="
-                  font-size: 15px;
-                  font-weight: 700;
-                  color: #0c2788;
-                  margin: 0 0 2px;
-                ">
-                Priya Nair
-              </p>
-              <p style="font-size: 12px; color: #555; margin: 0 0 8px">
-                Product Designer · Freelance
-              </p>
-              <p style="font-size: 11px; color: #444; margin: 0 0 2px">
-                ✉ priya@nairdesign.co
-              </p>
-              <a style="font-size: 11px; color: #0c2788">nairdesign.co</a>
-            </div>
-
-            <div
-              class="bg-white rounded-xl p-4 shadow-sm"
-              style="font-family: Arial, Helvetica, sans-serif">
-              <p
-                style="
-                  font-size: 15px;
-                  font-weight: 700;
-                  color: #0c2788;
-                  margin: 0 0 2px;
-                ">
-                Carlos Medina
-              </p>
-              <p style="font-size: 12px; color: #555; margin: 0 0 8px">
-                VP of Engineering · Vaultex
-              </p>
-              <hr
-                style="
-                  border: none;
-                  border-top: 2px solid #0c2788;
-                  margin: 0 0 8px;
-                " />
-              <p style="font-size: 11px; color: #444; margin: 0 0 2px">
-                📞 +1 415 555 0034
-              </p>
-              <p style="font-size: 11px; color: #444; margin: 0">
-                ✉ c.medina@vaultex.com
-              </p>
-            </div>
-
-            <div
-              class="bg-white rounded-xl shadow-sm p-4"
-              style="
-                border-left: 4px solid #0c2788;
-                font-family: Arial, Helvetica, sans-serif;
-              ">
-              <p
-                style="
-                  font-size: 15px;
-                  font-weight: 700;
-                  color: #0c2788;
-                  margin: 0 0 2px;
-                ">
-                Dana Park
-              </p>
-              <p style="font-size: 12px; color: #555; margin: 0 0 8px">
-                Recruiting Lead · TalentFlow
-              </p>
-              <p style="font-size: 11px; color: #444; margin: 0 0 2px">
-                ✉ dana@talentflow.io
-              </p>
-              <a style="font-size: 11px; color: #0c2788">talentflow.io</a>
-            </div>
-
-            <!-- Seamless scroll duplicates -->
-            <div
-              class="bg-white rounded-xl p-4 shadow-sm border border-white/20"
-              style="font-family: Arial, Helvetica, sans-serif">
-              <p
-                style="
-                  font-size: 15px;
-                  font-weight: 700;
-                  color: #0c2788;
-                  margin: 0 0 2px;
-                ">
-                James Harlow
-              </p>
-              <p style="font-size: 12px; color: #555; margin: 0 0 8px">
-                Senior Account Executive · Meridian
-              </p>
-              <hr
-                style="
-                  border: none;
-                  border-top: 2px solid #0c2788;
-                  margin: 0 0 8px;
-                " />
-              <p style="font-size: 11px; color: #444; margin: 0 0 2px">
-                📞 +1 212 555 0182
-              </p>
-              <p style="font-size: 11px; color: #444; margin: 0">
-                ✉ j.harlow@meridian.io
-              </p>
-            </div>
-
-            <div
-              class="bg-white rounded-xl shadow-sm p-4"
-              style="
-                border-left: 4px solid #0c2788;
-                font-family: Arial, Helvetica, sans-serif;
-              ">
-              <p
-                style="
-                  font-size: 15px;
-                  font-weight: 700;
-                  color: #0c2788;
-                  margin: 0 0 2px;
-                ">
-                Priya Nair
-              </p>
-              <p style="font-size: 12px; color: #555; margin: 0 0 8px">
-                Product Designer · Freelance
-              </p>
-              <p style="font-size: 11px; color: #444; margin: 0 0 2px">
-                ✉ priya@nairdesign.co
-              </p>
-              <a style="font-size: 11px; color: #0c2788">nairdesign.co</a>
-            </div>
-
-            <div
-              class="bg-white rounded-xl p-4 shadow-sm"
-              style="font-family: Arial, Helvetica, sans-serif">
-              <p
-                style="
-                  font-size: 15px;
-                  font-weight: 700;
-                  color: #0c2788;
-                  margin: 0 0 2px;
-                ">
-                Carlos Medina
-              </p>
-              <p style="font-size: 12px; color: #555; margin: 0 0 8px">
-                VP of Engineering · Vaultex
-              </p>
-              <hr
-                style="
-                  border: none;
-                  border-top: 2px solid #0c2788;
-                  margin: 0 0 8px;
-                " />
-              <p style="font-size: 11px; color: #444; margin: 0 0 2px">
-                📞 +1 415 555 0034
-              </p>
-              <p style="font-size: 11px; color: #444; margin: 0">
-                ✉ c.medina@vaultex.com
-              </p>
-            </div>
-
-            <div
-              class="bg-white rounded-xl shadow-sm p-4"
-              style="
-                border-left: 4px solid #0c2788;
-                font-family: Arial, Helvetica, sans-serif;
-              ">
-              <p
-                style="
-                  font-size: 15px;
-                  font-weight: 700;
-                  color: #0c2788;
-                  margin: 0 0 2px;
-                ">
-                Dana Park
-              </p>
-              <p style="font-size: 12px; color: #555; margin: 0 0 8px">
-                Recruiting Lead · TalentFlow
-              </p>
-              <p style="font-size: 11px; color: #444; margin: 0 0 2px">
-                ✉ dana@talentflow.io
-              </p>
-              <a style="font-size: 11px; color: #0c2788">talentflow.io</a>
-            </div>
+            {% for person in column_1_people + column_1_people %}
+            {{ signature_card_classic(person) }}
+            {% endfor %}
           </div>
         </div>
 
-        <!-- Column 2: Avatar/Modern -->
         <div class="column-2 overflow-hidden rounded-lg">
           <div class="scrolling-content space-y-4">
-            <div
-              class="bg-white rounded-xl p-4 shadow-sm"
-              style="font-family: Arial, Helvetica, sans-serif">
-              <div
-                style="
-                  display: flex;
-                  align-items: center;
-                  gap: 10px;
-                  margin-bottom: 8px;
-                ">
-                <div
-                  style="
-                    width: 38px;
-                    height: 38px;
-                    border-radius: 50%;
-                    background: #0c2788;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: #fff;
-                    font-size: 13px;
-                    font-weight: 700;
-                    flex-shrink: 0;
-                  ">
-                  RL
-                </div>
-                <div>
-                  <p
-                    style="
-                      font-size: 14px;
-                      font-weight: 700;
-                      color: #111;
-                      margin: 0;
-                    ">
-                    Rachel Lim
-                  </p>
-                  <p style="font-size: 11px; color: #666; margin: 0">
-                    Business Development · Arcline
-                  </p>
-                </div>
-              </div>
-              <p style="font-size: 11px; color: #444; margin: 0 0 2px">
-                📞 +1 646 555 0091
-              </p>
-              <p style="font-size: 11px; color: #444; margin: 0">
-                ✉ r.lim@arcline.com
-              </p>
-            </div>
-
-            <div
-              class="bg-white rounded-xl p-4 shadow-sm"
-              style="font-family: Arial, Helvetica, sans-serif">
-              <div
-                style="
-                  display: flex;
-                  align-items: center;
-                  gap: 10px;
-                  margin-bottom: 8px;
-                ">
-                <div
-                  style="
-                    width: 38px;
-                    height: 38px;
-                    border-radius: 50%;
-                    background: #1a3a6b;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: #fff;
-                    font-size: 13px;
-                    font-weight: 700;
-                    flex-shrink: 0;
-                  ">
-                  TW
-                </div>
-                <div>
-                  <p
-                    style="
-                      font-size: 14px;
-                      font-weight: 700;
-                      color: #111;
-                      margin: 0;
-                    ">
-                    Tom Wren
-                  </p>
-                  <p style="font-size: 11px; color: #666; margin: 0">
-                    Financial Advisor · WealthPoint
-                  </p>
-                </div>
-              </div>
-              <p style="font-size: 11px; color: #444; margin: 0 0 2px">
-                ✉ t.wren@wealthpoint.com
-              </p>
-              <a style="font-size: 11px; color: #0c2788">wealthpoint.com</a>
-            </div>
-
-            <div
-              class="bg-white rounded-xl p-4 shadow-sm"
-              style="font-family: Arial, Helvetica, sans-serif">
-              <div
-                style="
-                  display: flex;
-                  align-items: center;
-                  gap: 10px;
-                  margin-bottom: 8px;
-                ">
-                <div
-                  style="
-                    width: 38px;
-                    height: 38px;
-                    border-radius: 50%;
-                    background: #0c2788;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: #fff;
-                    font-size: 13px;
-                    font-weight: 700;
-                    flex-shrink: 0;
-                  ">
-                  SO
-                </div>
-                <div>
-                  <p
-                    style="
-                      font-size: 14px;
-                      font-weight: 700;
-                      color: #111;
-                      margin: 0;
-                    ">
-                    Sasha Obi
-                  </p>
-                  <p style="font-size: 11px; color: #666; margin: 0">
-                    Lead Consultant · Coreway
-                  </p>
-                </div>
-              </div>
-              <p style="font-size: 11px; color: #444; margin: 0 0 2px">
-                📞 +1 929 555 0017
-              </p>
-              <p style="font-size: 11px; color: #444; margin: 0">
-                ✉ s.obi@coreway.io
-              </p>
-            </div>
-
-            <div
-              class="bg-white rounded-xl p-4 shadow-sm"
-              style="font-family: Arial, Helvetica, sans-serif">
-              <div
-                style="
-                  display: flex;
-                  align-items: center;
-                  gap: 10px;
-                  margin-bottom: 8px;
-                ">
-                <div
-                  style="
-                    width: 38px;
-                    height: 38px;
-                    border-radius: 50%;
-                    background: #1a3a6b;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: #fff;
-                    font-size: 13px;
-                    font-weight: 700;
-                    flex-shrink: 0;
-                  ">
-                  MK
-                </div>
-                <div>
-                  <p
-                    style="
-                      font-size: 14px;
-                      font-weight: 700;
-                      color: #111;
-                      margin: 0;
-                    ">
-                    Mia Kessler
-                  </p>
-                  <p style="font-size: 11px; color: #666; margin: 0">
-                    Marketing Director · Lumio
-                  </p>
-                </div>
-              </div>
-              <p style="font-size: 11px; color: #444; margin: 0">
-                ✉ m.kessler@lumio.co
-              </p>
-            </div>
-
-            <!-- Seamless scroll duplicates -->
-            <div
-              class="bg-white rounded-xl p-4 shadow-sm"
-              style="font-family: Arial, Helvetica, sans-serif">
-              <div
-                style="
-                  display: flex;
-                  align-items: center;
-                  gap: 10px;
-                  margin-bottom: 8px;
-                ">
-                <div
-                  style="
-                    width: 38px;
-                    height: 38px;
-                    border-radius: 50%;
-                    background: #0c2788;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: #fff;
-                    font-size: 13px;
-                    font-weight: 700;
-                    flex-shrink: 0;
-                  ">
-                  RL
-                </div>
-                <div>
-                  <p
-                    style="
-                      font-size: 14px;
-                      font-weight: 700;
-                      color: #111;
-                      margin: 0;
-                    ">
-                    Rachel Lim
-                  </p>
-                  <p style="font-size: 11px; color: #666; margin: 0">
-                    Business Development · Arcline
-                  </p>
-                </div>
-              </div>
-              <p style="font-size: 11px; color: #444; margin: 0 0 2px">
-                📞 +1 646 555 0091
-              </p>
-              <p style="font-size: 11px; color: #444; margin: 0">
-                ✉ r.lim@arcline.com
-              </p>
-            </div>
-
-            <div
-              class="bg-white rounded-xl p-4 shadow-sm"
-              style="font-family: Arial, Helvetica, sans-serif">
-              <div
-                style="
-                  display: flex;
-                  align-items: center;
-                  gap: 10px;
-                  margin-bottom: 8px;
-                ">
-                <div
-                  style="
-                    width: 38px;
-                    height: 38px;
-                    border-radius: 50%;
-                    background: #1a3a6b;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: #fff;
-                    font-size: 13px;
-                    font-weight: 700;
-                    flex-shrink: 0;
-                  ">
-                  TW
-                </div>
-                <div>
-                  <p
-                    style="
-                      font-size: 14px;
-                      font-weight: 700;
-                      color: #111;
-                      margin: 0;
-                    ">
-                    Tom Wren
-                  </p>
-                  <p style="font-size: 11px; color: #666; margin: 0">
-                    Financial Advisor · WealthPoint
-                  </p>
-                </div>
-              </div>
-              <p style="font-size: 11px; color: #444; margin: 0 0 2px">
-                ✉ t.wren@wealthpoint.com
-              </p>
-              <a style="font-size: 11px; color: #0c2788">wealthpoint.com</a>
-            </div>
-
-            <div
-              class="bg-white rounded-xl p-4 shadow-sm"
-              style="font-family: Arial, Helvetica, sans-serif">
-              <div
-                style="
-                  display: flex;
-                  align-items: center;
-                  gap: 10px;
-                  margin-bottom: 8px;
-                ">
-                <div
-                  style="
-                    width: 38px;
-                    height: 38px;
-                    border-radius: 50%;
-                    background: #0c2788;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: #fff;
-                    font-size: 13px;
-                    font-weight: 700;
-                    flex-shrink: 0;
-                  ">
-                  SO
-                </div>
-                <div>
-                  <p
-                    style="
-                      font-size: 14px;
-                      font-weight: 700;
-                      color: #111;
-                      margin: 0;
-                    ">
-                    Sasha Obi
-                  </p>
-                  <p style="font-size: 11px; color: #666; margin: 0">
-                    Lead Consultant · Coreway
-                  </p>
-                </div>
-              </div>
-              <p style="font-size: 11px; color: #444; margin: 0 0 2px">
-                📞 +1 929 555 0017
-              </p>
-              <p style="font-size: 11px; color: #444; margin: 0">
-                ✉ s.obi@coreway.io
-              </p>
-            </div>
-
-            <div
-              class="bg-white rounded-xl p-4 shadow-sm"
-              style="font-family: Arial, Helvetica, sans-serif">
-              <div
-                style="
-                  display: flex;
-                  align-items: center;
-                  gap: 10px;
-                  margin-bottom: 8px;
-                ">
-                <div
-                  style="
-                    width: 38px;
-                    height: 38px;
-                    border-radius: 50%;
-                    background: #1a3a6b;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: #fff;
-                    font-size: 13px;
-                    font-weight: 700;
-                    flex-shrink: 0;
-                  ">
-                  MK
-                </div>
-                <div>
-                  <p
-                    style="
-                      font-size: 14px;
-                      font-weight: 700;
-                      color: #111;
-                      margin: 0;
-                    ">
-                    Mia Kessler
-                  </p>
-                  <p style="font-size: 11px; color: #666; margin: 0">
-                    Marketing Director · Lumio
-                  </p>
-                </div>
-              </div>
-              <p style="font-size: 11px; color: #444; margin: 0">
-                ✉ m.kessler@lumio.co
-              </p>
-            </div>
+            {% for person in column_2_people + column_2_people %}
+            {{ signature_card_avatar(person) }}
+            {% endfor %}
           </div>
         </div>
 
-        <!-- Column 3: Minimal top-ruled -->
         <div class="column-3 overflow-hidden rounded-lg">
           <div class="scrolling-content space-y-4">
-            <div
-              class="bg-white rounded-xl p-4 shadow-sm"
-              style="
-                border-top: 3px solid #0c2788;
-                font-family: Arial, Helvetica, sans-serif;
-              ">
-              <p
-                style="
-                  font-size: 14px;
-                  font-weight: 700;
-                  color: #111;
-                  margin: 0 0 2px;
-                ">
-                Ethan Brooke
-              </p>
-              <p style="font-size: 11px; color: #666; margin: 0 0 6px">
-                Operations Manager · Nexfield
-              </p>
-              <p style="font-size: 11px; color: #444; margin: 0">
-                ethan@nexfield.com · +1 305 555 0058
-              </p>
-            </div>
-
-            <div
-              class="bg-white rounded-xl p-4 shadow-sm"
-              style="
-                border-top: 3px solid #0c2788;
-                font-family: Arial, Helvetica, sans-serif;
-              ">
-              <p
-                style="
-                  font-size: 14px;
-                  font-weight: 700;
-                  color: #111;
-                  margin: 0 0 2px;
-                ">
-                Yuki Tanaka
-              </p>
-              <p style="font-size: 11px; color: #666; margin: 0 0 6px">
-                UX Researcher · Fieldstone Labs
-              </p>
-              <p style="font-size: 11px; color: #444; margin: 0">
-                y.tanaka@fieldstone.io
-              </p>
-            </div>
-
-            <div
-              class="bg-white rounded-xl p-4 shadow-sm"
-              style="
-                border-top: 3px solid #0c2788;
-                font-family: Arial, Helvetica, sans-serif;
-              ">
-              <p
-                style="
-                  font-size: 14px;
-                  font-weight: 700;
-                  color: #111;
-                  margin: 0 0 2px;
-                ">
-                Leila Rashid
-              </p>
-              <p style="font-size: 11px; color: #666; margin: 0 0 6px">
-                Legal Counsel · Axiom Partners
-              </p>
-              <p style="font-size: 11px; color: #444; margin: 0">
-                l.rashid@axiompartners.com · +1 212 555 0044
-              </p>
-            </div>
-
-            <div
-              class="bg-white rounded-xl p-4 shadow-sm"
-              style="
-                border-top: 3px solid #0c2788;
-                font-family: Arial, Helvetica, sans-serif;
-              ">
-              <p
-                style="
-                  font-size: 14px;
-                  font-weight: 700;
-                  color: #111;
-                  margin: 0 0 2px;
-                ">
-                Ben Ortega
-              </p>
-              <p style="font-size: 11px; color: #666; margin: 0 0 6px">
-                Founder · Clearpath Studio
-              </p>
-              <p style="font-size: 11px; color: #444; margin: 0">
-                ben@clearpathstudio.com
-              </p>
-            </div>
-
-            <!-- Seamless scroll duplicates -->
-            <div
-              class="bg-white rounded-xl p-4 shadow-sm"
-              style="
-                border-top: 3px solid #0c2788;
-                font-family: Arial, Helvetica, sans-serif;
-              ">
-              <p
-                style="
-                  font-size: 14px;
-                  font-weight: 700;
-                  color: #111;
-                  margin: 0 0 2px;
-                ">
-                Ethan Brooke
-              </p>
-              <p style="font-size: 11px; color: #666; margin: 0 0 6px">
-                Operations Manager · Nexfield
-              </p>
-              <p style="font-size: 11px; color: #444; margin: 0">
-                ethan@nexfield.com · +1 305 555 0058
-              </p>
-            </div>
-
-            <div
-              class="bg-white rounded-xl p-4 shadow-sm"
-              style="
-                border-top: 3px solid #0c2788;
-                font-family: Arial, Helvetica, sans-serif;
-              ">
-              <p
-                style="
-                  font-size: 14px;
-                  font-weight: 700;
-                  color: #111;
-                  margin: 0 0 2px;
-                ">
-                Yuki Tanaka
-              </p>
-              <p style="font-size: 11px; color: #666; margin: 0 0 6px">
-                UX Researcher · Fieldstone Labs
-              </p>
-              <p style="font-size: 11px; color: #444; margin: 0">
-                y.tanaka@fieldstone.io
-              </p>
-            </div>
-
-            <div
-              class="bg-white rounded-xl p-4 shadow-sm"
-              style="
-                border-top: 3px solid #0c2788;
-                font-family: Arial, Helvetica, sans-serif;
-              ">
-              <p
-                style="
-                  font-size: 14px;
-                  font-weight: 700;
-                  color: #111;
-                  margin: 0 0 2px;
-                ">
-                Leila Rashid
-              </p>
-              <p style="font-size: 11px; color: #666; margin: 0 0 6px">
-                Legal Counsel · Axiom Partners
-              </p>
-              <p style="font-size: 11px; color: #444; margin: 0">
-                l.rashid@axiompartners.com · +1 212 555 0044
-              </p>
-            </div>
-
-            <div
-              class="bg-white rounded-xl p-4 shadow-sm"
-              style="
-                border-top: 3px solid #0c2788;
-                font-family: Arial, Helvetica, sans-serif;
-              ">
-              <p
-                style="
-                  font-size: 14px;
-                  font-weight: 700;
-                  color: #111;
-                  margin: 0 0 2px;
-                ">
-                Ben Ortega
-              </p>
-              <p style="font-size: 11px; color: #666; margin: 0 0 6px">
-                Founder · Clearpath Studio
-              </p>
-              <p style="font-size: 11px; color: #444; margin: 0">
-                ben@clearpathstudio.com
-              </p>
-            </div>
+            {% for person in column_3_people + column_3_people %}
+            {{ signature_card_minimal(person) }}
+            {% endfor %}
           </div>
         </div>
       </div>
@@ -889,46 +207,17 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
 <!-- Built For Section -->
 <section class="bg-white py-16 px-4">
   <div class="max-w-5xl mx-auto">
-    <p
-      class="text-center text-sm font-semibold text-gray-400 uppercase tracking-widest mb-10">
+    <p class="text-center text-sm font-semibold text-gray-400 uppercase tracking-widest mb-10">
       Built For
     </p>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
-      <div
-        class="flex flex-col items-center text-center p-6 rounded-2xl border border-gray-100 hover:border-primary hover:shadow-md transition-all">
-        <div class="text-3xl mb-3">💼</div>
-        <p class="font-semibold text-gray-800 mb-1">Sales Teams</p>
-        <p class="text-sm text-gray-500">
-          Track opens and follow up at exactly the right moment.
-        </p>
+      {% for item in built_for %}
+      <div class="flex flex-col items-center text-center p-6 rounded-2xl border border-gray-100 hover:border-primary hover:shadow-md transition-all">
+        <div class="text-3xl mb-3">{{ item.emoji }}</div>
+        <p class="font-semibold text-gray-800 mb-1">{{ item.title }}</p>
+        <p class="text-sm text-gray-500">{{ item.text }}</p>
       </div>
-
-      <div
-        class="flex flex-col items-center text-center p-6 rounded-2xl border border-gray-100 hover:border-primary hover:shadow-md transition-all">
-        <div class="text-3xl mb-3">🎯</div>
-        <p class="font-semibold text-gray-800 mb-1">Recruiters</p>
-        <p class="text-sm text-gray-500">
-          Know when candidates engage so you can reach out first.
-        </p>
-      </div>
-
-      <div
-        class="flex flex-col items-center text-center p-6 rounded-2xl border border-gray-100 hover:border-primary hover:shadow-md transition-all">
-        <div class="text-3xl mb-3">📊</div>
-        <p class="font-semibold text-gray-800 mb-1">Consultants</p>
-        <p class="text-sm text-gray-500">
-          Project a polished brand on every client communication.
-        </p>
-      </div>
-
-      <div
-        class="flex flex-col items-center text-center p-6 rounded-2xl border border-gray-100 hover:border-primary hover:shadow-md transition-all">
-        <div class="text-3xl mb-3">🚀</div>
-        <p class="font-semibold text-gray-800 mb-1">Freelancers</p>
-        <p class="text-sm text-gray-500">
-          Look professional from day one without any design skills.
-        </p>
-      </div>
+      {% endfor %}
     </div>
   </div>
 </section>
@@ -941,41 +230,13 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
     </h2>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-      <div
-        class="bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/20 transition-all">
-        <div class="text-4xl mb-4">⚡</div>
-        <h3 class="text-xl font-bold mb-3">Rapid Setup</h3>
-        <p class="text-white/80">
-          Create your signature in under 5 minutes. No coding required.
-        </p>
+      {% for item in feature_highlights %}
+      <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/20 transition-all">
+        <div class="text-4xl mb-4">{{ item.emoji }}</div>
+        <h3 class="text-xl font-bold mb-3">{{ item.title }}</h3>
+        <p class="text-white/80">{{ item.text }}</p>
       </div>
-
-      <div
-        class="bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/20 transition-all">
-        <div class="text-4xl mb-4">📊</div>
-        <h3 class="text-xl font-bold mb-3">Track Analytics</h3>
-        <p class="text-white/80">
-          See who opens your emails and clicks your links in real-time.
-        </p>
-      </div>
-
-      <div
-        class="bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/20 transition-all">
-        <div class="text-4xl mb-4">🔄</div>
-        <h3 class="text-xl font-bold mb-3">Update Instantly</h3>
-        <p class="text-white/80">
-          Change your signature once, updates everywhere automatically.
-        </p>
-      </div>
-
-      <div
-        class="bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/20 transition-all">
-        <div class="text-4xl mb-4">📱</div>
-        <h3 class="text-xl font-bold mb-3">Mobile Ready</h3>
-        <p class="text-white/80">
-          Perfect display on all devices and email clients.
-        </p>
-      </div>
+      {% endfor %}
     </div>
   </div>
 </section>
@@ -989,8 +250,7 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
       <!-- Free Plan -->
-      <div
-        class="bg-gray-50 border-2 border-gray-200 rounded-2xl p-8 hover:border-primary transition-all">
+      <div class="bg-gray-50 border-2 border-gray-200 rounded-2xl p-8 hover:border-primary transition-all">
         <div class="text-center mb-6">
           <h3 class="text-2xl font-bold text-gray-800 mb-2">Free</h3>
           <div class="text-5xl font-bold text-primary mb-2">$0</div>
@@ -998,88 +258,28 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
         </div>
 
         <ul class="space-y-4 mb-8">
+          {% for feature in free_plan_features %}
           <li class="flex items-start text-gray-700">
-            <svg
-              class="w-6 h-6 text-green-500 mr-3 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 13l4 4L19 7"></path>
-            </svg>
-            1 Email Signature
+            {{ checkmark("text-green-500") }}
+            {{ feature }}
           </li>
-
-          <li class="flex items-start text-gray-700">
-            <svg
-              class="w-6 h-6 text-green-500 mr-3 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 13l4 4L19 7"></path>
-            </svg>
-            Analytics dashboard (opens + clicks)
-          </li>
-
-          <li class="flex items-start text-gray-700">
-            <svg
-              class="w-6 h-6 text-green-500 mr-3 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 13l4 4L19 7"></path>
-            </svg>
-            Works with all email clients
-          </li>
-
-          <li class="flex items-start text-gray-700">
-            <svg
-              class="w-6 h-6 text-green-500 mr-3 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 13l4 4L19 7"></path>
-            </svg>
-            Includes "Sent with Signature" branding
-          </li>
-          
+          {% endfor %}
         </ul>
 
-        {# NEW #} {% if current_user.is_authenticated %}
-        <a
-          href="{{ url_for('dashboard.index') }}"
-          class="block text-center py-3 px-6 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+        {% if current_user.is_authenticated %}
+        <a href="{{ url_for('dashboard.index') }}" class="block text-center py-3 px-6 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
           Go to Dashboard
         </a>
         {% else %}
-        <a
-          href="{{ url_for('auth.register') }}"
-          class="block text-center py-3 px-6 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+        <a href="{{ url_for('auth.register') }}" class="block text-center py-3 px-6 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
           Get Started
         </a>
         {% endif %}
       </div>
 
       <!-- Pro Plan -->
-      <div
-        class="bg-primary border-2 border-primary rounded-2xl p-8 relative hover:shadow-2xl transition-all">
-        <div
-          class="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-white text-primary px-4 py-1 rounded-full text-sm font-bold">
+      <div class="bg-primary border-2 border-primary rounded-2xl p-8 relative hover:shadow-2xl transition-all">
+        <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-white text-primary px-4 py-1 rounded-full text-sm font-bold">
           MOST POPULAR
         </div>
 
@@ -1090,98 +290,24 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
         </div>
 
         <ul class="space-y-4 mb-8">
+          {% for feature in pro_plan_features %}
           <li class="flex items-start text-white">
-            <svg
-              class="w-6 h-6 text-green-400 mr-3 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 13l4 4L19 7"></path>
-            </svg>
-            Unlimited Signatures
+            {{ checkmark("text-green-400") }}
+            {{ feature }}
           </li>
-           
-          <li class="flex items-start text-white">
-            <svg
-              class="w-6 h-6 text-green-400 mr-3 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 13l4 4L19 7"></path>
-            </svg>
-            Analytics dashboard (opens + clicks)
-          </li>
-
-          <li class="flex items-start text-white">
-            <svg
-              class="w-6 h-6 text-green-400 mr-3 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 13l4 4L19 7"></path>
-            </svg>
-            Works with all email clients
-          </li>
-
-          <li class="flex items-start text-white">
-            <svg
-              class="w-6 h-6 text-green-400 mr-3 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 13l4 4L19 7"></path>
-            </svg>
-            No watermark
-          </li>
-          <li class="flex items-start text-white">
-            <svg
-              class="w-6 h-6 text-green-400 mr-3 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 13l4 4L19 7"></path>
-            </svg>
-            Priority support
-          </li>
+          {% endfor %}
         </ul>
 
-        {# NEW #} {% if current_user.is_authenticated and
-        current_user.subscription_tier == 'pro' %}
-        <a
-          href="{{ url_for('subscription.manage') }}"
-          class="block text-center py-3 px-6 bg-white text-primary rounded-lg font-semibold hover:bg-white/90 hover:shadow-lg transition-all">
+        {% if current_user.is_authenticated and current_user.subscription_tier == 'pro' %}
+        <a href="{{ url_for('subscription.manage') }}" class="block text-center py-3 px-6 bg-white text-primary rounded-lg font-semibold hover:bg-white/90 hover:shadow-lg transition-all">
           Manage Your Plan
         </a>
         {% elif current_user.is_authenticated %}
-        <a
-          href="{{ url_for('billing.upgrade') }}"
-          class="block text-center py-3 px-6 bg-white text-primary rounded-lg font-semibold hover:bg-white/90 hover:shadow-lg transition-all">
+        <a href="{{ url_for('billing.upgrade') }}" class="block text-center py-3 px-6 bg-white text-primary rounded-lg font-semibold hover:bg-white/90 hover:shadow-lg transition-all">
           Upgrade to Pro
         </a>
         {% else %}
-        <a
-          href="{{ url_for('auth.register') }}"
-          class="block text-center py-3 px-6 bg-white text-primary rounded-lg font-semibold hover:bg-white/90 hover:shadow-lg transition-all">
+        <a href="{{ url_for('auth.register') }}" class="block text-center py-3 px-6 bg-white text-primary rounded-lg font-semibold hover:bg-white/90 hover:shadow-lg transition-all">
           Start Free Trial
         </a>
         {% endif %}
@@ -1197,8 +323,7 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
       See It In Action
     </h2>
     <p class="text-center text-white/70 mb-16 max-w-xl mx-auto">
-      Build a signature right here. Change the fields, watch it update — no
-      account needed yet.
+      Build a signature right here. Change the fields, watch it update — no account needed yet.
     </p>
 
     <div
@@ -1218,10 +343,7 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
           <label class="block text-white/70 text-xs font-semibold uppercase tracking-widest mb-1">
             Full Name
           </label>
-          <input
-            type="text"
-            x-model="name"
-            maxlength="60"
+          <input type="text" x-model="name" maxlength="60"
             class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-white/50 transition-colors"
             placeholder="Your name" />
         </div>
@@ -1231,10 +353,7 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
             <label class="block text-white/70 text-xs font-semibold uppercase tracking-widest mb-1">
               Job Title
             </label>
-            <input
-              type="text"
-              x-model="title"
-              maxlength="60"
+            <input type="text" x-model="title" maxlength="60"
               class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-white/50 transition-colors"
               placeholder="Job title" />
           </div>
@@ -1242,10 +361,7 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
             <label class="block text-white/70 text-xs font-semibold uppercase tracking-widest mb-1">
               Company
             </label>
-            <input
-              type="text"
-              x-model="company"
-              maxlength="60"
+            <input type="text" x-model="company" maxlength="60"
               class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-white/50 transition-colors"
               placeholder="Company" />
           </div>
@@ -1256,10 +372,7 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
             <label class="block text-white/70 text-xs font-semibold uppercase tracking-widest mb-1">
               Phone
             </label>
-            <input
-              type="text"
-              x-model="phone"
-              maxlength="30"
+            <input type="text" x-model="phone" maxlength="30"
               class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-white/50 transition-colors"
               placeholder="Phone" />
           </div>
@@ -1267,10 +380,7 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
             <label class="block text-white/70 text-xs font-semibold uppercase tracking-widest mb-1">
               Email
             </label>
-            <input
-              type="text"
-              x-model="email"
-              maxlength="80"
+            <input type="text" x-model="email" maxlength="80"
               class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-white/50 transition-colors"
               placeholder="Email" />
           </div>
@@ -1282,9 +392,7 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
             <span class="normal-case font-normal text-white/40">(Pro feature)</span>
           </label>
           <div class="flex items-center gap-3">
-            <input
-              type="color"
-              x-model="color"
+            <input type="color" x-model="color"
               class="w-12 h-10 rounded-lg border border-white/20 bg-transparent cursor-pointer" />
             <span class="text-white/50 text-xs font-mono" x-text="color"></span>
           </div>
@@ -1293,20 +401,12 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
 
       <!-- Live preview -->
       <div class="relative">
-        <span
-          class="absolute -top-3 left-1/2 -translate-x-1/2 bg-white text-primary text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
+        <span class="absolute -top-3 left-1/2 -translate-x-1/2 bg-white text-primary text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
           LIVE PREVIEW
         </span>
-        <div
-          class="bg-white rounded-2xl shadow-xl p-6 max-w-sm mx-auto"
-          style="font-family: Arial, Helvetica, sans-serif;">
-          <p
-            class="text-lg font-bold mb-1"
-            :style="`color: ${color}`"
-            x-text="name || 'Your Name'"></p>
-          <p
-            class="text-xs text-gray-500 mb-2"
-            x-text="[title, company].filter(Boolean).join(' · ') || 'Job Title · Company'"></p>
+        <div class="bg-white rounded-2xl shadow-xl p-6 max-w-sm mx-auto" style="font-family: Arial, Helvetica, sans-serif;">
+          <p class="text-lg font-bold mb-1" :style="`color: ${color}`" x-text="name || 'Your Name'"></p>
+          <p class="text-xs text-gray-500 mb-2" x-text="[title, company].filter(Boolean).join(' · ') || 'Job Title · Company'"></p>
           <hr class="mb-2" :style="`border: none; border-top: 2px solid ${color}`" />
           <p class="text-xs text-gray-600 mb-1" x-text="'📞 ' + (phone || '+1 555 000 0000')"></p>
           <p class="text-xs text-gray-600" x-text="'✉ ' + (email || 'you@example.com')"></p>
@@ -1316,19 +416,14 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
 
     <div class="text-center mt-12">
       <p class="text-white/70 mb-4 text-sm">
-        This is just a demo — nothing here is saved. Create your free
-        account to get a real, shareable, trackable signature.
+        This is just a demo — nothing here is saved. Create your free account to get a real, shareable, trackable signature.
       </p>
       {% if current_user.is_authenticated %}
-      <a
-        href="{{ url_for('dashboard.index') }}"
-        class="inline-block px-8 py-3 bg-white text-primary rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all">
+      <a href="{{ url_for('dashboard.index') }}" class="inline-block px-8 py-3 bg-white text-primary rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all">
         Go to Dashboard
       </a>
       {% else %}
-      <a
-        href="{{ url_for('auth.register') }}"
-        class="inline-block px-8 py-3 bg-white text-primary rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all">
+      <a href="{{ url_for('auth.register') }}" class="inline-block px-8 py-3 bg-white text-primary rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all">
         Create Your Free Signature
       </a>
       {% endif %}
@@ -1340,8 +435,7 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
 <section class="bg-gray-50 py-20 px-4">
   <div class="max-w-6xl mx-auto">
     <div class="text-center mb-4">
-      <span
-        class="inline-block bg-gray-200 text-gray-500 text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full">
+      <span class="inline-block bg-gray-200 text-gray-500 text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full">
         Sample Data
       </span>
     </div>
@@ -1349,8 +443,7 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
       See Who's Engaging With Your Emails
     </h2>
     <p class="text-center text-gray-500 mb-16 max-w-xl mx-auto">
-      Every signature comes with a dashboard like this. The numbers below
-      are illustrative — yours will show your own opens and clicks.
+      Every signature comes with a dashboard like this. The numbers below are illustrative — yours will show your own opens and clicks.
     </p>
 
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -1377,34 +470,12 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
         Last 7 Days
       </h3>
       <div class="flex items-end gap-3 h-40">
+        {% for day in [("Mon", 40), ("Tue", 65), ("Wed", 50), ("Thu", 80), ("Fri", 55), ("Sat", 90), ("Sun", 70)] %}
         <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
-          <div class="w-full bg-primary/20 rounded-t-md" style="height: 40%"></div>
-          <span class="text-xs text-gray-400">Mon</span>
+          <div class="w-full {% if day[1] >= 75 %}bg-primary/40{% else %}bg-primary/20{% endif %} rounded-t-md" style="height: {{ day[1] }}%"></div>
+          <span class="text-xs text-gray-400">{{ day[0] }}</span>
         </div>
-        <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
-          <div class="w-full bg-primary/20 rounded-t-md" style="height: 65%"></div>
-          <span class="text-xs text-gray-400">Tue</span>
-        </div>
-        <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
-          <div class="w-full bg-primary/20 rounded-t-md" style="height: 50%"></div>
-          <span class="text-xs text-gray-400">Wed</span>
-        </div>
-        <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
-          <div class="w-full bg-primary/40 rounded-t-md" style="height: 80%"></div>
-          <span class="text-xs text-gray-400">Thu</span>
-        </div>
-        <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
-          <div class="w-full bg-primary/20 rounded-t-md" style="height: 55%"></div>
-          <span class="text-xs text-gray-400">Fri</span>
-        </div>
-        <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
-          <div class="w-full bg-primary/40 rounded-t-md" style="height: 90%"></div>
-          <span class="text-xs text-gray-400">Sat</span>
-        </div>
-        <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
-          <div class="w-full bg-primary/20 rounded-t-md" style="height: 70%"></div>
-          <span class="text-xs text-gray-400">Sun</span>
-        </div>
+        {% endfor %}
       </div>
     </div>
   </div>
@@ -1417,19 +488,14 @@ Signatures with Analytics{% endblock %} {% block extra_css %}
       Your Email Signature Is Working — Are You Tracking It?
     </h2>
     <p class="text-xl text-gray-600 mb-8">
-      Build a professional signature in minutes and see exactly who opens your
-      emails, when, and from where.
+      Build a professional signature in minutes and see exactly who opens your emails, when, and from where.
     </p>
-    {# NEW #} {% if current_user.is_authenticated %}
-    <a
-      href="{{ url_for('dashboard.index') }}"
-      class="inline-block px-10 py-4 bg-primary text-white rounded-lg font-semibold text-lg hover:bg-primary-dark hover:shadow-xl transition-all">
+    {% if current_user.is_authenticated %}
+    <a href="{{ url_for('dashboard.index') }}" class="inline-block px-10 py-4 bg-primary text-white rounded-lg font-semibold text-lg hover:bg-primary-dark hover:shadow-xl transition-all">
       Go to Dashboard
     </a>
     {% else %}
-    <a
-      href="{{ url_for('auth.register') }}"
-      class="inline-block px-10 py-4 bg-primary text-white rounded-lg font-semibold text-lg hover:bg-primary-dark hover:shadow-xl transition-all">
+    <a href="{{ url_for('auth.register') }}" class="inline-block px-10 py-4 bg-primary text-white rounded-lg font-semibold text-lg hover:bg-primary-dark hover:shadow-xl transition-all">
       Start Free Trial - No Credit Card Required
     </a>
     {% endif %}

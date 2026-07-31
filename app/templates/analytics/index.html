@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "analytics/_daily_chart.html" import render_daily_chart %}
 {% block title %}Analytics – Signature{% endblock %}
 
 {% block content %}
@@ -116,54 +117,5 @@
 
 <!-- Chart.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script>
-  const labels = {{ summary.daily_last_30 | map(attribute='date') | list | tojson }};
-  const opensData = {{ summary.daily_last_30 | map(attribute='opens') | list | tojson }};
-  const clicksData = {{ summary.daily_last_30 | map(attribute='clicks') | list | tojson }};
-
-  new Chart(document.getElementById('dailyChart'), {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: 'Opens',
-          data: opensData,
-          backgroundColor: 'rgba(12, 39, 136, 0.15)',
-          borderColor: 'rgba(12, 39, 136, 0.8)',
-          borderWidth: 1,
-          borderRadius: 4,
-        },
-        {
-          label: 'Clicks',
-          data: clicksData,
-          backgroundColor: 'rgba(12, 39, 136, 0.5)',
-          borderColor: 'rgba(12, 39, 136, 1)',
-          borderWidth: 1,
-          borderRadius: 4,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { position: 'top' },
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: {
-            maxTicksLimit: 10,
-            font: { size: 11 },
-          },
-        },
-        y: {
-          beginAtZero: true,
-          ticks: { stepSize: 1 },
-          grid: { color: 'rgba(0,0,0,0.05)' },
-        },
-      },
-    },
-  });
-</script>
+{{ render_daily_chart(summary.daily_last_30, canvas_id='dailyChart') }}
 {% endblock %}

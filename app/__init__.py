@@ -10,7 +10,7 @@ from typing import Type
 
 load_dotenv()
 
-# Initialize extensions
+
 db = SQLAlchemy()
 login_manager = LoginManager()
 migrate = Migrate()
@@ -30,13 +30,12 @@ def create_app(config_class: Type[object] = DevelopmentConfig) -> Flask:
     # Load config object — caller decides which environment this is.
     app.config.from_object(config_class)
 
-    # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
 
-    # A07: Redirect unauthenticated users to login; show a warning flash
-    login_manager.login_view = "auth.login"  # type: ignore[assignment]
+   
+    login_manager.login_view = "auth.login" 
     login_manager.login_message = "Please log in to access that page."
     login_manager.login_message_category = "warning"
 
@@ -46,7 +45,7 @@ def create_app(config_class: Type[object] = DevelopmentConfig) -> Flask:
 
         return db.session.get(User, int(user_id))
 
-    # Register blueprints
+    
     from app.routes.auth import auth_bp
     from app.routes.dashboard import dashboard_bp
     from app.routes.signatures import signatures_bp
@@ -81,7 +80,7 @@ def create_app(config_class: Type[object] = DevelopmentConfig) -> Flask:
     def terms():
         return render_template("terms.html")
 
-    # Custom error pages
+  
     @app.errorhandler(404)
     def page_not_found(e):
         return render_template("errors/404.html"), 404

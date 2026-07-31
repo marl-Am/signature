@@ -2,12 +2,6 @@
 """
 User model with OWASP Top 10:2025 security measures.
 
-Security Features Implemented:
-- A01: Access Control - user_id relationships on all resources
-- A04: Cryptographic Failures - Argon2id password hashing
-- A07: Authentication Failures - account lockout, session management
-- A09: Logging - track login attempts and suspicious activity
-
 Datetime note: All datetimes are written as timezone-aware UTC via
 datetime.now(timezone.utc). PostgreSQL (Supabase, production) stores these as
 TIMESTAMPTZ and returns them aware, so comparisons work directly.
@@ -73,35 +67,25 @@ class User(UserMixin, db.Model):
 
     __tablename__ = "users"
 
-    # ========================================
-    # PRIMARY FIELDS
-    # ========================================
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     name = db.Column(db.String(100), nullable=False)
 
-    # ========================================
-    # A07: AUTHENTICATION SECURITY
-    # ========================================
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     email_verified = db.Column(db.Boolean, default=False, nullable=False)
     email_verification_token = db.Column(db.String(100), unique=True, nullable=True)
     email_verification_expires = db.Column(db.DateTime, nullable=True)
 
-    # Account lockout (prevents brute force attacks)
+    # Account lockout to prevent brute force attacks
     failed_login_attempts = db.Column(db.Integer, default=0, nullable=False)
     locked_until = db.Column(db.DateTime, nullable=True)
 
-    # Password reset
     password_reset_token = db.Column(db.String(100), unique=True, nullable=True)
     password_reset_expires = db.Column(db.DateTime, nullable=True)
 
-    # ========================================
-    # A09: LOGGING & MONITORING
-    # ========================================
     last_login_at = db.Column(db.DateTime, nullable=True)
-    last_login_ip = db.Column(db.String(45), nullable=True)  # IPv6 compatible
+    last_login_ip = db.Column(db.String(45), nullable=True)
 
     created_at = db.Column(
         db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
@@ -113,9 +97,6 @@ class User(UserMixin, db.Model):
         nullable=False,
     )
 
-    # ========================================
-    # SUBSCRIPTION & BUSINESS LOGIC
-    # ========================================
     subscription_status = db.Column(
         db.String(20), default="trial", nullable=False
     )  # Values: 'trial', 'active', 'cancelled', 'expired'
@@ -129,19 +110,12 @@ class User(UserMixin, db.Model):
     trial_ends_at = db.Column(db.DateTime, nullable=True)
     subscription_ends_at = db.Column(db.DateTime, nullable=True)
 
-    # ========================================
-    # A01: RELATIONSHIPS (for access control)
-    # ========================================
     signatures = db.relationship(
         "Signature",
         back_populates="user",
         lazy="dynamic",
         cascade="all, delete-orphan",
     )
-
-    # ========================================
-    # PASSWORD MANAGEMENT (A04: Cryptographic Failures)
-    # ========================================
 
     def set_password(self, password: str) -> None:
         """
@@ -177,9 +151,6 @@ class User(UserMixin, db.Model):
         except Exception:
             return False
 
-    # ========================================
-    # A07: ACCOUNT LOCKOUT
-    # ========================================
 
     def is_locked(self) -> bool:
         """
@@ -228,9 +199,6 @@ class User(UserMixin, db.Model):
         self.last_login_ip = ip_address
         db.session.commit()
 
-    # ========================================
-    # EMAIL VERIFICATION
-    # ========================================
 
     def generate_verification_token(self) -> str:
         """
@@ -267,9 +235,6 @@ class User(UserMixin, db.Model):
         db.session.commit()
         return True
 
-    # ========================================
-    # PASSWORD RESET
-    # ========================================
 
     def generate_password_reset_token(self) -> str:
         """
@@ -304,9 +269,6 @@ class User(UserMixin, db.Model):
         db.session.commit()
         return True
 
-    # ========================================
-    # SUBSCRIPTION CHECKS
-    # ========================================
 
     def has_active_subscription(self) -> bool:
         """
@@ -339,9 +301,6 @@ class User(UserMixin, db.Model):
         unlocked_count: int = self.signatures.filter_by(locked=False).count()
         return unlocked_count < 1
 
-    # ========================================
-    # UTILITY METHODS
-    # ========================================
 
     def __repr__(self) -> str:
         return f"<User {self.email}>"

@@ -18,14 +18,6 @@ Flow:
        Verifies the Stripe signature (A08: integrity), then upgrades or
        downgrades the account based on the event type.
 
-Security notes:
-  - A02: Secret key and webhook secret loaded from env, never hardcoded.
-  - A08: Every webhook payload is verified with stripe.Webhook.construct_event
-         before any database write occurs.
-  - A01: Upgrade only modifies the user identified by client_reference_id
-         (set to current_user.id when creating the session), never a
-         user-supplied value from the webhook payload.
-  - SSRF (A10): No outbound URL is constructed from user input.
 """
 
 import logging
@@ -61,10 +53,6 @@ def _stripe_client() -> ModuleType:
     stripe.api_key = current_app.config["STRIPE_SECRET_KEY"]
     return stripe
 
-
-# ---------------------------------------------------------------------------
-# 1. Initiate checkout
-# ---------------------------------------------------------------------------
 
 
 @billing_bp.route("/upgrade")
@@ -119,10 +107,6 @@ def upgrade() -> Response:
     return redirect(checkout_session.url, code=303)
 
 
-# ---------------------------------------------------------------------------
-# 2. Success landing
-# ---------------------------------------------------------------------------
-
 
 @billing_bp.route("/success")
 @login_required
@@ -141,10 +125,6 @@ def success() -> Response:
     return redirect(url_for("dashboard.index"))
 
 
-# ---------------------------------------------------------------------------
-# 3. Cancel landing
-# ---------------------------------------------------------------------------
-
 
 @billing_bp.route("/cancel")
 @login_required
@@ -154,17 +134,13 @@ def cancel() -> Response:
     return redirect(url_for("pricing"))
 
 
-# ---------------------------------------------------------------------------
-# 4. Stripe webhook
-# ---------------------------------------------------------------------------
-
 
 @billing_bp.route("/webhook", methods=["POST"])
 def webhook() -> Response:
     """
     Receive and process Stripe webhook events.
 
-    A08 (Integrity): The payload signature is verified with
+    The payload signature is verified with
     stripe.Webhook.construct_event before any logic runs. An invalid
     signature returns 400 immediately.
 
@@ -179,7 +155,7 @@ def webhook() -> Response:
         logger.error("STRIPE_WEBHOOK_SECRET is not configured.")
         return make_response("Webhook secret not configured.", 500)
 
-    # --- Verify signature (A08) ---
+    # --- Verify signature ---
     try:
         _stripe_client()
         event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
@@ -206,10 +182,6 @@ def webhook() -> Response:
     # Return 200 for all unhandled events so Stripe does not retry them.
     return make_response("Success", 200)
 
-
-# ---------------------------------------------------------------------------
-# Webhook helpers
-# ---------------------------------------------------------------------------
 
 
 def _handle_checkout_completed(session: stripe.checkout.Session) -> None:
@@ -238,8 +210,7 @@ def _handle_checkout_completed(session: stripe.checkout.Session) -> None:
     user.subscription_tier = "pro"
     user.subscription_ends_at = None
 
-    # Unlock all signatures — covers the re-subscribe path (A01: only this
-    # user's signatures are touched, identified by user.id not caller input)
+    # Unlock all signatures — covers the re-subscribe path
     Signature.query.filter_by(user_id=user.id).update({"locked": False})
 
     db.session.commit()
@@ -280,7 +251,6 @@ def _handle_subscription_deleted(subscription: stripe.Subscription) -> None:
 
     # Lock all signatures beyond the first one (ordered oldest-first so the
     # user keeps their original/primary signature active).
-    # A01: filter strictly by user.id — never touches another user's data.
     user_sigs = (
         Signature.query.filter_by(user_id=user.id)
         .order_by(Signature.created_at.asc())

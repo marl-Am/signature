@@ -65,7 +65,7 @@ def register() -> Union[str, Response]:
                     logger.warning(
                         "Verification email failed for %s: %s", user.email, err
                     )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logger.exception(
                     "Unexpected error sending verification email for %s: %s",
                     user.email,
@@ -110,13 +110,8 @@ def login() -> Union[str, Response]:
             return redirect(url_for("dashboard.index"))
         else:
             if failure_reason == AuthFailureReason.ACCOUNT_LOCKED and error_message is not None:
-                # Safe to disclose: lockout applies regardless of whether the
-                # password just entered was correct, so this does not leak
-                # credential validity (A07).
                 flash(error_message, "danger")
             else:
-                # A07: Generic message for all other cases — do not reveal
-                # whether the email exists or whether the password was wrong.
                 flash("Invalid email or password.", "danger")
             return render_template("auth/login.html", email=email)
 
@@ -137,9 +132,7 @@ def verify_email(token: str) -> Response:
     """
     Email verification endpoint — reached via the link emailed after registration.
 
-    A07: Token is single-use; it is cleared from the DB on successful verification.
-    A01: Any authenticated user can verify their own email via this link.
-         Mismatched tokens simply find no user and show an error.
+    Token is single-use; it is cleared from the DB on successful verification.
     """
     from app.models.user import User
 
@@ -157,7 +150,6 @@ def verify_email(token: str) -> Response:
     user.verify_email(token)
     logger.info("Email verified for user %s", user.email)
 
-    # If already logged in, stay on dashboard; otherwise go to login
     if current_user.is_authenticated:
         flash("Your email address has been verified.", "success")
         return redirect(url_for("dashboard.index"))
@@ -198,12 +190,11 @@ def forgot_password() -> Union[str, Response]:
                 )
                 if not success:
                     logger.warning("Password reset email failed for %s: %s", email, err)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logger.exception(
                     "Unexpected error sending reset email for %s: %s", email, exc
                 )
 
-        # A07: Always show the same flash message regardless of outcome
         flash(message, "info")
         return redirect(url_for("auth.login"))
 
@@ -278,7 +269,7 @@ def resend_verification() -> Response:
                 "Resend verification failed for %s: %s", current_user.email, err
             )
             flash("Could not send the email. Please try again later.", "danger")
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc: 
         logger.exception(
             "Unexpected error resending verification for %s: %s",
             current_user.email,

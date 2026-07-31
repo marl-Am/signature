@@ -1,10 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Pricing – Signature{% endblock %}
 
+{% macro check_icon(color="text-green-500") %}
+<svg class="w-5 h-5 {{ color }} flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+</svg>
+{% endmacro %}
+
 {% block content %}
 <div x-data="{ yearly: false }">
 
-  <!-- Hero -->
   <section class="bg-gradient-to-br from-primary via-primary-dark to-primary pt-24 pb-20 px-4">
     <div class="max-w-3xl mx-auto text-center">
       <h1 class="text-5xl font-bold text-white mb-4">Simple, Honest Pricing</h1>
@@ -12,10 +17,8 @@
         Start free, upgrade when you're ready. No hidden fees.
       </p>
 
-      <!-- Billing Toggle -->
       <div class="inline-flex items-center gap-4 bg-white/10 backdrop-blur-sm rounded-full px-6 py-3">
         <span class="text-white font-semibold text-sm" :class="!yearly ? 'opacity-100' : 'opacity-50'">Monthly</span>
-
         <button
           @click="yearly = !yearly"
           class="relative w-14 h-7 rounded-full transition-colors focus:outline-none"
@@ -26,7 +29,6 @@
             :class="yearly ? 'translate-x-7 bg-primary' : 'translate-x-0 bg-white'">
           </span>
         </button>
-
         <span class="text-white font-semibold text-sm" :class="yearly ? 'opacity-100' : 'opacity-50'">
           Yearly
           <span class="ml-2 bg-green-400 text-green-900 text-xs font-bold px-2 py-0.5 rounded-full">
@@ -37,12 +39,10 @@
     </div>
   </section>
 
-  <!-- Pricing Cards -->
   <section class="bg-white py-20 px-4 -mt-12">
     <div class="max-w-5xl mx-auto">
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
 
-        <!-- Free Plan -->
         <div class="bg-gray-50 border-2 border-gray-200 rounded-2xl p-8 flex flex-col hover:border-primary hover:shadow-xl transition-all">
           <div class="text-center mb-8">
             <h2 class="text-2xl font-bold text-gray-800 mb-1">Free</h2>
@@ -56,52 +56,37 @@
 
           <ul class="space-y-4 mb-10 flex-1">
             <li class="flex items-center gap-3 text-gray-700">
-              <svg class="w-5 h-5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-              </svg>
+              {{ check_icon() }}
               1 email signature
             </li>
-            
             <li class="flex items-center gap-3 text-gray-700">
-              <svg class="w-5 h-5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-              </svg>
+              {{ check_icon() }}
               Analytics dashboard (opens + clicks)
             </li>
-
             <li class="flex items-center gap-3 text-gray-700">
-              <svg class="w-5 h-5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-              </svg>
+              {{ check_icon() }}
               Works with all email clients
             </li>
-
             <li class="flex items-center gap-3 text-gray-700">
-              <svg class="w-5 h-5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-              </svg>
+              {{ check_icon() }}
               <span>Includes "Sent with Signature" branding</span>
             </li>
-
           </ul>
 
           {% if current_user.is_authenticated %}
-  <a href="{{ url_for('dashboard.index') }}"
-     class="block text-center py-3 px-6 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
-    Go to Dashboard
-  </a>
-{% else %}
-  <a href="{{ url_for('auth.register') }}"
-     class="block text-center py-3 px-6 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
-    Get Started Free
-  </a>
-{% endif %}
+          <a href="{{ url_for('dashboard.index') }}"
+             class="block text-center py-3 px-6 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+            Go to Dashboard
+          </a>
+          {% else %}
+          <a href="{{ url_for('auth.register') }}"
+             class="block text-center py-3 px-6 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+            Get Started Free
+          </a>
+          {% endif %}
         </div>
 
-        <!-- Pro Plan -->
         <div class="bg-primary border-2 border-primary rounded-2xl p-8 flex flex-col relative hover:shadow-2xl hover:shadow-primary/30 transition-all">
-
-          <!-- Badge -->
           <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-white text-primary px-5 py-1 rounded-full text-sm font-bold shadow-md whitespace-nowrap">
             MOST POPULAR
           </div>
@@ -110,19 +95,15 @@
             <h2 class="text-2xl font-bold text-white mb-1">Pro</h2>
             <p class="text-white/60 text-sm mb-6">For professionals who mean business</p>
 
-            <!-- Monthly price -->
             <div x-show="!yearly" class="flex items-end justify-center gap-1">
               <span class="text-6xl font-black text-white">$9</span>
               <span class="text-white/70 mb-3">/ mo</span>
             </div>
-
-            <!-- Yearly price -->
             <div x-show="yearly" x-cloak class="flex items-end justify-center gap-1">
               <span class="text-6xl font-black text-white">$7</span>
               <span class="text-white/70 mb-3">/ mo</span>
             </div>
 
-            <!-- Billing note -->
             <p x-show="!yearly" class="text-white/50 text-sm mt-2">Billed monthly</p>
             <p x-show="yearly" x-cloak class="text-white/50 text-sm mt-2">
               $84 billed yearly &mdash; you save $24
@@ -131,59 +112,47 @@
 
           <ul class="space-y-4 mb-10 flex-1">
             <li class="flex items-center gap-3 text-white">
-              <svg class="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-              </svg>
+              {{ check_icon("text-green-400") }}
               Unlimited signatures
             </li>
             <li class="flex items-center gap-3 text-white">
-              <svg class="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-              </svg>
+              {{ check_icon("text-green-400") }}
               Analytics dashboard (opens + clicks)
             </li>
             <li class="flex items-center gap-3 text-white">
-              <svg class="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-              </svg>
+              {{ check_icon("text-green-400") }}
               Works with all email clients
             </li>
             <li class="flex items-center gap-3 text-white">
-              <svg class="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-              </svg>
+              {{ check_icon("text-green-400") }}
               No watermark
             </li>
             <li class="flex items-center gap-3 text-white">
-              <svg class="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-              </svg>
+              {{ check_icon("text-green-400") }}
               Priority support
             </li>
-
           </ul>
 
           {% if current_user.is_authenticated and current_user.subscription_tier == 'pro' %}
-  <a href="{{ url_for('subscription.manage') }}"
-     class="block text-center py-3 px-6 bg-white text-primary rounded-lg font-semibold hover:bg-white/90 hover:shadow-lg transition-all">
-    Manage Your Plan
-  </a>
-{% elif current_user.is_authenticated %}
-  <a :href="yearly ? '{{ url_for('billing.upgrade') }}?interval=yearly' : '{{ url_for('billing.upgrade') }}'"
-     class="block text-center py-3 px-6 bg-white text-primary rounded-lg font-semibold hover:bg-white/90 hover:shadow-lg transition-all">
-    Upgrade to Pro
-  </a>
-{% else %}
-  <a href="{{ url_for('auth.register') }}"
-     class="block text-center py-3 px-6 bg-white text-primary rounded-lg font-semibold hover:bg-white/90 hover:shadow-lg transition-all">
-    Start Free Trial
-  </a>
-{% endif %}
+          <a href="{{ url_for('subscription.manage') }}"
+             class="block text-center py-3 px-6 bg-white text-primary rounded-lg font-semibold hover:bg-white/90 hover:shadow-lg transition-all">
+            Manage Your Plan
+          </a>
+          {% elif current_user.is_authenticated %}
+          <a :href="yearly ? '{{ url_for('billing.upgrade') }}?interval=yearly' : '{{ url_for('billing.upgrade') }}'"
+             class="block text-center py-3 px-6 bg-white text-primary rounded-lg font-semibold hover:bg-white/90 hover:shadow-lg transition-all">
+            Upgrade to Pro
+          </a>
+          {% else %}
+          <a href="{{ url_for('auth.register') }}"
+             class="block text-center py-3 px-6 bg-white text-primary rounded-lg font-semibold hover:bg-white/90 hover:shadow-lg transition-all">
+            Start Free Trial
+          </a>
+          {% endif %}
         </div>
 
       </div>
 
-      <!-- FAQ / Reassurance row -->
       <div class="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-8 text-center text-gray-600">
         <div>
           <div class="text-3xl mb-2">🔒</div>

@@ -1,11 +1,6 @@
 # app/models/signature.py
 """
 Signature model - Email signature storage
-
-Security Features Implemented:
-- A01: Broken Access Control - Every signature belongs to a user
-- A05: Injection - SQLAlchemy ORM prevents SQL injection
-- A08: Data Integrity - Validate HTML content before storage
 """
 
 from app import db
@@ -17,17 +12,12 @@ class Signature(db.Model):
     Email signature model
 
     Each signature belongs to exactly one user (user_id foreign key)
-    This enforces A01: Access Control - users can only access their own signatures
     """
 
     __tablename__ = "signatures"
 
-    # ========================================
-    # PRIMARY FIELDS
-    # ========================================
     id = db.Column(db.Integer, primary_key=True)
 
-    # A01: CRITICAL - Every signature must belong to a user
     user_id = db.Column(
         db.Integer,
         db.ForeignKey(
@@ -40,39 +30,27 @@ class Signature(db.Model):
     # Signature metadata
     name = db.Column(
         db.String(100), nullable=False
-    )  # User-friendly name like "Work Signature"
+    )
 
-    # User-controlled toggle (can be disabled without deletion)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
 
-    # System-controlled lock — set True on subscription downgrade for signatures
-    # beyond the free tier limit (1). Set back to False on re-upgrade.
-    # Kept separate from is_active so user intent is never overwritten by billing logic.
     locked = db.Column(db.Boolean, default=False, nullable=False)
 
-    # ========================================
-    # SIGNATURE CONTENT
-    # ========================================
-    # Personal information
     full_name = db.Column(db.String(100), nullable=False)
     job_title = db.Column(db.String(100), nullable=True)
     company = db.Column(db.String(100), nullable=True)
     department = db.Column(db.String(100), nullable=True)
 
-    # Contact information
     phone = db.Column(db.String(50), nullable=True)
     website = db.Column(db.String(255), nullable=True)
 
-    # Social media links
     linkedin_url = db.Column(db.String(255), nullable=True)
     twitter_url = db.Column(db.String(255), nullable=True)
     facebook_url = db.Column(db.String(255), nullable=True)
     instagram_url = db.Column(db.String(255), nullable=True)
 
-    # Logo/Image
-    logo_url = db.Column(db.String(500), nullable=True)  # S3 URL to uploaded logo
+    logo_url = db.Column(db.String(500), nullable=True)
 
-    # Design options
     accent_color = db.Column(db.String(7), nullable=False, default="#0c2788")
     layout       = db.Column(db.String(20), nullable=False, default="classic")
     font_family  = db.Column(db.String(50), nullable=False, default="Arial, Helvetica, sans-serif")
@@ -82,9 +60,6 @@ class Signature(db.Model):
         db.Text, nullable=False
     )  # Final HTML with tracking injected
 
-    # ========================================
-    # TRACKING & ANALYTICS (The Business Model)
-    # ========================================
     # Unique tracking code for this signature (used in pixel/redirect URLs)
     tracking_code = db.Column(db.String(32), unique=True, nullable=False, index=True)
 
@@ -93,9 +68,6 @@ class Signature(db.Model):
     total_clicks = db.Column(db.Integer, default=0, nullable=False)
     last_opened_at = db.Column(db.DateTime, nullable=True)
 
-    # ========================================
-    # TIMESTAMPS
-    # ========================================
     created_at = db.Column(
         db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )
@@ -106,10 +78,6 @@ class Signature(db.Model):
         nullable=False,
     )
 
-    # ========================================
-    # RELATIONSHIPS
-    # ========================================
-    # Back reference to User (A01: Access Control)
     user   = db.relationship("User", back_populates="signatures")
     opens  = db.relationship(
         "SignatureOpen", back_populates="signature", cascade="all, delete-orphan"
@@ -117,10 +85,6 @@ class Signature(db.Model):
     clicks = db.relationship(
         "SignatureClick", back_populates="signature", cascade="all, delete-orphan"
     )
-
-    # ========================================
-    # UTILITY METHODS
-    # ========================================
 
     def __repr__(self) -> str:
         """String representation for debugging"""
@@ -195,9 +159,3 @@ class Signature(db.Model):
         """
         self.total_clicks += 1
 
-
-# ========================================
-# DATABASE INDEXES (Already defined above)
-# ========================================
-# - user_id (indexed for fast "get all user signatures" queries)
-# - tracking_code (unique + indexed for fast tracking lookups)

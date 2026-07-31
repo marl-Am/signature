@@ -1,12 +1,9 @@
 # app/services/email_service.py
 """
 Email service - Brevo (formerly Sendinblue) integration for transactional emails.
-
-Security:
-- A02: API key loaded from environment, never hardcoded
-- A09: All send failures are logged with context
 """
 
+import html
 import os
 import logging
 from typing import Optional, Tuple, Any
@@ -17,6 +14,8 @@ logger = logging.getLogger(__name__)
 
 BREVO_API_URL: str = "https://api.brevo.com/v3/smtp/email"
 _REQUEST_TIMEOUT_SECONDS: int = 10
+
+APP_NAME: str = "Signature"
 
 
 def _get_api_key() -> Optional[str]:
@@ -36,6 +35,31 @@ def _get_api_key() -> Optional[str]:
 def _get_from_email() -> str:
     """Return the verified sender address from env, with a safe fallback."""
     return os.getenv("BREVO_FROM_EMAIL", "no-reply@example.com")
+
+
+def _render_email_body(to_name: str, *paragraphs: str) -> str:
+    """
+    Build the shared HTML body used by every transactional email:
+    a greeting, the caller-supplied paragraphs, and a standard sign-off.
+
+    Args:
+        to_name:    Recipient display name. HTML-escaped before interpolation,
+                    since this value originates from user-supplied input
+                    (e.g. the name entered at registration).
+        paragraphs: Pre-rendered HTML paragraph strings (each will be wrapped
+                    in its own <p> tag). Callers control this content
+                    directly, so it is not escaped here.
+
+    Returns:
+        A complete HTML fragment for use as the email's htmlContent.
+    """
+    safe_name = html.escape(to_name)
+    body_paragraphs = "\n    ".join(f"<p>{paragraph}</p>" for paragraph in paragraphs)
+    return f"""
+    <p>Hi {safe_name},</p>
+    {body_paragraphs}
+    <p>— The {APP_NAME} Team</p>
+    """
 
 
 def _send(
@@ -61,7 +85,7 @@ def _send(
         return False, "Email service is not configured."
 
     payload: dict[str, Any] = {
-        "sender": {"name": "Signature", "email": _get_from_email()},
+        "sender": {"name": APP_NAME, "email": _get_from_email()},
         "to": [{"email": to_email, "name": to_name}],
         "subject": subject,
         "htmlContent": html_content,
@@ -111,18 +135,17 @@ def send_welcome_email(to_email: str, to_name: str) -> Tuple[bool, Optional[str]
     Returns:
         Tuple of (success, error_message).
     """
-    subject = "Welcome to Signature — your account is ready"
-    html_content = f"""
-    <p>Hi {to_name},</p>
-    <p>Welcome! Your Signature account has been created.</p>
-    <p>
-      You are on a <strong>14-day free trial</strong>. Head to your
-      <a href="https://signature.example.com/dashboard">dashboard</a>
-      to build your first email signature.
-    </p>
-    <p>If you have questions, just reply to this email.</p>
-    <p>— The Signature Team</p>
-    """
+    subject = f"Welcome to {APP_NAME} — your account is ready"
+    html_content = _render_email_body(
+        to_name,
+        f"Welcome! Your {APP_NAME} account has been created.",
+        (
+            "You are on a <strong>14-day free trial</strong>. Head to your "
+            '<a href="https://signature.example.com/dashboard">dashboard</a> '
+            "to build your first email signature."
+        ),
+        "If you have questions, just reply to this email.",
+    )
     return _send(to_email, to_name, subject, html_content)
 
 
@@ -140,17 +163,14 @@ def send_verification_email(
     Returns:
         Tuple of (success, error_message).
     """
-    subject = "Signature — please verify your email address"
-    html_content = f"""
-    <p>Hi {to_name},</p>
-    <p>Thanks for signing up! Click the link below to verify your email address:</p>
-    <p><a href="{verify_url}">{verify_url}</a></p>
-    <p>This link expires in <strong>24 hours</strong>.</p>
-    <p>
-      If you did not create a Signature account, you can safely ignore this email.
-    </p>
-    <p>— The Signature Team</p>
-    """
+    subject = f"{APP_NAME} — please verify your email address"
+    html_content = _render_email_body(
+        to_name,
+        "Thanks for signing up! Click the link below to verify your email address:",
+        f'<a href="{verify_url}">{verify_url}</a>',
+        "This link expires in <strong>24 hours</strong>.",
+        f"If you did not create a {APP_NAME} account, you can safely ignore this email.",
+    )
     return _send(to_email, to_name, subject, html_content)
 
 
@@ -168,16 +188,15 @@ def send_password_reset_email(
     Returns:
         Tuple of (success, error_message).
     """
-    subject = "Signature — password reset request"
-    html_content = f"""
-    <p>Hi {to_name},</p>
-    <p>We received a request to reset your password. Click the link below to choose a new one:</p>
-    <p><a href="{reset_url}">{reset_url}</a></p>
-    <p>This link expires in <strong>1 hour</strong>.</p>
-    <p>
-      If you did not request a password reset, you can safely ignore this email —
-      your account has not been changed.
-    </p>
-    <p>— The Signature Team</p>
-    """
+    subject = f"{APP_NAME} — password reset request"
+    html_content = _render_email_body(
+        to_name,
+        "We received a request to reset your password. Click the link below to choose a new one:",
+        f'<a href="{reset_url}">{reset_url}</a>',
+        "This link expires in <strong>1 hour</strong>.",
+        (
+            "If you did not request a password reset, you can safely ignore this "
+            "email — your account has not been changed."
+        ),
+    )
     return _send(to_email, to_name, subject, html_content)

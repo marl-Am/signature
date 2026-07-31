@@ -156,7 +156,7 @@
             </p>
             <div class="flex items-center gap-3">
               <form method="POST" action="{{ url_for('subscription.cancel') }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                
                 <button
                   type="submit"
                   class="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">

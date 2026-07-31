@@ -1,5 +1,19 @@
 {% extends "base.html" %}
+{% from "analytics/_daily_chart.html" import render_daily_chart %}
 {% block title %}{{ detail.name }} – Analytics – Signature{% endblock %}
+
+{% macro device_badge(device) %}
+  {% if device == 'Mobile' %}
+    {% set badge_class = 'bg-blue-100 text-blue-700' %}
+  {% elif device == 'Desktop' %}
+    {% set badge_class = 'bg-gray-100 text-gray-600' %}
+  {% else %}
+    {% set badge_class = 'bg-yellow-100 text-yellow-700' %}
+  {% endif %}
+  <span class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold {{ badge_class }}">
+    {{ device }}
+  </span>
+{% endmacro %}
 
 {% block content %}
 <div class="min-h-screen bg-gray-50">
@@ -113,12 +127,7 @@
                   {{ o.opened_at.strftime('%b %d, %Y %H:%M') }}
                 </td>
                 <td class="py-2 text-right">
-                  <span class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold
-                    {% if o.device == 'Mobile' %}bg-blue-100 text-blue-700
-                    {% elif o.device == 'Desktop' %}bg-gray-100 text-gray-600
-                    {% else %}bg-yellow-100 text-yellow-700{% endif %}">
-                    {{ o.device }}
-                  </span>
+                  {{ device_badge(o.device) }}
                 </td>
               </tr>
               {% endfor %}
@@ -155,12 +164,7 @@
               </td>
               <td class="py-3 pr-6 font-semibold text-gray-700 capitalize">{{ c.platform }}</td>
               <td class="py-3 text-right">
-                <span class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold
-                  {% if c.device == 'Mobile' %}bg-blue-100 text-blue-700
-                  {% elif c.device == 'Desktop' %}bg-gray-100 text-gray-600
-                  {% else %}bg-yellow-100 text-yellow-700{% endif %}">
-                  {{ c.device }}
-                </span>
+                {{ device_badge(c.device) }}
               </td>
             </tr>
             {% endfor %}
@@ -177,49 +181,5 @@
 
 <!-- Chart.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script>
-  const labels    = {{ detail.daily_last_30 | map(attribute='date')   | list | tojson }};
-  const opensData = {{ detail.daily_last_30 | map(attribute='opens')  | list | tojson }};
-  const clicksData= {{ detail.daily_last_30 | map(attribute='clicks') | list | tojson }};
-
-  new Chart(document.getElementById('dailyChart'), {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: 'Opens',
-          data: opensData,
-          backgroundColor: 'rgba(12, 39, 136, 0.15)',
-          borderColor: 'rgba(12, 39, 136, 0.8)',
-          borderWidth: 1,
-          borderRadius: 4,
-        },
-        {
-          label: 'Clicks',
-          data: clicksData,
-          backgroundColor: 'rgba(12, 39, 136, 0.5)',
-          borderColor: 'rgba(12, 39, 136, 1)',
-          borderWidth: 1,
-          borderRadius: 4,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { position: 'top' } },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: { maxTicksLimit: 10, font: { size: 11 } },
-        },
-        y: {
-          beginAtZero: true,
-          ticks: { stepSize: 1 },
-          grid: { color: 'rgba(0,0,0,0.05)' },
-        },
-      },
-    },
-  });
-</script>
+{{ render_daily_chart(detail.daily_last_30, canvas_id='dailyChart') }}
 {% endblock %}

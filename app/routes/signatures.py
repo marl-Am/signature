@@ -1,10 +1,16 @@
 # app/routes/signatures.py
-from flask import Blueprint, render_template, redirect, url_for, flash, request
-from flask_login import login_required
-from werkzeug.wrappers import Response
+import logging
+from dataclasses import asdict, dataclass
 from typing import Union
 
+from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask_login import login_required, current_user
+from werkzeug.datastructures import ImmutableMultiDict
+from werkzeug.wrappers import Response
+
 from app.services.signature_service import SignatureService
+
+logger = logging.getLogger(__name__)
 
 signatures_bp = Blueprint("signatures", __name__, url_prefix="/signatures")
 
@@ -24,6 +30,57 @@ def _normalize_url(url: str | None) -> str | None:
     return url
 
 
+@dataclass(frozen=True)
+class SignatureFormFields:
+    """
+    Typed result of reading the signature builder's optional fields from
+    submitted form data. Each attribute keeps the same type
+    SignatureService.create_signature/update_signature expects — the
+    contact/social fields may be None, while accent_color/layout/
+    font_family always fall back to a default and are never None.
+    """
+
+    job_title: str | None
+    company: str | None
+    department: str | None
+    phone: str | None
+    website: str | None
+    linkedin_url: str | None
+    twitter_url: str | None
+    facebook_url: str | None
+    instagram_url: str | None
+    logo_url: str | None
+    accent_color: str
+    layout: str
+    font_family: str
+
+
+def _read_signature_form_fields(form: ImmutableMultiDict) -> SignatureFormFields:
+    """
+    Extract the signature builder's optional fields from submitted form
+    data, applying the same trim/default/URL-normalization rules used by
+    both create() and edit().
+    """
+    return SignatureFormFields(
+        job_title=form.get("job_title", "").strip() or None,
+        company=form.get("company", "").strip() or None,
+        department=form.get("department", "").strip() or None,
+        phone=form.get("phone", "").strip() or None,
+        website=_normalize_url(form.get("website", "")),
+        linkedin_url=_normalize_url(form.get("linkedin_url", "")),
+        twitter_url=_normalize_url(form.get("twitter_url", "")),
+        facebook_url=_normalize_url(form.get("facebook_url", "")),
+        instagram_url=_normalize_url(form.get("instagram_url", "")),
+        logo_url=_normalize_url(form.get("logo_url", "")),
+        accent_color=form.get("accent_color", "#0c2788").strip() or "#0c2788",
+        layout=form.get("layout", "classic").strip() or "classic",
+        font_family=(
+            form.get("font_family", "Arial, Helvetica, sans-serif").strip()
+            or "Arial, Helvetica, sans-serif"
+        ),
+    )
+
+
 @signatures_bp.route("/create", methods=["GET", "POST"])
 @login_required
 def create() -> Union[str, Response]:
@@ -40,49 +97,23 @@ def create() -> Union[str, Response]:
     if request.method == "POST":
         name: str = request.form.get("name", "").strip()
         full_name: str = request.form.get("full_name", "").strip()
-        job_title: str | None = request.form.get("job_title", "").strip() or None
-        company: str | None = request.form.get("company", "").strip() or None
-        department: str | None = request.form.get("department", "").strip() or None
-        phone: str | None = request.form.get("phone", "").strip() or None
-
-        website: str | None = _normalize_url(request.form.get("website", ""))
-        linkedin_url: str | None = _normalize_url(request.form.get("linkedin_url", ""))
-        twitter_url: str | None = _normalize_url(request.form.get("twitter_url", ""))
-        facebook_url: str | None = _normalize_url(request.form.get("facebook_url", ""))
-        instagram_url: str | None = _normalize_url(
-            request.form.get("instagram_url", "")
-        )
-        logo_url: str | None = _normalize_url(request.form.get("logo_url", ""))
 
         if not name or not full_name:
             flash("Signature label and full name are required.", "danger")
             return render_template("signatures/create.html", form_data=request.form)
 
+        fields = _read_signature_form_fields(request.form)
+
         try:
             signature = SignatureService.create_signature(
-                name=name,
-                full_name=full_name,
-                job_title=job_title,
-                company=company,
-                department=department,
-                phone=phone,
-                website=website,
-                linkedin_url=linkedin_url,
-                twitter_url=twitter_url,
-                facebook_url=facebook_url,
-                instagram_url=instagram_url,
-                logo_url=logo_url,
-                accent_color=request.form.get("accent_color", "#0c2788").strip()
-                or "#0c2788",
-                layout=request.form.get("layout", "classic").strip() or "classic",
-                font_family=request.form.get(
-                    "font_family", "Arial, Helvetica, sans-serif"
-                ).strip()
-                or "Arial, Helvetica, sans-serif",
+                name=name, full_name=full_name, **asdict(fields)
             )
             flash(f'Signature "{signature.name}" created successfully!', "success")
             return redirect(url_for("dashboard.index"))
         except Exception:
+            logger.exception(
+                "Unexpected error creating signature for user %s", current_user.id
+            )
             flash("An error occurred while saving. Please try again.", "danger")
             return render_template("signatures/create.html", form_data=request.form)
 
@@ -109,46 +140,20 @@ def edit(signature_id: int) -> Union[str, Response]:
                 form_data=request.form,
             )
 
-        job_title: str | None = request.form.get("job_title", "").strip() or None
-        company: str | None = request.form.get("company", "").strip() or None
-        department: str | None = request.form.get("department", "").strip() or None
-        phone: str | None = request.form.get("phone", "").strip() or None
-
-        website: str | None = _normalize_url(request.form.get("website", ""))
-        linkedin_url: str | None = _normalize_url(request.form.get("linkedin_url", ""))
-        twitter_url: str | None = _normalize_url(request.form.get("twitter_url", ""))
-        facebook_url: str | None = _normalize_url(request.form.get("facebook_url", ""))
-        instagram_url: str | None = _normalize_url(
-            request.form.get("instagram_url", "")
-        )
-        logo_url: str | None = _normalize_url(request.form.get("logo_url", ""))
+        fields = _read_signature_form_fields(request.form)
 
         try:
             updated = SignatureService.update_signature(
-                signature_id,
-                name=name,
-                full_name=full_name,
-                job_title=job_title,
-                company=company,
-                department=department,
-                phone=phone,
-                website=website,
-                linkedin_url=linkedin_url,
-                twitter_url=twitter_url,
-                facebook_url=facebook_url,
-                instagram_url=instagram_url,
-                logo_url=logo_url,
-                accent_color=request.form.get("accent_color", "#0c2788").strip()
-                or "#0c2788",
-                layout=request.form.get("layout", "classic").strip() or "classic",
-                font_family=request.form.get(
-                    "font_family", "Arial, Helvetica, sans-serif"
-                ).strip()
-                or "Arial, Helvetica, sans-serif",
+                signature_id, name=name, full_name=full_name, **asdict(fields)
             )
             flash(f'Signature "{updated.name}" updated successfully!', "success")
             return redirect(url_for("dashboard.index"))
         except Exception:
+            logger.exception(
+                "Unexpected error updating signature %s for user %s",
+                signature_id,
+                current_user.id,
+            )
             flash("An error occurred while saving. Please try again.", "danger")
             return render_template(
                 "signatures/edit.html",

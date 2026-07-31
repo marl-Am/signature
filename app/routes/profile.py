@@ -2,10 +2,6 @@
 """
 Profile routes blueprint.
 Handles change email, change password, and delete account.
-
-Security:
-- A01: All routes require login; actions operate only on current_user
-- A07: Email change and account deletion require password re-confirmation
 """
 
 import logging
@@ -68,7 +64,7 @@ def change_email() -> Response:
                 current_user.id,
                 err,
             )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.exception(
             "Unexpected error sending verification email after email change for user %s: %s",
             current_user.id,

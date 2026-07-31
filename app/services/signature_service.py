@@ -1,8 +1,6 @@
 # app/services/signature_service.py
 """
 Signature service - Business logic for signature operations
-
-Security: A01 - All queries filtered by user_id to prevent unauthorized access
 """
 
 import re
@@ -505,6 +503,38 @@ class SignatureService:
         return SignatureService.DEFAULT_FONT_FAMILY
 
     @staticmethod
+    def _get_initials(full_name: str | None) -> str:
+        """
+        Derive up to two initials from a full name, HTML-escaped, falling
+        back to "YN" when no name is available.
+
+        Shared by the avatar and split layouts, which both render initials
+        in place of a logo when the user hasn't uploaded one.
+        """
+        words: list[str] = full_name.strip().split() if full_name else []
+        return SignatureService._escape(
+            "".join(w[0] for w in words[:2]).upper() if words else "YN"
+        )
+
+    @staticmethod
+    def _wrap_table(safe_font_family: str, *cells: str) -> str:
+        """
+        Shared outer <table> used by every layout: same cellpadding/
+        cellspacing/border/font-family/max-width wrapper, with the given
+        cell HTML strings placed side by side in a single <tr>.
+
+        Does not include the tracking pixel — callers append pixel_html
+        after this, since the classic layout wraps this table in an
+        additional outer <div> before adding the pixel.
+        """
+        return (
+            f'<table cellpadding="0" cellspacing="0" border="0" '
+            f'style="font-family:{safe_font_family};max-width:520px;">'
+            "<tr>" + "".join(cells) + "</tr>"
+            "</table>"
+        )
+
+    @staticmethod
     def _generate_html_content(
         full_name: str,
         job_title: str | None,
@@ -710,10 +740,8 @@ class SignatureService:
                 '<td style="vertical-align:top;">' + header_html + sub_html + "</td>"
             )
             html = (
-                f'<table cellpadding="0" cellspacing="0" border="0" '
-                f'style="font-family:{safe_font_family};max-width:520px;">'
-                "<tr>" + logo_html + content_td + "</tr>"
-                "</table>" + pixel_html
+                SignatureService._wrap_table(safe_font_family, logo_html, content_td)
+                + pixel_html
             )
 
         elif layout == "minimal":
@@ -728,10 +756,8 @@ class SignatureService:
                 + "</td>"
             )
             html = (
-                f'<table cellpadding="0" cellspacing="0" border="0" '
-                f'style="font-family:{safe_font_family};max-width:520px;">'
-                "<tr>" + logo_html + content_td + "</tr>"
-                "</table>" + pixel_html
+                SignatureService._wrap_table(safe_font_family, logo_html, content_td)
+                + pixel_html
             )
 
         elif layout == "ruled":
@@ -746,18 +772,13 @@ class SignatureService:
                 + "</td>"
             )
             html = (
-                f'<table cellpadding="0" cellspacing="0" border="0" '
-                f'style="font-family:{safe_font_family};max-width:520px;">'
-                "<tr>" + logo_html + content_td + "</tr>"
-                "</table>" + pixel_html
+                SignatureService._wrap_table(safe_font_family, logo_html, content_td)
+                + pixel_html
             )
 
         elif layout == "avatar":
             # Circular avatar (initials or logo) left of content
-            words: list[str] = full_name.strip().split() if full_name else []
-            initials: str = SignatureService._escape(
-                "".join(w[0] for w in words[:2]).upper() if words else "YN"
-            )
+            initials: str = SignatureService._get_initials(full_name)
             if safe_logo_url:
                 avatar_td = (
                     f'<td style="padding-right:16px;vertical-align:middle;">'
@@ -783,10 +804,8 @@ class SignatureService:
                 + "</td>"
             )
             html = (
-                f'<table cellpadding="0" cellspacing="0" border="0" '
-                f'style="font-family:{safe_font_family};max-width:520px;">'
-                "<tr>" + avatar_td + content_td + "</tr>"
-                "</table>" + pixel_html
+                SignatureService._wrap_table(safe_font_family, avatar_td, content_td)
+                + pixel_html
             )
 
         elif layout == "compact":
@@ -832,10 +851,8 @@ class SignatureService:
                 + "</td>"
             )
             html = (
-                f'<table cellpadding="0" cellspacing="0" border="0" '
-                f'style="font-family:{safe_font_family};max-width:520px;">'
-                "<tr>" + logo_html + content_td + "</tr>"
-                "</table>" + pixel_html
+                SignatureService._wrap_table(safe_font_family, logo_html, content_td)
+                + pixel_html
             )
 
         elif layout == "banner":
@@ -861,10 +878,8 @@ class SignatureService:
                 + "</td>"
             )
             html = (
-                f'<table cellpadding="0" cellspacing="0" border="0" '
-                f'style="font-family:{safe_font_family};max-width:520px;">'
-                "<tr>" + logo_html + content_td + "</tr>"
-                "</table>" + pixel_html
+                SignatureService._wrap_table(safe_font_family, logo_html, content_td)
+                + pixel_html
             )
 
         elif layout == "solid":
@@ -959,10 +974,7 @@ class SignatureService:
                 + "</td>"
             )
             html = (
-                f'<table cellpadding="0" cellspacing="0" border="0" '
-                f'style="font-family:{safe_font_family};max-width:520px;">'
-                "<tr>" + content_td + "</tr>"
-                "</table>" + pixel_html
+                SignatureService._wrap_table(safe_font_family, content_td) + pixel_html
             )
 
         elif layout == "split":
@@ -971,10 +983,7 @@ class SignatureService:
             # column reuses name_html/title_html/dept_html/divider_html/
             # contact_html/social_html as-is, since that side has the same
             # white background as the classic layout.
-            split_words: list[str] = full_name.strip().split() if full_name else []
-            split_initials: str = SignatureService._escape(
-                "".join(w[0] for w in split_words[:2]).upper() if split_words else "YN"
-            )
+            split_initials: str = SignatureService._get_initials(full_name)
             if safe_logo_url:
                 avatar_block: str = (
                     f'<img src="{safe_logo_url}" alt="{split_initials}" width="56" height="56" '
@@ -1007,21 +1016,16 @@ class SignatureService:
                 + "</td>"
             )
             html = (
-                f'<table cellpadding="0" cellspacing="0" border="0" '
-                f'style="font-family:{safe_font_family};max-width:520px;">'
-                "<tr>" + rail_td + content_td + "</tr>"
-                "</table>" + pixel_html
+                SignatureService._wrap_table(safe_font_family, rail_td, content_td)
+                + pixel_html
             )
 
         else:
             # Classic (default) — outer div carries the border so it always
             # sits on the far-left edge even when a logo column is present.
             content_td = '<td style="vertical-align:top;">' + body_html + "</td>"
-            inner_table: str = (
-                f'<table cellpadding="0" cellspacing="0" border="0" '
-                f'style="font-family:{safe_font_family};max-width:520px;">'
-                "<tr>" + logo_html + content_td + "</tr>"
-                "</table>"
+            inner_table: str = SignatureService._wrap_table(
+                safe_font_family, logo_html, content_td
             )
             html = (
                 f'<div style="border-left:3px solid {safe_accent_color};padding-left:14px;">'

@@ -46,8 +46,14 @@ chat.*
 
 ## Open Issues
 
-- [ ] **Not yet deployed** — the Solid/Split layout work (2026-07-26) passed
-      all local tests but hasn't been pushed/deployed yet.
+- [ ] **Solid/Split live visual verification** — pushed, CI green, deploy
+      green (2026-07-26), but not yet visually confirmed on the live URL.
+      Same verification gap as prior sessions closed by actually visiting
+      the live site rather than trusting a green build: create a Pro-tier
+      signature with each of the two new layouts and check they render as
+      intended, especially since they're the first layouts to use a
+      colored background as the entire card rather than just an accent
+      line or header band.
 - [ ] **`ty` MRO warnings on `db.Model` subclasses** — `ty check .` surfaces
       4 warnings (`analytics.py` x2, `signature.py`, `user.py`) about an
       unresolved MRO for classes inheriting Flask-SQLAlchemy's
@@ -114,7 +120,11 @@ unconditionally → service layer enforces tier + validates input):
   suite: 78 → 86, all passing. `ruff check .` clean
 - `ty check .` surfaced 4 pre-existing warnings unrelated to this session
   (see Open Issues) — not yet investigated or resolved
-- Not yet deployed
+- Pushed to `main`. CI green, Render deploy green. Live visual check of the
+  two new layouts still outstanding (see Open Issues)
+- Also untracked `tests/__pycache__/*.pyc` (was accidentally committed) and
+  added `!docs/CHANGELOG.md` to `.gitignore`'s `docs/*` negation pattern,
+  same fix as the `PROJECT_STATUS.md` one from the prior session
 
 *Earlier sessions' full detail now lives in `CHANGELOG.md` — this section
 was trimmed back per the ~150-line guideline below.*
