@@ -1,0 +1,24 @@
+{# Shared form-field markup for auth templates.
+   One macro, one place to change the input styling instead of four. #}
+
+{% macro form_input(field_id, field_name, label, field_type='text', placeholder='', required=true, minlength=none, autocomplete=none, autofocus=false, hint=none) %}
+<div>
+  <label for="{{ field_id }}" class="block text-sm font-semibold text-gray-700 mb-2">
+    {{ label }}
+  </label>
+  <input
+    type="{{ field_type }}"
+    id="{{ field_id }}"
+    name="{{ field_name }}"
+    {% if required %}required{% endif %}
+    {% if minlength %}minlength="{{ minlength }}"{% endif %}
+    {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %}
+    {% if autofocus %}autofocus{% endif %}
+    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-gray-800"
+    placeholder="{{ placeholder }}"
+  />
+  {% if hint %}
+  <p class="text-xs text-gray-500 mt-1">{{ hint }}</p>
+  {% endif %}
+</div>
+{% endmacro %}
