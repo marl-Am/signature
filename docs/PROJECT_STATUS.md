@@ -46,15 +46,6 @@ chat.*
 
 ## Open Issues
 
-- [ ] **No CSRF protection anywhere in the app** — confirmed via
-      `requirements.txt`: no Flask-WTF, no Flask-SeaSurf, nothing
-      CSRF-specific. Found while auditing the auth templates. Two real
-      fixes once ready: add `Flask-WTF` (gives `{{ form.hidden_tag() }}`
-      + automatic validation), or hand-roll it with `itsdangerous`
-      (already a dependency) — generate a session-bound token, check it
-      in each POST route. Needs `app/__init__.py` (app factory) and the
-      route files, not just templates.
-
 - [ ] **Solid/Split live visual verification** — pushed, CI green, deploy
       green (2026-07-26), but not yet visually confirmed on the live URL.
       Same verification gap as prior sessions closed by actually visiting
@@ -114,30 +105,37 @@ unconditionally → service layer enforces tier + validates input):
 
 ## Recently Completed (this section gets replaced, not appended, next session)
 
-**Session: Auth template audit (2026-07-30)**
-- Ran the code-audit workflow (Pass 1 flag-only, Pass 2 fix-one-at-a-time)
-  against `login.html`, `register.html`, `forgot_password.html`,
-  `reset_password.html` using `signs-of-llm-generated-code.md`
-- Fixed title collision — `forgot_password.html` was titled "Reset
-  Password" (duplicate of `reset_password.html`'s actual title); now
-  "Forgot Password"
-- `register.html`'s password/confirm_password fields were missing
-  `minlength="12"` and `autocomplete="new-password"` despite the on-page
-  hint describing a 12-character policy; added both
-- `reset_password.html` used a different design system (plain gray
-  background, indigo button) from the other three auth screens; restyled
-  to match the shared gradient background / white card / primary button
-  pattern, and added the security trust badge it was missing
-- Extracted the repeated Tailwind input markup into
-  `app/templates/auth/_form_macros.html` (`form_input` macro), used by
-  all four auth templates
-- Fixed a stray double blank line in `login.html`
-- All 86 tests passing, `ruff check .` clean, confirmed locally
-  (`pytest`, then manual click-through of all four pages via
-  `python wsgi.py`)
-- [Pushed to `main` via `code-audit-auth-templates` branch. CI green,
-  Render deploy green, live visual check done — OR — pending, see Open
-  Issues]
+**Session: CSRF protection added app-wide (2026-07-31)**
+- Closed the Open Issue flagged during the auth template audit: the app
+  had no CSRF protection anywhere (confirmed via `requirements.txt` — no
+  Flask-WTF, no hand-rolled token, nothing)
+- Added `Flask-WTF==1.3.0` (+ `WTForms==3.2.2` dependency) to
+  `requirements.txt`
+- Wired `CSRFProtect` into `app/__init__.py`, same pattern as
+  `db`/`login_manager`/`migrate`
+- Added `WTF_CSRF_ENABLED = False` to `TestingConfig` in `app/config.py`
+  (conftest.py's `app` fixture already forced this at the fixture level;
+  this covers anything else run under `TestingConfig` outside pytest)
+- Exempted `POST /billing/webhook` from CSRF via `@csrf.exempt` — Stripe's
+  servers call this directly with no browser session and no token;
+  Stripe's own signature verification is the real authenticity check on
+  that route, not CSRF
+- Added the hidden `csrf_token()` field to all 11 POST forms in the app:
+  `auth/login.html`, `auth/register.html`, `auth/forgot_password.html`,
+  `auth/reset_password.html`, `dashboard/index.html` (delete signature),
+  `profile/index.html` (change email, change password, delete account —
+  three separate forms), `signatures/create.html`, `signatures/edit.html`,
+  `subscription/manage.html` (cancel)
+- `pytest` (86 passing), `ruff check .` clean, `ty check .` — same 4
+  pre-existing MRO warnings, unaffected by this session
+- Manually verified in a way `pytest` structurally cannot: clicked through
+  all 11 forms locally, and used the Stripe CLI (`stripe listen` +
+  `stripe trigger checkout.session.completed`) to confirm the webhook
+  still returns 200 and the Pro upgrade applies correctly with the
+  exemption in place
+- Pushed to `main`. CI green, Render deploy green, confirmed working in
+  production: logged in and completed a real Stripe upgrade on the live
+  site, account correctly shows Pro
 ---
 
 ## How This Project Talks to Claude Now

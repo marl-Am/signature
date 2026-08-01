@@ -11,6 +11,14 @@ If you want them added, paste the old handoff files in and they can be
 backfilled accurately instead of guessed at.*
 
 ---
+
+## 2026-07-31: Added CSRF protection app-wide via Flask-WTF 
+— wired CSRFProtect into the app factory, added the hidden token to all 11 POST
+forms, exempted the Stripe webhook route (protected by Stripe's own
+signature verification instead). Verified locally via Stripe CLI and
+confirmed working in production with a real upgrade.
+
+
 ## 2026-07-30: Auth template audit 
 — fixed title collision (forgot/reset password), missing minlength/autocomplete on register.html, restyled
 reset_password.html to match shared design, extracted repeated input
