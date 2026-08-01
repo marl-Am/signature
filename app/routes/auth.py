@@ -5,14 +5,14 @@ Handles user registration, login, logout, and password reset.
 """
 
 import logging
-from urllib.parse import urlparse, urljoin
 from typing import Union
+from urllib.parse import urljoin, urlparse
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request
-from flask_login import login_user, logout_user, login_required, current_user
+from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.wrappers import Response
 
-from app.services.user_service import UserService, AuthFailureReason
+from app.services.user_service import AuthFailureReason, UserService
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +109,10 @@ def login() -> Union[str, Response]:
                 return redirect(next_page)
             return redirect(url_for("dashboard.index"))
         else:
-            if failure_reason == AuthFailureReason.ACCOUNT_LOCKED and error_message is not None:
+            if (
+                failure_reason == AuthFailureReason.ACCOUNT_LOCKED
+                and error_message is not None
+            ):
                 flash(error_message, "danger")
             else:
                 flash("Invalid email or password.", "danger")
@@ -134,21 +137,18 @@ def verify_email(token: str) -> Response:
 
     Token is single-use; it is cleared from the DB on successful verification.
     """
-    from app.models.user import User
+    success, error_message = UserService.verify_email(token)
 
-    user: User | None = User.query.filter_by(email_verification_token=token).first()
-
-    if user is None:
-        # Token not found — already used, expired, or tampered with
+    if not success:
         flash(
-            "This verification link is invalid or has already been used. "
+            error_message
+            or "This verification link is invalid or has already been used. "
             "Please request a new one.",
             "danger",
         )
         return redirect(url_for("auth.login"))
 
-    user.verify_email(token)
-    logger.info("Email verified for user %s", user.email)
+    logger.info("Email verified for token %s", token)
 
     if current_user.is_authenticated:
         flash("Your email address has been verified.", "success")
@@ -269,7 +269,7 @@ def resend_verification() -> Response:
                 "Resend verification failed for %s: %s", current_user.email, err
             )
             flash("Could not send the email. Please try again later.", "danger")
-    except Exception as exc: 
+    except Exception as exc:
         logger.exception(
             "Unexpected error resending verification for %s: %s",
             current_user.email,

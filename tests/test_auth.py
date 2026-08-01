@@ -4,6 +4,8 @@ Tests for app/routes/auth.py: registration, login, account lockout,
 email verification, and password reset.
 """
 
+from datetime import datetime, timedelta, timezone
+
 from flask import Flask
 from flask.testing import FlaskClient
 
@@ -182,6 +184,36 @@ def test_verify_email_with_invalid_token(client: FlaskClient) -> None:
 
     assert response.status_code == 302
     assert "login" in response.headers["Location"].lower()
+
+
+def test_verify_email_with_expired_token_redirects_to_login(
+    app: Flask, client: FlaskClient
+) -> None:
+    register_via_client(client, email="expiredverify@example.com")
+    with app.app_context():
+        user = get_user_by_email(app, "expiredverify@example.com")
+        user.email_verification_token = "expired-token"
+        user.email_verification_expires = datetime.now(timezone.utc) - timedelta(
+            hours=1
+        )
+        user.email_verified = False
+        user.save() if hasattr(user, "save") else None
+        from app import db
+
+        db.session.commit()
+
+    response = client.get(
+        "/auth/verify-email/expired-token",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert "login" in response.headers["Location"].lower()
+
+    with app.app_context():
+        user = get_user_by_email(app, "expiredverify@example.com")
+        assert user.email_verified is False
+        assert user.email_verification_token == "expired-token"
 
 
 # ---------------------------------------------------------------------------
