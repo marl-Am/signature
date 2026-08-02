@@ -8,7 +8,7 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import CSRFProtect
 
-from app.config import DevelopmentConfig
+from app.config import Config, DevelopmentConfig
 
 load_dotenv()
 
@@ -19,7 +19,7 @@ migrate = Migrate()
 csrf = CSRFProtect()
 
 
-def create_app(config_class: Type[object] = DevelopmentConfig) -> Flask:
+def create_app(config_class: Type[Config] = DevelopmentConfig) -> Flask:
     """
     Application factory pattern.
 
@@ -32,6 +32,7 @@ def create_app(config_class: Type[object] = DevelopmentConfig) -> Flask:
 
     # Load config object — caller decides which environment this is.
     app.config.from_object(config_class)
+    config_class.init_app(app)
 
     db.init_app(app)
     migrate.init_app(app, db)

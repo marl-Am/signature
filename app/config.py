@@ -3,6 +3,7 @@ import os
 from datetime import timedelta
 
 from dotenv import load_dotenv
+from flask import Flask
 
 load_dotenv()
 
@@ -39,10 +40,21 @@ def get_brevo_from_email_for_config(config_name: str) -> str:
         return from_email
     return from_email or "no-reply@example.com"
 
+
 class Config:
     """Base configuration"""
 
     SECRET_KEY: str = get_secret_key_for_config("development")
+
+    @staticmethod
+    def init_app(app: Flask) -> None:
+        """
+        Hook for subclasses to run validation after the config is applied
+        to the app. Base class is a no-op; ProductionConfig overrides this
+        to fail loudly on missing secrets.
+        """
+        pass
+
     SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
 
     # verify pooled connections
@@ -86,12 +98,29 @@ class ProductionConfig(Config):
 
     DEBUG: bool = False
     SQLALCHEMY_DATABASE_URI: str = os.getenv("DATABASE_URL", "")
-    SECRET_KEY: str = get_secret_key_for_config("production")
-    BREVO_FROM_EMAIL: str = get_brevo_from_email_for_config("production")
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "")
+    BREVO_FROM_EMAIL: str = os.getenv("BREVO_FROM_EMAIL", "")
     REMEMBER_COOKIE_SECURE: bool = True
     SESSION_COOKIE_SECURE: bool = True
     SESSION_COOKIE_HTTPONLY: bool = True
     SESSION_COOKIE_SAMESITE: str = "Lax"
+
+    @staticmethod
+    def init_app(app: Flask) -> None:
+        """
+        Validate required production secrets once this config is actually
+        applied to a running app, rather than at import time.
+
+        Merely importing app.config — which every test run and CI job does,
+        regardless of which config it ends up using — must never raise on
+        its own. Only actually starting the app with ProductionConfig
+        should. Calling the existing fail-loudly helpers here (discarding
+        their return value; the class attributes above already hold the
+        real value) keeps the validation logic itself in one place instead
+        of duplicating the check.
+        """
+        get_secret_key_for_config("production")
+        get_brevo_from_email_for_config("production")
 
 
 class TestingConfig(Config):
