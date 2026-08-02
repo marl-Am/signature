@@ -652,7 +652,7 @@ class SignatureService:
         # --- Tracking pixel ---
         pixel_html: str = (
             f'<img src="{request.host_url.rstrip("/")}/track/pixel/{tracking_code}.gif" '
-            f'width="1" height="1" alt="" style="display:none;" />'
+            f'width="1" height="1" alt="" style="border:0;outline:none;" />'
         )
 
         # --- Free-tier watermark ---
