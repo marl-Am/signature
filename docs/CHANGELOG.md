@@ -12,6 +12,82 @@ backfilled accurately instead of guessed at.*
 
 ---
 
+## 2026-08-02 (cont. 3): SVG logo guard with user-facing validation
+Found via live Outlook/Gmail/Proton testing that a logo hosted as an SVG
+silently failed to render in every tested client (Outlook, Gmail with
+images explicitly enabled) with no error and no broken-image indicator —
+SVG is not reliably supported as an inline <img> in HTML email, a
+client-compatibility gap rather than a network or hotlinking issue.
+Added `_sanitize_image_href()` in `signature_service.py` (rejects .svg by
+file extension, checked via the URL's path rather than raw text so a query
+string like "?ref=x.svg" on an actual .png is never misflagged) as a
+defense-in-depth backstop at HTML-generation time, keeping `logo_url` as
+the only field routed through it since website/social links aren't
+rendered as images. Added a second, user-facing `validate_logo_url()`
+check at the route level in both `create()` and `edit()`, following the
+existing `UserService.validate_password()`/`validate_email()`
+(is_valid, error_message) pattern, so submitting an SVG logo now shows a
+specific flash explaining why instead of silently saving with a blank
+logo. Fixed a `ty` type-narrowing error this introduced: checked
+`logo_error` directly rather than the paired boolean before calling
+`flash()`, since `ty` can't correlate two separately-typed tuple elements
+even though the function's contract guarantees they're always in sync.
+`pytest` (91 passed), `ruff check .`, `ty check .` all clean.
+
+## 2026-08-02 (cont. 2b): Fix ProductionConfig eagerly raising at import time
+(Already recorded above under "2026-08-02: Fix ProductionConfig eagerly
+raising at import time" — CI had been silently failing since the previous
+session's SECRET_KEY guard was merged; fixed via an init_app(app) hook.)
+
+## 2026-08-02 (cont. 4): Live Outlook/Gmail/Proton delivery test — pixel fix, and full findings triage
+Ran the project's first true end-to-end delivery test outside Gmail-only
+validation: created a test signature, installed it in New Outlook /
+Outlook on the web following the app's own instructions, sent to Proton
+Mail and Gmail, and cross-checked opens/clicks against the live Analytics
+dashboard and raw Neon rows. Found and fixed a real bug: the tracking
+pixel used `style="display:none;"`, which Outlook/Microsoft 365 silently
+treats as a known tracking-pixel heuristic and skips fetching entirely —
+no broken-image icon, no prompt, just never requested. Removed
+`display:none` from the pixel `<img>` in `signature_service.py` (a 1×1
+image needs no extra hiding); confirmed fixed by re-saving the test
+signature and re-sending — Outlook opens now record correctly. Triaged
+three further observations from the same test and confirmed none of them
+are code bugs:
+  - Gmail holding "Total Opens" at 1 despite multiple opens — expected;
+    Gmail's image-caching proxy is already excluded from open counts via
+    the existing `_PROXY_SIGNATURES` list (`GoogleImageProxy`), and a
+    proxy fetch isn't a reliable signal of a human actually viewing the
+    email regardless.
+  - Proton Mail's UI explicitly reporting it blocked
+    `/track/pixel/<code>.gif` — this is Proton's own tracker-blocking
+    feature, a deliberate recipient privacy choice, not a bug and not
+    something to work around.
+  - Click count showing 13 instead of an expected 10 (5 Proton + 5 Gmail)
+    — confirmed via raw `signature_clicks` rows that two clusters of
+    extra clicks (4 in Firefox ~1 second apart, 4 in a different Chrome UA
+    seconds later, both missing the same platform) landed shortly after
+    the Gmail send. Pattern matches an automated link-scanner rendering
+    each link in a real browser before/on open — a known industry-wide
+    click-tracking limitation, distinct from the Gmail-proxy case since
+    there's no self-identifying user-agent to exclude the same way.
+    Logged as a known limitation; a burst-detection heuristic was
+    considered and deliberately not implemented yet, since a fast genuine
+    human clicking several links back-to-back would look identical, and
+    getting this wrong risks undercounting real engagement — worth its
+    own dedicated design pass if pursued.
+Also confirmed via Firefox's Inspector on the actual signature saved
+inside Outlook's editor that the social icons render "connected" there:
+compared against the app's own "Copy HTML" output and confirmed the app's
+generated HTML is correct (each icon has its own `margin-right:4px`) —
+Outlook's own paste-sanitizer wraps adjacent same-background-color
+elements in an extra `<span class="spanWithBackgroundColor">` that paints
+solid color across the gaps. Diagnosed but not yet fixed — real fix
+requires rebuilding `social_html` as a table-based layout (more reliable
+across Outlook's paste-cleanup than inline-block + margin), which touches
+all 8 call sites across all 9 layout branches in `_generate_html_content()`
+and needs its own dedicated pass. `pytest` (91 passed), `ruff check .`,
+`ty check .` all clean after the pixel fix.
+
 ## 2026-08-02 (cont.): Solid/Split live visual verification
 Closed the last open verification gap from the 2026-07-26 layout session:
 visited the live production URL and confirmed both the `solid` and `split`

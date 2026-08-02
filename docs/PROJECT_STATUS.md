@@ -43,8 +43,10 @@ chat._
   compiler. Node/npm never ship in the final runtime image.
 - Outlook/Apple Mail install instructions on the preview page were checked
   against current Microsoft/Apple docs and updated where Microsoft's own UI
-  rollout has created two possible menu paths. Actual end-to-end send/receive
-  testing in those clients is still outstanding (see Open Issues).
+  rollout has created two possible menu paths. **Outlook end-to-end
+  delivery (install → send → receive → opens/clicks tracking) is now
+  fully tested and confirmed working**, following a real bug fix (see
+  Recently Completed). Apple Mail testing is still outstanding.
 - **The full pass-1 code audit (`docs/AUDIT_FINDINGS.md`) is now fully
   triaged and closed out**, and every fix from this session is confirmed
   live in CI (not just locally) — see Recently Completed and
@@ -58,10 +60,31 @@ chat._
 ## Open Issues
 
 
-- [ ] **Outlook/Apple Mail delivery test** — the create → copy → paste →
-      send → receive flow has only been validated in Gmail. UI install
-      instructions exist for all three clients, but Outlook/Apple Mail
-      haven't been tested end to end.
+- [ ] **Social icons render "connected" in Outlook** — confirmed via a
+      live test: the app's generated HTML is correct (each icon has its
+      own `margin-right:4px`), but Outlook's own paste-sanitizer wraps
+      adjacent same-color icons in an extra `<span>` that paints solid
+      color across the gaps. Real fix is rebuilding `social_html` as a
+      table-based layout instead of inline-block + margin — touches all
+      9 layout branches in `_generate_html_content()`, needs its own pass.
+- [ ] **Click counts inflated by automated link-scanners** — confirmed via
+      raw `signature_clicks` rows that some providers' security scanners
+      visit every link in a real browser before/on open, adding phantom
+      clicks with no reliable self-identifying signal (unlike the
+      Gmail-proxy case, already handled). Known industry-wide limitation,
+      not fixed — a burst-detection heuristic was considered and
+      deliberately deferred, since a fast genuine human clicking several
+      links back-to-back would look identical, and getting it wrong risks
+      undercounting real engagement.
+- [ ] Apple Mail delivery test still outstanding — Outlook and Gmail are
+      now both validated end-to-end (opens, clicks, rendering); Apple
+      Mail has not been tested yet.
+
+- [ ] Proton Mail blocks the tracking pixel outright (its own
+      tracker-blocking feature) — this is a deliberate recipient privacy
+      choice, not a bug, and not something to build around. Noted here
+      only so it isn't mistaken for one later.
+
 - [ ] **Brevo sender deliverability risk** — `BREVO_FROM_EMAIL` is
       confirmed set in both local `.env` and Render, but its value is a
       personal Outlook address (`signatureapp.2026@outlook.com`), not a
@@ -107,63 +130,45 @@ chat._
 
 ## Recently Completed (this section gets replaced, not appended, next session)
 
-**Session: full audit triage completed (2026-08-01)**
+**Session: live Outlook delivery test + fixes (2026-08-02)**
 
-- Visually confirmed the Solid and Split layouts on the live production
-  URL (pushed 2026-07-26, CI/deploy green at the time but never actually
-  eyeballed until now) — both render correctly with a Pro-tier signature.
-- Fixed a real CI-breaking bug found by actually checking `gh run list`
-  instead of assuming a local green run meant CI was fine:
-  `ProductionConfig` in `app/config.py` raised at import time (not only
-  when actually used), which had been silently failing every CI run since
-  the previous session's `SECRET_KEY` guard was merged. Fixed via a
-  `ProductionConfig.init_app(app)` hook. See `CHANGELOG.md` 2026-08-02 for
-  the full root cause.
-- Triaged and fixed every remaining `docs/AUDIT_FINDINGS.md` item:
-  - `app/models/user.py` — `is_locked()` no longer mutates state as a side
-    effect of a read-only check; split into a pure `is_locked()` and a new
-    `clear_expired_lockout()`. Fixed a latent bug this uncovered:
-    `record_failed_login()` now calls `clear_expired_lockout()` first, so
-    a stale attempt count can't instantly re-lock a user after their
-    lockout window has already expired.
-  - `app/models/user.py` — extracted a shared `_token_is_valid()` helper
-    so `verify_email()`/`reset_password()` no longer duplicate the same
-    token-match-and-expiry check.
-  - `app/routes/tracking.py` and `app/routes/signatures.py` — narrowed
-    four `except Exception:` blocks to `except SQLAlchemyError:` across
-    `pixel()`, `click()`, `create()`, and `edit()`. The graceful-continue
-    behavior (always serve the GIF, always redirect, flash a friendly
-    error) was correct by design and left untouched; the fix only stops
-    unrelated bugs from being silently swallowed alongside real database
-    failures. Also fixed a related latent bug: `edit()`'s internal second
-    call to `get_signature_by_id()` inside `update_signature()` could
-    previously have its 404 masked by the bare `except Exception:` on a
-    delete-during-edit race condition.
-  - Reviewed `app/routes/signatures.py`'s form-duplication finding and
-    found it largely already resolved (`_read_signature_form_fields()`
-    already exists as the shared helper); judged the remaining
-    create/edit shape not worth extracting further with only two callers.
-  - Reviewed and deliberately deferred `app/models/user.py`'s
-    persistence-in-model finding — every other method in the file follows
-    the same commit-in-model convention, so fixing only two would make the
-    file inconsistent rather than cleaner.
-  - `pytest` (91 passed), `ruff check .` (all checks passed), `ty check .`
-    (all checks passed) confirmed clean after every fix.
-- Older completed sessions (prod hardening guards, Brevo/SendGrid template
-  fixes, `ty.toml` exclusion, `signature_service.py` dedup, initial audit
-  run) have moved to `CHANGELOG.md` under `2026-08-01`.
-
+- Ran a full live delivery test in New Outlook / Outlook on the web,
+  sending to both Proton Mail and Gmail, and cross-checked results against
+  the Analytics dashboard and raw Neon rows.
+- Fixed a real bug found by this test: the tracking pixel's
+  `style="display:none;"` caused Outlook/Microsoft 365 to silently skip
+  fetching it as a known tracking heuristic. Removed `display:none`;
+  confirmed opens now record correctly after re-saving and re-testing.
+- Fixed a second real bug: logo URLs pointing to an SVG rendered as
+  nothing in every tested client, with no error or broken-image
+  indicator. Added `_sanitize_image_href()` (backend backstop) and
+  `validate_logo_url()` (user-facing flash message) so an SVG logo is now
+  explained and blocked at save time instead of silently invisible.
+- Triaged three further observations and confirmed each is expected
+  client behavior, not a bug: Gmail's image-proxy holding opens at 1
+  (already handled by the existing `_PROXY_SIGNATURES` exclusion), Proton
+  Mail's own tracker-blocking feature, and automated link-scanners
+  inflating click counts (a known, deliberately-unaddressed industry-wide
+  limitation — see Open Issues).
+- Diagnosed (not yet fixed) the social-icon "connected" rendering in
+  Outlook: confirmed via Firefox Inspector that the app's own generated
+  HTML is correct, and the cause is Outlook's paste-sanitizer wrapping
+  same-color icons in an extra span. Real fix needs a table-based layout
+  across all 9 signature layouts — see Open Issues.
+- `pytest` (91 passed), `ruff check .`, `ty check .` all clean after every
+  fix, including a `ty` type-narrowing fix in `signatures.py` (checking
+  `logo_error` directly rather than the paired bool before `flash()`).
+- Older completed sessions (audit triage, ProductionConfig import-time
+  fix, Solid/Split visual confirmation) have moved to `CHANGELOG.md`.
 ---
 
 ## Next Up
 
-- [ ] Pay for a real custom domain and set up Brevo domain authentication —
-      resolves both the sender-reputation/Outlook-filtering risk and the
-      `BREVO_FROM_EMAIL` deliverability concern above in one step.
-- [ ] Run an end-to-end Outlook/Apple Mail delivery test against the live app
-      to verify copy/paste and render behavior outside Gmail.
-
-
+- [ ] Rebuild `social_html` as a table-based layout across all 9 signature
+      layouts to fix Outlook's paste-sanitizer collapsing icon spacing.
+- [ ] Pay for a real custom domain and set up Brevo domain authentication.
+- [ ] Run an end-to-end Apple Mail delivery test (Outlook and Gmail are
+      now both confirmed working).
 ---
 
 ## How This Project Talks to Claude Now
