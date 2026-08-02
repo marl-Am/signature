@@ -96,11 +96,10 @@ chat._
 - [ ] Decide whether to keep `app/static/css/output.css` committed to git or
       remove it (add to `.gitignore`) now that Docker rebuilds it fresh on
       every image — either is fine, just an open decision
-- [ ] Full pass-1 audit findings not yet triaged beyond this session's four
+- [ ] Full pass-1 audit findings not yet triaged beyond this session's five
       fixes — remaining items (model-layer duplication in
       `verify_email`/`reset_password` token-validity checks in `user.py`;
       `is_locked()` performing a write inside a read-style guard;
-      `signature_service.py` create/update duplication;
       `signatures.py` form-handling duplication between create/edit;
       broad exception handling in `tracking.py`'s pixel/click endpoints)
       are documented in `docs/AUDIT_FINDINGS.md` and still need a
@@ -170,6 +169,16 @@ unconditionally → service layer enforces tier + validates input):
   change, password change, and account deletion all tested working on the
   real deployed URL, along with every other form in the app. No regressions
   from either guard.
+- Fixed the `signature_service.py` create/update duplication flagged by the
+  audit: `create_signature()` and `update_signature()` both used to list
+  the same 14 fields by hand when calling `_generate_html_content()`.
+  Extracted a `_build_html_content(signature)` helper as the single source
+  of truth for which fields feed HTML generation; both methods now call it
+  instead of duplicating the field list. No change to
+  `_generate_html_content()` itself or any layout branch. Also removed a
+  stray leftover `# ← add these` comment on `font_family` in
+  `update_signature()`'s allow-list. `pytest` (91 passed), `ruff check .`,
+  `ty check .` all clean after the change.
 
 ---
 

@@ -24,18 +24,23 @@ Fixed the stale SendGrid reference in `privacy.html` (actual provider is
 Brevo) and the hardcoded placeholder URL in the welcome email. Added a
 targeted `ty.toml` exclusion for the long-standing Flask-SQLAlchemy
 `db.Model` MRO false positive — resolved without touching the ORM models.
-Ran the project's first full pass-1 codebase audit against
-`docs/signs-of-llm-generated-code.md`, covering every git-tracked file;
-findings logged in `docs/AUDIT_FINDINGS.md` for future triage. Checked one
-audit finding (`terms.html`/`base.html` contact copy vs. `privacy.html`)
-and confirmed it was a false positive — no fix needed. Flagged a new,
-separate concern: `BREVO_FROM_EMAIL` is a personal Outlook address, not a
-Brevo-authenticated domain, which is a deliverability risk tied to the
-existing custom-domain decision, not a code bug. Test suite: 91 tests,
-all passing throughout. `ruff check .` clean. `ty check .` clean. Deployed
-and confirmed live: email verification, email change, password change,
-and account deletion all tested working on the production site, along
-with every other form in the app.
+Extracted a `_build_html_content(signature)` helper in
+`signature_service.py` so `create_signature()`/`update_signature()` share
+one source of truth for the 14 fields that feed HTML generation, instead
+of each listing them separately; also removed a stray leftover comment
+found alongside it. Ran the project's first full pass-1 codebase audit
+against `docs/signs-of-llm-generated-code.md`, covering every git-tracked
+file; findings logged in `docs/AUDIT_FINDINGS.md` for future triage.
+Checked one audit finding (`terms.html`/`base.html` contact copy vs.
+`privacy.html`) and confirmed it was a false positive — no fix needed.
+Flagged a new, separate concern: `BREVO_FROM_EMAIL` is a personal Outlook
+address, not a Brevo-authenticated domain, which is a deliverability risk
+tied to the existing custom-domain decision, not a code bug. Test suite:
+91 tests, all passing throughout every fix. `ruff check .` clean
+throughout. `ty check .` clean throughout. Deployed and confirmed live:
+email verification, email change, password change, and account deletion
+all tested working on the production site, along with every other form
+in the app.
 
 ## 2026-07-31: Added CSRF protection app-wide via Flask-WTF 
 — wired CSRFProtect into the app factory, added the hidden token to all 11 POST
