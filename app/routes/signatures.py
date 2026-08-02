@@ -105,6 +105,11 @@ def create() -> Union[str, Response]:
 
         fields = _read_signature_form_fields(request.form)
 
+        _, logo_error = SignatureService.validate_logo_url(fields.logo_url)
+        if logo_error:
+            flash(logo_error, "danger")
+            return render_template("signatures/create.html", form_data=request.form)
+
         try:
             signature = SignatureService.create_signature(
                 name=name, full_name=full_name, **asdict(fields)
@@ -142,6 +147,15 @@ def edit(signature_id: int) -> Union[str, Response]:
             )
 
         fields = _read_signature_form_fields(request.form)
+
+        _, logo_error = SignatureService.validate_logo_url(fields.logo_url)
+        if logo_error:
+            flash(logo_error, "danger")
+            return render_template(
+                "signatures/edit.html",
+                signature=signature,
+                form_data=request.form,
+            )
 
         try:
             updated = SignatureService.update_signature(
