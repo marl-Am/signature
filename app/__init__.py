@@ -1,17 +1,19 @@
 # app/__init__.py
+from typing import Type
+
+from dotenv import load_dotenv
 from flask import Flask, render_template
-from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
+from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import CSRFProtect
-from dotenv import load_dotenv
+
 from app.config import DevelopmentConfig
-from typing import Type
 
 load_dotenv()
 
 
-db = SQLAlchemy()
+db = SQLAlchemy(session_options={"expire_on_commit": False})
 login_manager = LoginManager()
 migrate = Migrate()
 csrf = CSRFProtect()
@@ -46,14 +48,14 @@ def create_app(config_class: Type[object] = DevelopmentConfig) -> Flask:
 
         return db.session.get(User, int(user_id))
 
-    from app.routes.auth import auth_bp
-    from app.routes.dashboard import dashboard_bp
-    from app.routes.signatures import signatures_bp
-    from app.routes.tracking import tracking_bp
-    from app.routes.billing import billing_bp
-    from app.routes.subscription import subscription_bp
     from app.routes.analytics import analytics_bp
+    from app.routes.auth import auth_bp
+    from app.routes.billing import billing_bp
+    from app.routes.dashboard import dashboard_bp
     from app.routes.profile import profile_bp
+    from app.routes.signatures import signatures_bp
+    from app.routes.subscription import subscription_bp
+    from app.routes.tracking import tracking_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)

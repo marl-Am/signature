@@ -1,10 +1,10 @@
 # Signature — Project Status
 
-*This file replaces the old `HANDOFF_N.MD` habit. It is edited in place, not
+_This file replaces the old `HANDOFF_N.MD` habit. It is edited in place, not
 appended to — when something here gets done, it's deleted, not moved to a
 "done" list. Git history is the permanent record; this file is only ever a
 snapshot of "true right now." Paste this whole file at the start of a new
-chat.*
+chat._
 
 **Live app:** https://signature-j0bv.onrender.com/
 **Repo:** https://github.com/marl-Am/signature.git
@@ -24,10 +24,12 @@ chat.*
 - Pro tier: unlimited signatures, all 11 fonts, custom accent color, all 9
   layout templates (added `solid` and `split` this session), no watermark,
   priority support.
-- Test suite: 86 tests, all passing. `ruff check .` clean. `ty check .`
-  surfaces 4 warnings (Flask-SQLAlchemy `db.Model` MRO resolution — see
-  Open Issues); confirmed unrelated to `ty` version and to this session's
-  changes.
+- Test suite: 91 tests, all passing. `ruff check .` clean. `ty check .`
+  passes clean — the Flask-SQLAlchemy `db.Model` MRO false positive is
+  resolved via the targeted rule exclusion in [ty.toml](../ty.toml); no app
+  logic changes were required. Confirmed 2026-08-01: `pytest` (91 passed),
+  `ruff check .` (all checks passed), `ty check .` (all checks passed) —
+  re-confirmed again after the `BREVO_FROM_EMAIL` guard, same clean result.
 - CI: GitHub Actions, runs on every push to `main`, confirmed passing via
   `gh run list`.
 - Landing page's testimonials section (fake client quotes) has been replaced
@@ -41,6 +43,19 @@ chat.*
   against current Microsoft/Apple docs and updated where Microsoft's own UI
   rollout has created two possible menu paths. Actual end-to-end send/receive
   testing in those clients is still outstanding (see Open Issues).
+- A pass-1 code audit (checklist: `docs/signs-of-llm-generated-code.md`) was
+  run across the whole tracked codebase; findings are in
+  `docs/AUDIT_FINDINGS.md`. Four items from it have been fixed and verified
+  (see Recently Completed), one was checked and confirmed a false positive
+  (terms.html/base.html contact copy — see below), and the rest still need a
+  confidence/triage pass before any further fixes (see Open Issues).
+- Checked `app/templates/terms.html` and `app/templates/base.html` against
+  the `privacy.html` fix the audit flagged as inconsistent: the actual fix
+  only changed the third-party-provider narrative (SendGrid → Brevo), which
+  never existed in the other two files, and the contact address
+  (`signatureapp.2026@outlook.com`) was identical across all three the whole
+  time and was never part of the fix. No change needed; audit finding was a
+  false positive.
 
 ---
 
@@ -54,36 +69,43 @@ chat.*
       intended, especially since they're the first layouts to use a
       colored background as the entire card rather than just an accent
       line or header band.
-- [ ] **`ty` MRO warnings on `db.Model` subclasses** — `ty check .` surfaces
-      4 warnings (`analytics.py` x2, `signature.py`, `user.py`) about an
-      unresolved MRO for classes inheriting Flask-SQLAlchemy's
-      dynamically-generated `db.Model` base. Confirmed NOT a version-drift
-      issue (`pip show ty` = `0.0.61`, matching the pin). Most likely a
-      known false-positive class with Flask-SQLAlchemy's declarative
-      metaclass that predates this session and simply wasn't noticed
-      before, since it's a warning, not a failing check. No code change
-      caused this. Decide whether to silence it (inline `# ty: ignore` or
-      config exclusion) or leave as background noise.
 - [ ] **Outlook/Apple Mail delivery test** — the create → copy → paste →
       send → receive flow has only been validated in Gmail. UI install
       instructions exist for all three clients, but Outlook/Apple Mail
       haven't been tested end to end.
+- [ ] **Brevo sender deliverability risk** — `BREVO_FROM_EMAIL` is
+      confirmed set in both local `.env` and Render, but its value is a
+      personal Outlook address (`signatureapp.2026@outlook.com`), not a
+      domain Brevo has verified/authenticated (SPF/DKIM). Transactional
+      email sent through Brevo "from" an unauthenticated domain risks
+      spam-folder routing or spoofing flags, independent of whether the
+      API key is valid. Same underlying blocker as the existing "Brevo
+      domain authentication decision" below — real fix is the custom
+      domain purchase, not a code change.
 - [ ] Consider a regression test or manual QA checklist item for the
       clipboard-copy background bug (fixed in an earlier session)
 - [ ] Existing signatures created before a certain point have old relative
       tracking URLs (data issue, not a code bug)
-- [ ] Placeholder emails in `terms.html`/`privacy.html` not yet replaced
-      with real ones
 - [ ] `font_family`'s Pro-only set intentionally isn't validated beyond the
       allow-list check — no further action needed, just noting the design
       is deliberate (see Recently Completed below)
 - [ ] Decide whether to keep `app/static/css/output.css` committed to git or
       remove it (add to `.gitignore`) now that Docker rebuilds it fresh on
       every image — either is fine, just an open decision
+- [ ] Full pass-1 audit findings not yet triaged beyond this session's four
+      fixes — remaining items (model-layer duplication in
+      `verify_email`/`reset_password` token-validity checks in `user.py`;
+      `is_locked()` performing a write inside a read-style guard;
+      `signature_service.py` create/update duplication;
+      `signatures.py` form-handling duplication between create/edit;
+      broad exception handling in `tracking.py`'s pixel/click endpoints)
+      are documented in `docs/AUDIT_FINDINGS.md` and still need a
+      confidence pass before anything is fixed.
 
 **Cheap Pro-tier design features not yet built** (same gating pattern as
 accent color/font family/layout — form field → route passes through
 unconditionally → service layer enforces tier + validates input):
+
 - [ ] Divider/border style options (easiest)
 - [ ] Avatar shape variants (easy)
 - [ ] Social icon row (needs Simple Icons SVG assets, free/CC0)
@@ -97,7 +119,8 @@ unconditionally → service layer enforces tier + validates input):
   plan
 - Docker Scout's two remaining failed policies (copyleft license scan,
   supply chain attestations) — low priority
-- Brevo domain authentication decision — tied to the domain purchase above
+- Brevo domain authentication decision — tied to the domain purchase above;
+  also the real fix for the Brevo sender deliverability risk noted above
 - Auto-regenerating `html_content` on Stripe webhook tier change — decided
   against, watermark/font/color only update on next manual save
 
@@ -105,37 +128,55 @@ unconditionally → service layer enforces tier + validates input):
 
 ## Recently Completed (this section gets replaced, not appended, next session)
 
-**Session: CSRF protection added app-wide (2026-07-31)**
-- Closed the Open Issue flagged during the auth template audit: the app
-  had no CSRF protection anywhere (confirmed via `requirements.txt` — no
-  Flask-WTF, no hand-rolled token, nothing)
-- Added `Flask-WTF==1.3.0` (+ `WTForms==3.2.2` dependency) to
-  `requirements.txt`
-- Wired `CSRFProtect` into `app/__init__.py`, same pattern as
-  `db`/`login_manager`/`migrate`
-- Added `WTF_CSRF_ENABLED = False` to `TestingConfig` in `app/config.py`
-  (conftest.py's `app` fixture already forced this at the fixture level;
-  this covers anything else run under `TestingConfig` outside pytest)
-- Exempted `POST /billing/webhook` from CSRF via `@csrf.exempt` — Stripe's
-  servers call this directly with no browser session and no token;
-  Stripe's own signature verification is the real authenticity check on
-  that route, not CSRF
-- Added the hidden `csrf_token()` field to all 11 POST forms in the app:
-  `auth/login.html`, `auth/register.html`, `auth/forgot_password.html`,
-  `auth/reset_password.html`, `dashboard/index.html` (delete signature),
-  `profile/index.html` (change email, change password, delete account —
-  three separate forms), `signatures/create.html`, `signatures/edit.html`,
-  `subscription/manage.html` (cancel)
-- `pytest` (86 passing), `ruff check .` clean, `ty check .` — same 4
-  pre-existing MRO warnings, unaffected by this session
-- Manually verified in a way `pytest` structurally cannot: clicked through
-  all 11 forms locally, and used the Stripe CLI (`stripe listen` +
-  `stripe trigger checkout.session.completed`) to confirm the webhook
-  still returns 200 and the Pro upgrade applies correctly with the
-  exemption in place
-- Pushed to `main`. CI green, Render deploy green, confirmed working in
-  production: logged in and completed a real Stripe upgrade on the live
-  site, account correctly shows Pro
+**Session: prod hardening + audit cleanup (2026-08-01)**
+
+- Verified the `FLASK_ENV` app-level check in [wsgi.py](../wsgi.py) is not
+  using any Flask-internal behavior removed in Flask 3.x; it is just a
+  custom config switch and did not require a runtime fix.
+- Fixed the production-only secret guard in [app/config.py](app/config.py):
+  `SECRET_KEY` now fails loudly in production if missing, while
+  local/dev/test runs still keep the safe fallback for easier startup.
+- Fixed the stale Brevo/SendGrid mismatch and placeholder live-domain
+  issues:
+  - [app/services/email_service.py](app/services/email_service.py): welcome
+    email now uses the real app base URL and the configured sender
+    fallback
+  - [app/templates/privacy.html](app/templates/privacy.html): updated to
+    Brevo and removed stale SendGrid copy
+- Added a targeted `ty` exclusion in [ty.toml](../ty.toml) to ignore the
+  Flask-SQLAlchemy `unsupported-base` false positive without rewriting the
+  ORM models.
+- Added the same fail-loudly production guard pattern to
+  `BREVO_FROM_EMAIL` in [app/config.py](app/config.py) via a new
+  `get_brevo_from_email_for_config()` helper, mirroring
+  `get_secret_key_for_config()`. Confirmed Render and local `.env` both
+  have the variable set before applying the guard, so this is a hardening
+  change, not a live fix.
+- Ran a full pass-1 codebase audit (checklist-driven, no edits) across
+  `app/models`, `app/services`, `app/routes`, `app/templates`, and
+  remaining tracked config/bootstrap files. Findings recorded in
+  `docs/AUDIT_FINDINGS.md`.
+- Checked the audit's `terms.html`/`base.html` contact-copy finding against
+  the actual `privacy.html` diff and confirmed it was a false positive —
+  no fix needed (see Current State for detail).
+- Validation confirmed 2026-08-01: `pytest` (91 passed), `ruff check .`
+  (all checks passed), `ty check .` (all checks passed) — clean after both
+  the `SECRET_KEY` and `BREVO_FROM_EMAIL` guards.
+
+---
+
+## Next Up
+
+- [ ] Pay for a real custom domain and set up Brevo domain authentication —
+      resolves both the sender-reputation/Outlook-filtering risk and the
+      `BREVO_FROM_EMAIL` deliverability concern above in one step.
+- [ ] Run an end-to-end Outlook/Apple Mail delivery test against the live app
+      to verify copy/paste and render behavior outside Gmail.
+- [ ] Do a live visual QA pass on the Solid/Split layouts on the production
+      URL.
+- [ ] Triage the remaining `docs/AUDIT_FINDINGS.md` items by confidence
+      level before fixing anything further.
+
 ---
 
 ## How This Project Talks to Claude Now

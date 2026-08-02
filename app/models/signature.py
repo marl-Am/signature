@@ -3,8 +3,9 @@
 Signature model - Email signature storage
 """
 
-from app import db
 from datetime import datetime, timezone
+
+from app import db
 
 
 class Signature(db.Model):
@@ -28,9 +29,7 @@ class Signature(db.Model):
     )
 
     # Signature metadata
-    name = db.Column(
-        db.String(100), nullable=False
-    )
+    name = db.Column(db.String(100), nullable=False)
 
     is_active = db.Column(db.Boolean, default=True, nullable=False)
 
@@ -52,8 +51,10 @@ class Signature(db.Model):
     logo_url = db.Column(db.String(500), nullable=True)
 
     accent_color = db.Column(db.String(7), nullable=False, default="#0c2788")
-    layout       = db.Column(db.String(20), nullable=False, default="classic")
-    font_family  = db.Column(db.String(50), nullable=False, default="Arial, Helvetica, sans-serif")
+    layout = db.Column(db.String(20), nullable=False, default="classic")
+    font_family = db.Column(
+        db.String(50), nullable=False, default="Arial, Helvetica, sans-serif"
+    )
 
     # Generated HTML (the actual signature code)
     html_content = db.Column(
@@ -78,8 +79,8 @@ class Signature(db.Model):
         nullable=False,
     )
 
-    user   = db.relationship("User", back_populates="signatures")
-    opens  = db.relationship(
+    user = db.relationship("User", back_populates="signatures")
+    opens = db.relationship(
         "SignatureOpen", back_populates="signature", cascade="all, delete-orphan"
     )
     clicks = db.relationship(
@@ -89,58 +90,6 @@ class Signature(db.Model):
     def __repr__(self) -> str:
         """String representation for debugging"""
         return f"<Signature {self.name} (User: {self.user_id})>"
-
-    def to_dict(self) -> dict:
-        """
-        Convert signature to dictionary (for API responses)
-
-        Returns:
-            Dictionary of signature data
-        """
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "name": self.name,
-            "is_active": self.is_active,
-            "locked": self.locked,
-            "full_name": self.full_name,
-            "job_title": self.job_title,
-            "company": self.company,
-            "phone": self.phone,
-            "website": self.website,
-            "logo_url": self.logo_url,
-            "total_opens": self.total_opens,
-            "total_clicks": self.total_clicks,
-            "last_opened_at": (
-                self.last_opened_at.isoformat() if self.last_opened_at else None
-            ),
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-        }
-
-    def get_tracking_pixel_url(self) -> str:
-        """
-        Generate tracking pixel URL for this signature
-
-        Returns:
-            Full URL to tracking pixel endpoint
-        """
-        # TODO: Replace with actual domain in production
-        base_url = "https://yourdomain.com"
-        return f"{base_url}/track/pixel/{self.tracking_code}.png"
-
-    def get_redirect_url(self, social_platform: str) -> str:
-        """
-        Generate click tracking redirect URL for social media links
-
-        Args:
-            social_platform: Platform name (linkedin, twitter, etc.)
-
-        Returns:
-            Full URL to redirect endpoint
-        """
-        # TODO: Replace with actual domain in production
-        base_url = "https://yourdomain.com"
-        return f"{base_url}/track/click/{self.tracking_code}/{social_platform}"
 
     def increment_opens(self) -> None:
         """
@@ -158,4 +107,3 @@ class Signature(db.Model):
         A09: Logging - This action should also be logged
         """
         self.total_clicks += 1
-

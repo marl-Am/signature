@@ -6,8 +6,8 @@ Handles change email, change password, and delete account.
 
 import logging
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request
-from flask_login import login_required, logout_user, current_user
+from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask_login import current_user, login_required, logout_user
 from werkzeug.wrappers import Response
 
 from app.services.user_service import UserService
@@ -47,9 +47,7 @@ def change_email() -> Response:
         return redirect(url_for("profile.index"))
 
     # token_or_error is the verification token on success
-    verify_url: str = url_for(
-        "auth.verify_email", token=token_or_error, _external=True
-    )
+    verify_url: str = url_for("auth.verify_email", token=token_or_error, _external=True)
     try:
         from app.services.email_service import send_verification_email
 
@@ -115,8 +113,11 @@ def delete_account() -> Response:
     """
     current_password: str = request.form.get("current_password", "")
 
-    # Grab the real object before logout clears the proxy
+    # Grab the real object before logout clears the proxy and before the
+    # service commits the delete. This avoids ObjectDeletedError if the row
+    # is deleted and the ORM instance expires on commit.
     user = current_user._get_current_object()
+    user_id = user.id
 
     success, error = UserService.delete_account(
         user=user,
@@ -128,6 +129,6 @@ def delete_account() -> Response:
         return redirect(url_for("profile.index"))
 
     logout_user()
-    logger.info("User account deleted (id=%s)", user.id)
+    logger.info("User account deleted (id=%s)", user_id)
     flash("Your account has been permanently deleted.", "info")
     return redirect(url_for("index"))

@@ -4,9 +4,9 @@ Email service - Brevo (formerly Sendinblue) integration for transactional emails
 """
 
 import html
-import os
 import logging
-from typing import Optional, Tuple, Any
+import os
+from typing import Any, Optional, Tuple
 
 import requests
 
@@ -34,7 +34,10 @@ def _get_api_key() -> Optional[str]:
 
 def _get_from_email() -> str:
     """Return the verified sender address from env, with a safe fallback."""
-    return os.getenv("BREVO_FROM_EMAIL", "no-reply@example.com")
+    return os.getenv("BREVO_FROM_EMAIL", "signatureapp.2026@outlook.com")
+
+
+APP_BASE_URL: str = os.getenv("APP_BASE_URL", "https://signature-j0bv.onrender.com")
 
 
 def _render_email_body(to_name: str, *paragraphs: str) -> str:
@@ -141,7 +144,7 @@ def send_welcome_email(to_email: str, to_name: str) -> Tuple[bool, Optional[str]
         f"Welcome! Your {APP_NAME} account has been created.",
         (
             "You are on a <strong>14-day free trial</strong>. Head to your "
-            '<a href="https://signature.example.com/dashboard">dashboard</a> '
+            f'<a href="{APP_BASE_URL}/dashboard">dashboard</a> '
             "to build your first email signature."
         ),
         "If you have questions, just reply to this email.",

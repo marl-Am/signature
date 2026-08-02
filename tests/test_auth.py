@@ -6,6 +6,7 @@ email verification, and password reset.
 
 from datetime import datetime, timedelta, timezone
 
+import pytest
 from flask import Flask
 from flask.testing import FlaskClient
 
@@ -197,7 +198,6 @@ def test_verify_email_with_expired_token_redirects_to_login(
             hours=1
         )
         user.email_verified = False
-        user.save() if hasattr(user, "save") else None
         from app import db
 
         db.session.commit()
@@ -214,6 +214,42 @@ def test_verify_email_with_expired_token_redirects_to_login(
         user = get_user_by_email(app, "expiredverify@example.com")
         assert user.email_verified is False
         assert user.email_verification_token == "expired-token"
+
+
+def test_delete_account_after_commit_does_not_raise_object_deleted(
+    app: Flask, client: FlaskClient
+) -> None:
+    register_via_client(client, email="deleteacct@example.com")
+
+    response = client.post(
+        "/profile/delete-account",
+        data={"current_password": STRONG_PASSWORD},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/"
+
+    with app.app_context():
+        user = User.query.filter_by(email="deleteacct@example.com").first()
+        assert user is None
+
+
+def test_user_set_password_uses_service_min_length(
+    app: Flask, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.services.user_service import UserService
+
+    monkeypatch.setattr(UserService, "MIN_PASSWORD_LENGTH", 15)
+
+    with app.app_context():
+        user = User(email="pwdpolicy@example.com", name="Pwd Policy")
+
+        with pytest.raises(ValueError, match="at least 15 characters long"):
+            user.set_password("ShortPass1!")
+
+        user.set_password("ThisIsLongEnough1!")
+        assert user.password_hash
 
 
 # ---------------------------------------------------------------------------

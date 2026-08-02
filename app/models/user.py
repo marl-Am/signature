@@ -16,13 +16,15 @@ so behavior is correct on both SQLite and PostgreSQL without touching the
 storage layer or requiring a schema/migration change.
 """
 
-from app import db
-from flask_login import UserMixin
-from argon2 import PasswordHasher, Type
-from argon2.exceptions import VerifyMismatchError, InvalidHashError
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-import secrets
+
+from argon2 import PasswordHasher, Type
+from argon2.exceptions import InvalidHashError, VerifyMismatchError
+from flask_login import UserMixin
+
+from app import db
 
 # OWASP Recommended minimum configuration for Argon2id:
 # Memory: 19 MiB -> 19456 KiB (argon2-cffi uses KiB)
@@ -124,8 +126,11 @@ class User(UserMixin, db.Model):
         Args:
             password: Plain text password to hash.
         """
-        if not password or len(password) < 12:
-            raise ValueError("Password must be at least 12 characters long")
+        from app.services.user_service import UserService
+
+        min_length = UserService.MIN_PASSWORD_LENGTH
+        if not password or len(password) < min_length:
+            raise ValueError(f"Password must be at least {min_length} characters long")
         self.password_hash = ph.hash(password)
 
     def check_password(self, password: str) -> bool:
@@ -150,7 +155,6 @@ class User(UserMixin, db.Model):
             return False
         except Exception:
             return False
-
 
     def is_locked(self) -> bool:
         """
@@ -199,7 +203,6 @@ class User(UserMixin, db.Model):
         self.last_login_ip = ip_address
         db.session.commit()
 
-
     def generate_verification_token(self) -> str:
         """
         Generate a secure email verification token that expires in 24 hours.
@@ -235,7 +238,6 @@ class User(UserMixin, db.Model):
         db.session.commit()
         return True
 
-
     def generate_password_reset_token(self) -> str:
         """
         Generate a secure password reset token that expires in 1 hour.
@@ -269,7 +271,6 @@ class User(UserMixin, db.Model):
         db.session.commit()
         return True
 
-
     def has_active_subscription(self) -> bool:
         """
         Check if user has an active paid subscription or valid trial.
@@ -300,7 +301,6 @@ class User(UserMixin, db.Model):
         # Count only unlocked signatures — locked ones don't consume the free slot
         unlocked_count: int = self.signatures.filter_by(locked=False).count()
         return unlocked_count < 1
-
 
     def __repr__(self) -> str:
         return f"<User {self.email}>"

@@ -1,15 +1,48 @@
 # app/config.py
 import os
 from datetime import timedelta
+
 from dotenv import load_dotenv
 
 load_dotenv()
 
 
+def get_secret_key_for_config(config_name: str) -> str:
+    """Return the configured secret key for the given environment.
+
+    Production must fail loudly when the environment variable is missing so
+    misconfiguration is caught at startup rather than silently using a default.
+    Development and testing intentionally allow a local fallback so tests and
+    local runs do not require a manually configured secret.
+    """
+    secret_key = os.getenv("SECRET_KEY")
+    if config_name == "production":
+        if not secret_key:
+            raise RuntimeError("SECRET_KEY must be set in production")
+        return secret_key
+    return secret_key or "dev-secret-key-change-this-later"
+
+
+def get_brevo_from_email_for_config(config_name: str) -> str:
+    """Return the configured Brevo sender address for the given environment.
+
+    Production must fail loudly when the environment variable is missing so
+    misconfiguration is caught at startup rather than silently sending from a
+    placeholder address. Development and testing intentionally allow a local
+    fallback so tests and local runs do not require a manually configured
+    sender address.
+    """
+    from_email = os.getenv("BREVO_FROM_EMAIL")
+    if config_name == "production":
+        if not from_email:
+            raise RuntimeError("BREVO_FROM_EMAIL must be set in production")
+        return from_email
+    return from_email or "no-reply@example.com"
+
 class Config:
     """Base configuration"""
 
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "dev-secret-key-change-this-later")
+    SECRET_KEY: str = get_secret_key_for_config("development")
     SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
 
     # verify pooled connections
@@ -29,7 +62,7 @@ class Config:
 
     # Verification Email — Brevo
     BREVO_API_KEY: str = os.getenv("BREVO_API_KEY", "")
-    BREVO_FROM_EMAIL: str = os.getenv("BREVO_FROM_EMAIL", "no-reply@example.com")
+    BREVO_FROM_EMAIL: str = get_brevo_from_email_for_config("development")
 
     # Payments - Stripe
     STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "")
@@ -53,6 +86,8 @@ class ProductionConfig(Config):
 
     DEBUG: bool = False
     SQLALCHEMY_DATABASE_URI: str = os.getenv("DATABASE_URL", "")
+    SECRET_KEY: str = get_secret_key_for_config("production")
+    BREVO_FROM_EMAIL: str = get_brevo_from_email_for_config("production")
     REMEMBER_COOKIE_SECURE: bool = True
     SESSION_COOKIE_SECURE: bool = True
     SESSION_COOKIE_HTTPONLY: bool = True
