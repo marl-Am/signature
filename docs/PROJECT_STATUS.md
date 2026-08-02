@@ -57,14 +57,7 @@ chat._
 
 ## Open Issues
 
-- [ ] **Solid/Split live visual verification** — pushed, CI green, deploy
-      green (2026-07-26), but not yet visually confirmed on the live URL.
-      Same verification gap as prior sessions closed by actually visiting
-      the live site rather than trusting a green build: create a Pro-tier
-      signature with each of the two new layouts and check they render as
-      intended, especially since they're the first layouts to use a
-      colored background as the entire card rather than just an accent
-      line or header band.
+
 - [ ] **Outlook/Apple Mail delivery test** — the create → copy → paste →
       send → receive flow has only been validated in Gmail. UI install
       instructions exist for all three clients, but Outlook/Apple Mail
@@ -116,6 +109,9 @@ chat._
 
 **Session: full audit triage completed (2026-08-01)**
 
+- Visually confirmed the Solid and Split layouts on the live production
+  URL (pushed 2026-07-26, CI/deploy green at the time but never actually
+  eyeballed until now) — both render correctly with a Pro-tier signature.
 - Fixed a real CI-breaking bug found by actually checking `gh run list`
   instead of assuming a local green run meant CI was fine:
   `ProductionConfig` in `app/config.py` raised at import time (not only
@@ -166,8 +162,7 @@ chat._
       `BREVO_FROM_EMAIL` deliverability concern above in one step.
 - [ ] Run an end-to-end Outlook/Apple Mail delivery test against the live app
       to verify copy/paste and render behavior outside Gmail.
-- [ ] Do a live visual QA pass on the Solid/Split layouts on the production
-      URL.
+
 
 ---
 

@@ -12,6 +12,12 @@ backfilled accurately instead of guessed at.*
 
 ---
 
+## 2026-08-02 (cont.): Solid/Split live visual verification
+Closed the last open verification gap from the 2026-07-26 layout session:
+visited the live production URL and confirmed both the `solid` and `split`
+Pro-tier layouts render as intended with a real signature. No code changes
+needed.
+
 ## 2026-08-02: Fix ProductionConfig import-time crash (CI had been broken since 2026-08-01)
 Discovered via `gh run list` that CI had been failing on every push since the
 `SECRET_KEY`/`BREVO_FROM_EMAIL` production guards were merged the previous
