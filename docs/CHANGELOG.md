@@ -12,6 +12,31 @@ backfilled accurately instead of guessed at.*
 
 ---
 
+## 2026-08-01: Prod hardening + first full codebase audit
+Fixed `verify_email()` bypassing the service layer (route called the model
+directly and discarded the success/failure result — expired tokens still
+reported success), and `delete_account()` logging `user.id` after the row
+was already deleted and committed. Added fail-loudly production guards for
+`SECRET_KEY` and `BREVO_FROM_EMAIL` in `app/config.py` (dev/test keep safe
+fallbacks); confirmed both env vars were already set in Render before
+adding the guards, so neither was a live-exposure fix, both are hardening.
+Fixed the stale SendGrid reference in `privacy.html` (actual provider is
+Brevo) and the hardcoded placeholder URL in the welcome email. Added a
+targeted `ty.toml` exclusion for the long-standing Flask-SQLAlchemy
+`db.Model` MRO false positive — resolved without touching the ORM models.
+Ran the project's first full pass-1 codebase audit against
+`docs/signs-of-llm-generated-code.md`, covering every git-tracked file;
+findings logged in `docs/AUDIT_FINDINGS.md` for future triage. Checked one
+audit finding (`terms.html`/`base.html` contact copy vs. `privacy.html`)
+and confirmed it was a false positive — no fix needed. Flagged a new,
+separate concern: `BREVO_FROM_EMAIL` is a personal Outlook address, not a
+Brevo-authenticated domain, which is a deliverability risk tied to the
+existing custom-domain decision, not a code bug. Test suite: 91 tests,
+all passing throughout. `ruff check .` clean. `ty check .` clean. Deployed
+and confirmed live: email verification, email change, password change,
+and account deletion all tested working on the production site, along
+with every other form in the app.
+
 ## 2026-07-31: Added CSRF protection app-wide via Flask-WTF 
 — wired CSRFProtect into the app factory, added the hidden token to all 11 POST
 forms, exempted the Stripe webhook route (protected by Stripe's own

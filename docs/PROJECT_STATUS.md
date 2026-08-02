@@ -56,6 +56,10 @@ chat._
   (`signatureapp.2026@outlook.com`) was identical across all three the whole
   time and was never part of the fix. No change needed; audit finding was a
   false positive.
+- `SECRET_KEY` and `BREVO_FROM_EMAIL` production guards deployed and
+  confirmed live (2026-08-01): email verification, email change, password
+  change, and account deletion all tested working on the production site,
+  and every form was checked. No regressions from either guard.
 
 ---
 
@@ -162,6 +166,10 @@ unconditionally → service layer enforces tier + validates input):
 - Validation confirmed 2026-08-01: `pytest` (91 passed), `ruff check .`
   (all checks passed), `ty check .` (all checks passed) — clean after both
   the `SECRET_KEY` and `BREVO_FROM_EMAIL` guards.
+- Deployed to production and confirmed live: email verification, email
+  change, password change, and account deletion all tested working on the
+  real deployed URL, along with every other form in the app. No regressions
+  from either guard.
 
 ---
 
