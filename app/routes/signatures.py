@@ -5,6 +5,7 @@ from typing import Union
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
+from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.datastructures import ImmutableMultiDict
 from werkzeug.wrappers import Response
 
@@ -110,7 +111,7 @@ def create() -> Union[str, Response]:
             )
             flash(f'Signature "{signature.name}" created successfully!', "success")
             return redirect(url_for("dashboard.index"))
-        except Exception:
+        except SQLAlchemyError:
             logger.exception(
                 "Unexpected error creating signature for user %s", current_user.id
             )
@@ -148,7 +149,7 @@ def edit(signature_id: int) -> Union[str, Response]:
             )
             flash(f'Signature "{updated.name}" updated successfully!', "success")
             return redirect(url_for("dashboard.index"))
-        except Exception:
+        except SQLAlchemyError:
             logger.exception(
                 "Unexpected error updating signature %s for user %s",
                 signature_id,

@@ -12,6 +12,58 @@ backfilled accurately instead of guessed at.*
 
 ---
 
+## 2026-08-01 (cont. 2): Audit triage — tracking.py and signatures.py exception narrowing
+Completed the pass-1 audit triage: reviewed `app/routes/tracking.py`'s
+`pixel()`/`click()` and `app/routes/signatures.py`'s `create()`/`edit()`,
+all four of which caught broad `Exception` and continued (serving the GIF,
+redirecting, or showing a generic error) rather than surfacing failures.
+The graceful-continue behavior itself was correct by design — a public
+tracking endpoint must never break a recipient's inbox rendering over an
+analytics write failure, and both routes' docstrings already documented
+this intentionally — but catching bare `Exception` meant an unrelated
+programming bug would be silently swallowed forever alongside legitimate
+database failures. Narrowed all four `except Exception:` blocks to
+`except SQLAlchemyError:` in both files, so real database failures are
+still handled gracefully exactly as before, while any other bug now
+surfaces as a real error instead of vanishing into a log line. This also
+fixed a related latent bug in `signatures.py`: `update_signature()` calls
+`get_signature_by_id()` internally a second time (`edit()` already fetches
+it once, outside the `try` block), which can raise Werkzeug's `NotFound`
+on a delete-during-edit race condition — previously that 404 would have
+been caught by the bare `except Exception:` and shown as a generic "an
+error occurred" flash instead of a proper 404 page. Reviewed
+`app/routes/signatures.py`'s form-handling duplication finding and found
+it largely already resolved: `_read_signature_form_fields()` already
+exists as a shared helper for both routes; the remaining shared shape
+(validate → extract fields → try/except/flash/redirect) was judged not
+worth extracting further with only two call sites and real differences
+between them (rule of three — revisit if a third caller appears).
+`pytest` (91 passed), `ruff check .` (all checks passed), `ty check .`
+(all checks passed) confirmed clean after both files. This closes out the
+full pass-1 audit: all five items are now either fixed and verified, or
+reviewed and deliberately deferred with documented reasoning.
+
+## 2026-08-01 (cont.): Audit triage — user.py fixes
+Triaged the remaining `docs/AUDIT_FINDINGS.md` items by confidence level.
+Fixed two: `is_locked()` was mutating state (clearing lockout fields and
+committing) as a side effect of what should be a pure read-only guard
+check — split into a pure `is_locked()` and a new `clear_expired_lockout()`
+that persists the reset. This uncovered a latent bug: `record_failed_login()`
+never checked for an expired lockout before incrementing, so a user's first
+failed attempt after their lockout window ended could instantly re-lock
+them off a stale attempt count; `record_failed_login()` now calls
+`clear_expired_lockout()` first. Also extracted a shared `_token_is_valid()`
+static helper for `verify_email()`/`reset_password()`, which had duplicated
+the same token-match-and-expiry check. Reviewed the
+`record_failed_login()`/`record_successful_login()` persistence-in-model
+finding and deliberately deferred it — every other method in the file
+follows the same commit-in-model convention, so fixing only two would make
+the file inconsistent rather than cleaner; a real fix means moving
+persistence into a service layer project-wide. `pytest` (91 passed),
+`ruff check .`, `ty check .` all clean, including after catching and
+removing an accidental duplicate `record_failed_login()` definition
+introduced mid-edit.
+
 ## 2026-08-01: Prod hardening + first full codebase audit
 Fixed `verify_email()` bypassing the service layer (route called the model
 directly and discarded the success/failure result — expired tokens still

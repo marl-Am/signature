@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from typing import Union
 
 from flask import Blueprint, make_response, redirect, request, url_for
+from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.wrappers import Response
 
 from app import db
@@ -92,7 +93,7 @@ def pixel(tracking_code: str) -> Response:
                     signature.id,
                     signature.total_opens,
                 )
-            except Exception:
+            except SQLAlchemyError:
                 db.session.rollback()
                 logger.exception(
                     "Failed to record open for tracking_code=%s", tracking_code
@@ -169,7 +170,7 @@ def click(tracking_code: str, platform: str) -> Union[Response, tuple[str, int]]
                 platform,
                 signature.total_clicks,
             )
-    except Exception:
+    except SQLAlchemyError:
         db.session.rollback()
         logger.exception(
             "Failed to record click for tracking_code=%s platform=%s",

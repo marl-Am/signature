@@ -160,24 +160,45 @@ class User(UserMixin, db.Model):
         """
         Check if account is currently locked due to failed login attempts.
 
+        Pure read-only check: does not mutate state or write to the
+        database. If the lockout window has expired, this returns False,
+        but the stored lockout fields are not cleared here — call
+        clear_expired_lockout() to persist that reset (record_failed_login()
+        already does this automatically before recording a new attempt).
+
         Returns:
             True if account is locked, False otherwise.
         """
         if self.locked_until is None:
             return False
 
-        if datetime.now(timezone.utc) > _ensure_aware_utc(self.locked_until):
-            self.locked_until = None
-            self.failed_login_attempts = 0
-            db.session.commit()
+        return datetime.now(timezone.utc) <= _ensure_aware_utc(self.locked_until)
+
+    def clear_expired_lockout(self) -> bool:
+        """
+        Reset lockout fields if the lockout window has expired.
+
+        Returns:
+            True if an expired lockout was cleared and committed,
+            False if there was nothing to clear.
+        """
+        if self.locked_until is None:
             return False
 
+        if datetime.now(timezone.utc) <= _ensure_aware_utc(self.locked_until):
+            return False
+
+        self.locked_until = None
+        self.failed_login_attempts = 0
+        db.session.commit()
         return True
 
     def record_failed_login(self) -> None:
         """
         Record a failed login attempt and lock account if threshold exceeded.
         """
+        self.clear_expired_lockout()
+
         self.failed_login_attempts += 1
 
         MAX_ATTEMPTS = 5
@@ -189,6 +210,7 @@ class User(UserMixin, db.Model):
             )
 
         db.session.commit()
+
 
     def record_successful_login(self, ip_address: Optional[str] = None) -> None:
         """
@@ -217,6 +239,33 @@ class User(UserMixin, db.Model):
         db.session.commit()
         return self.email_verification_token
 
+    @staticmethod
+    def _token_is_valid(
+        stored_token: Optional[str],
+        provided_token: str,
+        expires_at: Optional[datetime],
+    ) -> bool:
+        """
+        Check whether a provided token matches a stored token and is unexpired.
+
+        Shared by verify_email() and reset_password() so both token-validity
+        checks (match + expiry comparison) live in one place instead of
+        being duplicated per method.
+
+        Args:
+            stored_token: The token currently stored on the user record.
+            provided_token: The token supplied by the caller to validate.
+            expires_at: The stored expiry timestamp, or None if never issued.
+
+        Returns:
+            True if the token matches and has not expired, False otherwise.
+        """
+        if stored_token is None or expires_at is None:
+            return False
+        if stored_token != provided_token:
+            return False
+        return datetime.now(timezone.utc) <= _ensure_aware_utc(expires_at)
+
     def verify_email(self, token: str) -> bool:
         """
         Verify email with provided token.
@@ -224,11 +273,8 @@ class User(UserMixin, db.Model):
         Returns:
             True if verification successful, False if token is wrong or expired.
         """
-        if (
-            self.email_verification_token != token
-            or self.email_verification_expires is None
-            or datetime.now(timezone.utc)
-            > _ensure_aware_utc(self.email_verification_expires)
+        if not self._token_is_valid(
+            self.email_verification_token, token, self.email_verification_expires
         ):
             return False
 
@@ -257,11 +303,8 @@ class User(UserMixin, db.Model):
         Returns:
             True if reset successful, False otherwise.
         """
-        if (
-            self.password_reset_token != token
-            or self.password_reset_expires is None
-            or datetime.now(timezone.utc)
-            > _ensure_aware_utc(self.password_reset_expires)
+        if not self._token_is_valid(
+            self.password_reset_token, token, self.password_reset_expires
         ):
             return False
 

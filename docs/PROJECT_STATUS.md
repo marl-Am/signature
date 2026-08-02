@@ -25,11 +25,8 @@ chat._
   layout templates (added `solid` and `split` this session), no watermark,
   priority support.
 - Test suite: 91 tests, all passing. `ruff check .` clean. `ty check .`
-  passes clean — the Flask-SQLAlchemy `db.Model` MRO false positive is
-  resolved via the targeted rule exclusion in [ty.toml](../ty.toml); no app
-  logic changes were required. Confirmed 2026-08-01: `pytest` (91 passed),
-  `ruff check .` (all checks passed), `ty check .` (all checks passed) —
-  re-confirmed again after the `BREVO_FROM_EMAIL` guard, same clean result.
+  clean. Confirmed 2026-08-01 after every audit fix this session
+  (`user.py`, `tracking.py`, `signatures.py`) — same clean result each time.
 - CI: GitHub Actions, runs on every push to `main`, confirmed passing via
   `gh run list`.
 - Landing page's testimonials section (fake client quotes) has been replaced
@@ -43,23 +40,14 @@ chat._
   against current Microsoft/Apple docs and updated where Microsoft's own UI
   rollout has created two possible menu paths. Actual end-to-end send/receive
   testing in those clients is still outstanding (see Open Issues).
-- A pass-1 code audit (checklist: `docs/signs-of-llm-generated-code.md`) was
-  run across the whole tracked codebase; findings are in
-  `docs/AUDIT_FINDINGS.md`. Four items from it have been fixed and verified
-  (see Recently Completed), one was checked and confirmed a false positive
-  (terms.html/base.html contact copy — see below), and the rest still need a
-  confidence/triage pass before any further fixes (see Open Issues).
-- Checked `app/templates/terms.html` and `app/templates/base.html` against
-  the `privacy.html` fix the audit flagged as inconsistent: the actual fix
-  only changed the third-party-provider narrative (SendGrid → Brevo), which
-  never existed in the other two files, and the contact address
-  (`signatureapp.2026@outlook.com`) was identical across all three the whole
-  time and was never part of the fix. No change needed; audit finding was a
-  false positive.
+- **The full pass-1 code audit (`docs/AUDIT_FINDINGS.md`) is now fully
+  triaged and closed out.** Every item is either fixed and verified, or
+  reviewed and deliberately deferred with documented reasoning — see
+  Recently Completed for this session's work and `CHANGELOG.md` for the
+  complete history.
 - `SECRET_KEY` and `BREVO_FROM_EMAIL` production guards deployed and
-  confirmed live (2026-08-01): email verification, email change, password
-  change, and account deletion all tested working on the production site,
-  and every form was checked. No regressions from either guard.
+  confirmed live: email verification, email change, password change, and
+  account deletion all tested working on the production site.
 
 ---
 
@@ -92,27 +80,18 @@ chat._
       tracking URLs (data issue, not a code bug)
 - [ ] `font_family`'s Pro-only set intentionally isn't validated beyond the
       allow-list check — no further action needed, just noting the design
-      is deliberate (see Recently Completed below)
+      is deliberate
 - [ ] Decide whether to keep `app/static/css/output.css` committed to git or
       remove it (add to `.gitignore`) now that Docker rebuilds it fresh on
       every image — either is fine, just an open decision
-- [ ] Full pass-1 audit findings not yet triaged beyond this session's five
-      fixes — remaining items (model-layer duplication in
-      `verify_email`/`reset_password` token-validity checks in `user.py`;
-      `is_locked()` performing a write inside a read-style guard;
-      `signatures.py` form-handling duplication between create/edit;
-      broad exception handling in `tracking.py`'s pixel/click endpoints)
-      are documented in `docs/AUDIT_FINDINGS.md` and still need a
-      confidence pass before anything is fixed.
-
-**Cheap Pro-tier design features not yet built** (same gating pattern as
-accent color/font family/layout — form field → route passes through
-unconditionally → service layer enforces tier + validates input):
-
-- [ ] Divider/border style options (easiest)
-- [ ] Avatar shape variants (easy)
-- [ ] Social icon row (needs Simple Icons SVG assets, free/CC0)
-- [ ] QR code / vCard button (needs the `qrcode` Python package, free)
+- [ ] **Deliberately deferred, not planned:** `app/models/user.py`'s
+      `record_failed_login()`/`record_successful_login()` commit directly
+      to the database from model methods — consistent with every other
+      method in the file, so left alone rather than fixed in isolation
+      (see `CHANGELOG.md` 2026-08-01 for full reasoning). Also low-priority
+      stylistic-only items from the audit: `tracking.py`'s hardcoded
+      platform-mapping dict, and `app/__init__.py`'s monolithic
+      `create_app()`. None of these are blocking anything.
 
 ## Blocked / Deferred (no action needed, just tracked)
 
@@ -131,54 +110,41 @@ unconditionally → service layer enforces tier + validates input):
 
 ## Recently Completed (this section gets replaced, not appended, next session)
 
-**Session: prod hardening + audit cleanup (2026-08-01)**
+**Session: full audit triage completed (2026-08-01)**
 
-- Verified the `FLASK_ENV` app-level check in [wsgi.py](../wsgi.py) is not
-  using any Flask-internal behavior removed in Flask 3.x; it is just a
-  custom config switch and did not require a runtime fix.
-- Fixed the production-only secret guard in [app/config.py](app/config.py):
-  `SECRET_KEY` now fails loudly in production if missing, while
-  local/dev/test runs still keep the safe fallback for easier startup.
-- Fixed the stale Brevo/SendGrid mismatch and placeholder live-domain
-  issues:
-  - [app/services/email_service.py](app/services/email_service.py): welcome
-    email now uses the real app base URL and the configured sender
-    fallback
-  - [app/templates/privacy.html](app/templates/privacy.html): updated to
-    Brevo and removed stale SendGrid copy
-- Added a targeted `ty` exclusion in [ty.toml](../ty.toml) to ignore the
-  Flask-SQLAlchemy `unsupported-base` false positive without rewriting the
-  ORM models.
-- Added the same fail-loudly production guard pattern to
-  `BREVO_FROM_EMAIL` in [app/config.py](app/config.py) via a new
-  `get_brevo_from_email_for_config()` helper, mirroring
-  `get_secret_key_for_config()`. Confirmed Render and local `.env` both
-  have the variable set before applying the guard, so this is a hardening
-  change, not a live fix.
-- Ran a full pass-1 codebase audit (checklist-driven, no edits) across
-  `app/models`, `app/services`, `app/routes`, `app/templates`, and
-  remaining tracked config/bootstrap files. Findings recorded in
-  `docs/AUDIT_FINDINGS.md`.
-- Checked the audit's `terms.html`/`base.html` contact-copy finding against
-  the actual `privacy.html` diff and confirmed it was a false positive —
-  no fix needed (see Current State for detail).
-- Validation confirmed 2026-08-01: `pytest` (91 passed), `ruff check .`
-  (all checks passed), `ty check .` (all checks passed) — clean after both
-  the `SECRET_KEY` and `BREVO_FROM_EMAIL` guards.
-- Deployed to production and confirmed live: email verification, email
-  change, password change, and account deletion all tested working on the
-  real deployed URL, along with every other form in the app. No regressions
-  from either guard.
-- Fixed the `signature_service.py` create/update duplication flagged by the
-  audit: `create_signature()` and `update_signature()` both used to list
-  the same 14 fields by hand when calling `_generate_html_content()`.
-  Extracted a `_build_html_content(signature)` helper as the single source
-  of truth for which fields feed HTML generation; both methods now call it
-  instead of duplicating the field list. No change to
-  `_generate_html_content()` itself or any layout branch. Also removed a
-  stray leftover `# ← add these` comment on `font_family` in
-  `update_signature()`'s allow-list. `pytest` (91 passed), `ruff check .`,
-  `ty check .` all clean after the change.
+- Triaged and fixed every remaining `docs/AUDIT_FINDINGS.md` item:
+  - `app/models/user.py` — `is_locked()` no longer mutates state as a side
+    effect of a read-only check; split into a pure `is_locked()` and a new
+    `clear_expired_lockout()`. Fixed a latent bug this uncovered:
+    `record_failed_login()` now calls `clear_expired_lockout()` first, so
+    a stale attempt count can't instantly re-lock a user after their
+    lockout window has already expired.
+  - `app/models/user.py` — extracted a shared `_token_is_valid()` helper
+    so `verify_email()`/`reset_password()` no longer duplicate the same
+    token-match-and-expiry check.
+  - `app/routes/tracking.py` and `app/routes/signatures.py` — narrowed
+    four `except Exception:` blocks to `except SQLAlchemyError:` across
+    `pixel()`, `click()`, `create()`, and `edit()`. The graceful-continue
+    behavior (always serve the GIF, always redirect, flash a friendly
+    error) was correct by design and left untouched; the fix only stops
+    unrelated bugs from being silently swallowed alongside real database
+    failures. Also fixed a related latent bug: `edit()`'s internal second
+    call to `get_signature_by_id()` inside `update_signature()` could
+    previously have its 404 masked by the bare `except Exception:` on a
+    delete-during-edit race condition.
+  - Reviewed `app/routes/signatures.py`'s form-duplication finding and
+    found it largely already resolved (`_read_signature_form_fields()`
+    already exists as the shared helper); judged the remaining
+    create/edit shape not worth extracting further with only two callers.
+  - Reviewed and deliberately deferred `app/models/user.py`'s
+    persistence-in-model finding — every other method in the file follows
+    the same commit-in-model convention, so fixing only two would make the
+    file inconsistent rather than cleaner.
+  - `pytest` (91 passed), `ruff check .` (all checks passed), `ty check .`
+    (all checks passed) confirmed clean after every fix.
+- Older completed sessions (prod hardening guards, Brevo/SendGrid template
+  fixes, `ty.toml` exclusion, `signature_service.py` dedup, initial audit
+  run) have moved to `CHANGELOG.md` under `2026-08-01`.
 
 ---
 
@@ -191,8 +157,6 @@ unconditionally → service layer enforces tier + validates input):
       to verify copy/paste and render behavior outside Gmail.
 - [ ] Do a live visual QA pass on the Solid/Split layouts on the production
       URL.
-- [ ] Triage the remaining `docs/AUDIT_FINDINGS.md` items by confidence
-      level before fixing anything further.
 
 ---
 
