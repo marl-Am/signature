@@ -11,7 +11,7 @@ from flask import request
 from app import db
 from app.models.signature import Signature
 from flask_login import current_user
-from typing import List, Optional
+from typing import List, Optional, Tuple
 import secrets
 from datetime import datetime, timezone
 
@@ -343,6 +343,34 @@ class SignatureService:
         if path.endswith(SignatureService._UNSUPPORTED_IMAGE_EXTENSIONS):
             return None
         return safe_url
+
+    @staticmethod
+    def validate_logo_url(logo_url: str | None) -> Tuple[bool, Optional[str]]:
+        """
+        Validate a logo URL before it is saved, so the user gets immediate,
+        specific feedback instead of a silently blank logo in their emails.
+
+        This is separate from _sanitize_image_href(), which still runs at
+        HTML-generation time as a defense-in-depth backstop (e.g. for any
+        future caller that bypasses this route-level check). Both check
+        the same thing the same way — the URL's path, not its raw text —
+        so a query string like "?ref=x.svg" on an actual .png file is
+        never mistaken for an unsupported extension.
+
+        Returns:
+            Tuple of (is_valid, error_message).
+        """
+        if not logo_url:
+            return True, None
+        path: str = urlparse(logo_url.strip()).path.lower()
+        if path.endswith(SignatureService._UNSUPPORTED_IMAGE_EXTENSIONS):
+            return (
+                False,
+                "Logo image must be a PNG, JPG, or GIF. SVG images are not "
+                "supported by most email clients, including Outlook, and "
+                "will not appear in your signature.",
+            )
+        return True, None
 
     DEFAULT_ACCENT_COLOR: str = "#0c2788"
     _HEX_COLOR_PATTERN = re.compile(r"^#[0-9a-fA-F]{6}$")
