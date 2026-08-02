@@ -25,10 +25,15 @@ chat._
   layout templates (added `solid` and `split` this session), no watermark,
   priority support.
 - Test suite: 91 tests, all passing. `ruff check .` clean. `ty check .`
-  clean. Confirmed 2026-08-01 after every audit fix this session
-  (`user.py`, `tracking.py`, `signatures.py`) — same clean result each time.
-- CI: GitHub Actions, runs on every push to `main`, confirmed passing via
-  `gh run list`.
+  clean. Confirmed locally after every audit fix this session (`user.py`,
+  `tracking.py`, `signatures.py`).
+- CI: GitHub Actions, runs on every push to `main`. **Actually verified
+  green via `gh run list` as of 2026-08-02** — a prior session's claim
+  that CI was "confirmed passing" was wrong; CI had silently been failing
+  on every push since the `SECRET_KEY` guard was merged (see
+  `CHANGELOG.md` 2026-08-02 for the root cause and fix). Lesson: check
+  `gh run list` after every push going forward, don't just trust a local
+  green run.
 - Landing page's testimonials section (fake client quotes) has been replaced
   with a live interactive signature demo (Alpine.js, `x-text` bindings only —
   no HTML injection surface) paired with a labeled "sample data" analytics
@@ -41,10 +46,9 @@ chat._
   rollout has created two possible menu paths. Actual end-to-end send/receive
   testing in those clients is still outstanding (see Open Issues).
 - **The full pass-1 code audit (`docs/AUDIT_FINDINGS.md`) is now fully
-  triaged and closed out.** Every item is either fixed and verified, or
-  reviewed and deliberately deferred with documented reasoning — see
-  Recently Completed for this session's work and `CHANGELOG.md` for the
-  complete history.
+  triaged and closed out**, and every fix from this session is confirmed
+  live in CI (not just locally) — see Recently Completed and
+  `CHANGELOG.md` for the complete history.
 - `SECRET_KEY` and `BREVO_FROM_EMAIL` production guards deployed and
   confirmed live: email verification, email change, password change, and
   account deletion all tested working on the production site.
@@ -112,6 +116,13 @@ chat._
 
 **Session: full audit triage completed (2026-08-01)**
 
+- Fixed a real CI-breaking bug found by actually checking `gh run list`
+  instead of assuming a local green run meant CI was fine:
+  `ProductionConfig` in `app/config.py` raised at import time (not only
+  when actually used), which had been silently failing every CI run since
+  the previous session's `SECRET_KEY` guard was merged. Fixed via a
+  `ProductionConfig.init_app(app)` hook. See `CHANGELOG.md` 2026-08-02 for
+  the full root cause.
 - Triaged and fixed every remaining `docs/AUDIT_FINDINGS.md` item:
   - `app/models/user.py` — `is_locked()` no longer mutates state as a side
     effect of a read-only check; split into a pure `is_locked()` and a new

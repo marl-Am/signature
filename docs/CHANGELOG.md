@@ -12,6 +12,31 @@ backfilled accurately instead of guessed at.*
 
 ---
 
+## 2026-08-02: Fix ProductionConfig import-time crash (CI had been broken since 2026-08-01)
+Discovered via `gh run list` that CI had been failing on every push since the
+`SECRET_KEY`/`BREVO_FROM_EMAIL` production guards were merged the previous
+session — including both of that session's own runs, which were never
+actually checked at the time. Root cause: `ProductionConfig`'s class body
+called `get_secret_key_for_config("production")` directly as a class
+attribute assignment, which executes immediately whenever `app.config` is
+imported — not only when `ProductionConfig` is actually used to start an
+app. Since `app/__init__.py` imports `app.config` unconditionally, every
+test run and CI job evaluated `ProductionConfig`'s body and raised, even
+though the app was never actually running in production mode. It only
+appeared to work locally because the local `.env` happens to have
+`SECRET_KEY` set, masking the bug. Fixed by moving the validation into a
+`ProductionConfig.init_app(app)` hook (Flask's standard pattern for this),
+which only runs when a config is actually applied to a real app via
+`create_app()` — not at import time. `ProductionConfig`'s class attributes
+now read the env vars directly without raising; `Config.init_app()` is a
+no-op that subclasses can override, so `DevelopmentConfig`/`TestingConfig`
+are unaffected. Corrects an inaccurate claim in this file's 2026-08-01
+entry and in `PROJECT_STATUS.md`: CI was not actually confirmed passing
+after that session's guards were added, despite what was recorded at the
+time. `pytest` (91 passed), `ruff check .`, `ty check .` all clean, and
+`gh run list` now shows a genuine green run on GitHub Actions for the
+first time since the guards were introduced.
+
 ## 2026-08-01 (cont. 2): Audit triage — tracking.py and signatures.py exception narrowing
 Completed the pass-1 audit triage: reviewed `app/routes/tracking.py`'s
 `pixel()`/`click()` and `app/routes/signatures.py`'s `create()`/`edit()`,
