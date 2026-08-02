@@ -104,24 +104,6 @@ class SignatureService:
         layout = SignatureService._sanitize_layout(layout, current_user)
         tracking_code = secrets.token_urlsafe(16)
 
-        html_content: str = SignatureService._generate_html_content(
-            full_name=full_name,
-            job_title=job_title,
-            company=company,
-            department=department,
-            phone=phone,
-            website=website,
-            linkedin_url=linkedin_url,
-            twitter_url=twitter_url,
-            facebook_url=facebook_url,
-            instagram_url=instagram_url,
-            logo_url=logo_url,
-            tracking_code=tracking_code,
-            accent_color=accent_color,
-            layout=layout,
-            font_family=font_family,
-        )
-
         signature = Signature(
             user_id=current_user.id,  # A01: Always set user_id
             name=name,
@@ -140,9 +122,9 @@ class SignatureService:
             accent_color=accent_color,
             layout=layout,
             font_family=font_family,
-            html_content=html_content,
             is_active=True,
         )
+        signature.html_content = SignatureService._build_html_content(signature)
 
         db.session.add(signature)
         db.session.commit()
@@ -184,7 +166,7 @@ class SignatureService:
             "is_active",
             "accent_color",
             "layout",
-            "font_family",  # ← add these
+            "font_family",
         ]
 
         for field, value in kwargs.items():
@@ -199,23 +181,7 @@ class SignatureService:
 
         signature.updated_at = datetime.now(timezone.utc)
 
-        signature.html_content = SignatureService._generate_html_content(
-            full_name=signature.full_name,
-            job_title=signature.job_title,
-            company=signature.company,
-            department=signature.department,
-            phone=signature.phone,
-            website=signature.website,
-            linkedin_url=signature.linkedin_url,
-            twitter_url=signature.twitter_url,
-            facebook_url=signature.facebook_url,
-            instagram_url=signature.instagram_url,
-            logo_url=signature.logo_url,
-            tracking_code=signature.tracking_code,
-            accent_color=signature.accent_color,
-            layout=signature.layout,
-            font_family=signature.font_family,
-        )
+        signature.html_content = SignatureService._build_html_content(signature)
 
         db.session.commit()
 
@@ -1038,6 +1004,33 @@ class SignatureService:
             html += watermark_html
 
         return html
+
+    @staticmethod
+    def _build_html_content(signature: Signature) -> str:
+        """
+        Regenerate html_content from a Signature's current field values.
+
+        Single source of truth for which fields feed HTML generation, so
+        create_signature() and update_signature() can't drift out of sync
+        with each other as fields are added.
+        """
+        return SignatureService._generate_html_content(
+            full_name=signature.full_name,
+            job_title=signature.job_title,
+            company=signature.company,
+            department=signature.department,
+            phone=signature.phone,
+            website=signature.website,
+            linkedin_url=signature.linkedin_url,
+            twitter_url=signature.twitter_url,
+            facebook_url=signature.facebook_url,
+            instagram_url=signature.instagram_url,
+            logo_url=signature.logo_url,
+            tracking_code=signature.tracking_code,
+            accent_color=signature.accent_color,
+            layout=signature.layout,
+            font_family=signature.font_family,
+        )
 
     @staticmethod
     def _format_phone(phone: str | None) -> str | None:
