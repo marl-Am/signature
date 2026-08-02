@@ -317,6 +317,33 @@ class SignatureService:
             return None
         return html.escape(url, quote=True)
 
+    # File extensions that are valid, safe URLs but that major email
+    # clients (Outlook in particular) cannot render as an inline <img> —
+    # notably SVG, which silently renders as nothing rather than failing
+    # visibly. Only applies to logo_url; website/social links go through
+    # _sanitize_href directly since they aren't rendered as images.
+    _UNSUPPORTED_IMAGE_EXTENSIONS: tuple[str, ...] = (".svg",)
+
+    @staticmethod
+    def _sanitize_image_href(url: str | None) -> Optional[str]:
+        """
+        Validate a URL intended for use as an <img src>, on top of the
+        scheme/format checks _sanitize_href already performs.
+
+        Compatibility: rejects file extensions that pass _sanitize_href's
+        safety checks but that most major email clients cannot render
+        inline. Returns None for these so callers simply omit the image
+        rather than embed a src that will be invisible in the recipient's
+        inbox with no indication anything is wrong.
+        """
+        safe_url: Optional[str] = SignatureService._sanitize_href(url)
+        if safe_url is None:
+            return None
+        path: str = urlparse(url).path.lower() if url else ""
+        if path.endswith(SignatureService._UNSUPPORTED_IMAGE_EXTENSIONS):
+            return None
+        return safe_url
+
     DEFAULT_ACCENT_COLOR: str = "#0c2788"
     _HEX_COLOR_PATTERN = re.compile(r"^#[0-9a-fA-F]{6}$")
 
@@ -547,7 +574,7 @@ class SignatureService:
             else SignatureService.DEFAULT_FONT_FAMILY
         )
         safe_website: Optional[str] = SignatureService._sanitize_href(website)
-        safe_logo_url: Optional[str] = SignatureService._sanitize_href(logo_url)
+        safe_logo_url: Optional[str] = SignatureService._sanitize_image_href(logo_url)
         safe_linkedin_url: Optional[str] = SignatureService._sanitize_href(linkedin_url)
         safe_twitter_url: Optional[str] = SignatureService._sanitize_href(twitter_url)
         safe_facebook_url: Optional[str] = SignatureService._sanitize_href(facebook_url)
