@@ -12,6 +12,23 @@ backfilled accurately instead of guessed at.*
 
 ---
 
+## 2026-08-02 (cont. 5): Fix production AttributeError from an incomplete commit
+`validate_logo_url()` caused a live 500 on `/signatures/<id>/edit` —
+`AttributeError: type object 'SignatureService' has no attribute
+'validate_logo_url'` — despite passing locally. Root cause: the method was
+added to `app/services/signature_service.py` as part of the same fix that
+added its call site in `app/routes/signatures.py`, but a subsequent
+`ty`-narrowing fix only staged and committed `signatures.py`, never
+`signature_service.py`. Local tests kept passing because the local
+working copy still had both files; CI and production build from what's
+actually committed, so both failed identically once `signatures.py` tried
+to call a method that had never been pushed. Fixed by committing the
+missing file. Confirmed live: submitting an SVG logo URL on the deployed
+site now correctly shows the flash warning instead of a 500. Lesson: when
+a fix spans multiple files, every `git add`/commit for that fix must
+include all of them together, even in follow-up commits addressing a
+linter/type error on just one of the files.
+
 ## 2026-08-02 (cont. 3): SVG logo guard with user-facing validation
 Found via live Outlook/Gmail/Proton testing that a logo hosted as an SVG
 silently failed to render in every tested client (Outlook, Gmail with

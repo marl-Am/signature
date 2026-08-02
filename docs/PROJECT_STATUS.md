@@ -51,6 +51,12 @@ chat._
   triaged and closed out**, and every fix from this session is confirmed
   live in CI (not just locally) — see Recently Completed and
   `CHANGELOG.md` for the complete history.
+- **Outlook delivery is now fully tested end-to-end and confirmed working
+  in production**: pixel opens record correctly, SVG logos are rejected
+  with a clear user-facing message (both the backend guard and the flash
+  message are live and confirmed on the deployed site), and click tracking
+  works as expected outside of known scanner-inflation noise (see Open
+  Issues).
 - `SECRET_KEY` and `BREVO_FROM_EMAIL` production guards deployed and
   confirmed live: email verification, email change, password change, and
   account deletion all tested working on the production site.
@@ -132,6 +138,13 @@ chat._
 
 **Session: live Outlook delivery test + fixes (2026-08-02)**
 
+- Fixed a real production 500 caused by an incomplete commit: a follow-up
+  fix for a `ty` type-narrowing error only staged `signatures.py`, leaving
+  `signature_service.py`'s new `validate_logo_url()` method uncommitted.
+  Confirmed via `gh run list` (two red runs, both from commits made before
+  this was caught) and live production logs. Fixed by committing the
+  missing file; confirmed live on the deployed site that an SVG logo URL
+  now correctly shows the flash warning instead of crashing.
 - Ran a full live delivery test in New Outlook / Outlook on the web,
   sending to both Proton Mail and Gmail, and cross-checked results against
   the Analytics dashboard and raw Neon rows.
