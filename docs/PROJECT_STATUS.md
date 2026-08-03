@@ -66,13 +66,6 @@ chat._
 ## Open Issues
 
 
-- [ ] **Social icons render "connected" in Outlook** — confirmed via a
-      live test: the app's generated HTML is correct (each icon has its
-      own `margin-right:4px`), but Outlook's own paste-sanitizer wraps
-      adjacent same-color icons in an extra `<span>` that paints solid
-      color across the gaps. Real fix is rebuilding `social_html` as a
-      table-based layout instead of inline-block + margin — touches all
-      9 layout branches in `_generate_html_content()`, needs its own pass.
 - [ ] **Click counts inflated by automated link-scanners** — confirmed via
       raw `signature_clicks` rows that some providers' security scanners
       visit every link in a real browser before/on open, adding phantom
@@ -136,49 +129,27 @@ chat._
 
 ## Recently Completed (this section gets replaced, not appended, next session)
 
-**Session: live Outlook delivery test + fixes (2026-08-02)**
+**Session: table-based social icon fix (2026-08-02, cont.)**
 
-- Fixed a real production 500 caused by an incomplete commit: a follow-up
-  fix for a `ty` type-narrowing error only staged `signatures.py`, leaving
-  `signature_service.py`'s new `validate_logo_url()` method uncommitted.
-  Confirmed via `gh run list` (two red runs, both from commits made before
-  this was caught) and live production logs. Fixed by committing the
-  missing file; confirmed live on the deployed site that an SVG logo URL
-  now correctly shows the flash warning instead of crashing.
-- Ran a full live delivery test in New Outlook / Outlook on the web,
-  sending to both Proton Mail and Gmail, and cross-checked results against
-  the Analytics dashboard and raw Neon rows.
-- Fixed a real bug found by this test: the tracking pixel's
-  `style="display:none;"` caused Outlook/Microsoft 365 to silently skip
-  fetching it as a known tracking heuristic. Removed `display:none`;
-  confirmed opens now record correctly after re-saving and re-testing.
-- Fixed a second real bug: logo URLs pointing to an SVG rendered as
-  nothing in every tested client, with no error or broken-image
-  indicator. Added `_sanitize_image_href()` (backend backstop) and
-  `validate_logo_url()` (user-facing flash message) so an SVG logo is now
-  explained and blocked at save time instead of silently invisible.
-- Triaged three further observations and confirmed each is expected
-  client behavior, not a bug: Gmail's image-proxy holding opens at 1
-  (already handled by the existing `_PROXY_SIGNATURES` exclusion), Proton
-  Mail's own tracker-blocking feature, and automated link-scanners
-  inflating click counts (a known, deliberately-unaddressed industry-wide
-  limitation — see Open Issues).
-- Diagnosed (not yet fixed) the social-icon "connected" rendering in
-  Outlook: confirmed via Firefox Inspector that the app's own generated
-  HTML is correct, and the cause is Outlook's paste-sanitizer wrapping
-  same-color icons in an extra span. Real fix needs a table-based layout
-  across all 9 signature layouts — see Open Issues.
-- `pytest` (91 passed), `ruff check .`, `ty check .` all clean after every
-  fix, including a `ty` type-narrowing fix in `signatures.py` (checking
-  `logo_error` directly rather than the paired bool before `flash()`).
-- Older completed sessions (audit triage, ProductionConfig import-time
-  fix, Solid/Split visual confirmation) have moved to `CHANGELOG.md`.
+- Fixed the social-icon "connected" rendering in Outlook, diagnosed the
+  previous session but not yet fixed at that point (see `CHANGELOG.md` for
+  the full root-cause writeup): replaced the inline-block `<a>` tags with
+  `margin-right:4px` with a new shared `_build_social_table()` helper that
+  renders each icon as its own `<td>` cell, separated by a dedicated
+  zero-width spacer `<td>` instead of margin. Applied to both social-icon
+  call sites in `signature_service.py` (the shared block used by 8 of the
+  9 layouts, and the `solid` layout's separate white-background variant).
+- `pytest` (91 passed), `ruff check .`, `ty check .` all clean locally
+  before deploy.
+- Deployed and confirmed live via `gh run list` (green). **Verified in
+  both Outlook and Gmail on the actual deployed site**: icons render as
+  separate rounded badges, no longer joined into one solid-color block.
+- Older completed sessions (live Outlook delivery test, incomplete-commit
+  production 500 fix, audit triage) have moved to `CHANGELOG.md`.
 ---
 
 ## Next Up
 
-- [ ] Rebuild `social_html` as a table-based layout across all 9 signature
-      layouts to fix Outlook's paste-sanitizer collapsing icon spacing.
 - [ ] Pay for a real custom domain and set up Brevo domain authentication.
 - [ ] Run an end-to-end Apple Mail delivery test (Outlook and Gmail are
       now both confirmed working).

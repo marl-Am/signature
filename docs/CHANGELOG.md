@@ -12,6 +12,33 @@ backfilled accurately instead of guessed at.*
 
 ---
 
+## 2026-08-02 (cont. 6): Table-based social icon layout fixes Outlook icon-joining bug
+Fixed the social-icon "connected" rendering in Outlook diagnosed in the
+previous session (cont. 4): confirmed via Firefox Inspector that
+`signature_service.py`'s generated HTML was correct on the app's side —
+each icon `<a>` had its own `margin-right:4px` — but Outlook's own
+paste-sanitizer wraps adjacent same-background-color inline elements in
+an extra `<span class="spanWithBackgroundColor">` once the HTML is pasted
+into a New Outlook / Outlook on the web signature field, painting solid
+color across the gaps between icons regardless of the source margin.
+Replaced the inline-block `<a>` + margin pattern with a new shared
+`_build_social_table()` static method that renders each icon as its own
+`<td>` cell in a small `<table>`, with a dedicated zero-width spacer `<td>`
+between icons instead of margin — table cells are structurally separate
+elements the sanitizer has nothing to coalesce. Applied to both places
+the app builds social icon HTML: the shared block reused by 8 of the 9
+signature layouts (`classic`, `modern`, `minimal`, `ruled`, `avatar`,
+`compact`, `banner`, `split`), and the `solid` layout's separate
+white-background/accent-text variant, which had duplicated the same
+inline-block pattern rather than reusing the shared one. No changes to
+`_sanitize_href()`, the tracked-click URL construction, or any
+escaping/validation — this was purely a markup-structure fix, not a
+security or data change. `pytest` (91 passed), `ruff check .`,
+`ty check .` all clean locally before deploy. Deployed; confirmed green
+via `gh run list`. Verified live in both Outlook and Gmail on the actual
+deployed site: social icons now render as separate rounded badges, no
+longer merged into one solid-color block.
+
 ## 2026-08-02 (cont. 5): Fix production AttributeError from an incomplete commit
 `validate_logo_url()` caused a live 500 on `/signatures/<id>/edit` —
 `AttributeError: type object 'SignatureService' has no attribute
