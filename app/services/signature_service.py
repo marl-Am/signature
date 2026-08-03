@@ -556,6 +556,64 @@ class SignatureService:
         )
 
     @staticmethod
+    def _build_social_table(
+        links: list[tuple[str, str, str]],
+        bg_color: str,
+        text_color: str,
+    ) -> str:
+        """
+        Build a table-based row of social icon links.
+
+        Security/Compatibility: uses a <table> of cells rather than
+        inline-block <a> tags separated by margin, because Outlook's own
+        paste-sanitizer wraps adjacent same-background-color inline
+        elements in an extra <span class="spanWithBackgroundColor"> that
+        paints solid color across the gaps between them once the HTML is
+        pasted into a New Outlook / Outlook on the web signature field
+        (confirmed via Firefox Inspector — see CHANGELOG 2026-08-02). Table
+        cells are never coalesced this way. A dedicated zero-width spacer
+        <td> between each icon cell, rather than padding or margin on the
+        icon cell itself, guarantees a real DOM gap the sanitizer cannot
+        bridge, and each icon cell carries its own border-radius so corners
+        stay rounded independently.
+
+        Args:
+            links: (tracked_url, label, badge) tuples, already escaped/
+                sanitized by the caller — this method does no validation
+                of its own, matching every other _html builder in this
+                file.
+            bg_color: badge background color (safe_accent_color for every
+                layout except solid, which passes "#ffffff").
+            text_color: badge text color (the inverse of bg_color).
+
+        Returns:
+            Empty string if links is empty, otherwise a <div> wrapping a
+            single-row <table> of icon cells.
+        """
+        if not links:
+            return ""
+        cells: list[str] = []
+        for index, (tracked_url, label, badge) in enumerate(links):
+            if index > 0:
+                cells.append(
+                    '<td style="width:4px;line-height:1px;font-size:0;">' "&nbsp;</td>"
+                )
+            cells.append(
+                f'<td style="background:{bg_color};border-radius:4px;'
+                f'text-align:center;">'
+                f'<a href="{tracked_url}" title="{label}" '
+                f'style="display:block;color:{text_color};font-size:11px;'
+                f'font-weight:bold;text-decoration:none;padding:3px 7px;">'
+                f"{badge}</a></td>"
+            )
+        return (
+            '<div style="margin-top:4px;">'
+            '<table cellpadding="0" cellspacing="0" border="0"><tr>'
+            + "".join(cells)
+            + "</tr></table></div>"
+        )
+
+    @staticmethod
     def _generate_html_content(
         full_name: str,
         job_title: str | None,
@@ -670,30 +728,26 @@ class SignatureService:
             )
 
         # --- Social links ---
-        social_parts: list[str] = []
+        # Built as a table (see _build_social_table) rather than
+        # inline-block <a> tags with margin, since Outlook's paste-
+        # sanitizer merges adjacent same-color inline elements into one
+        # solid block (see CHANGELOG 2026-08-02).
         social_map: list[tuple[str | None, str, str, str]] = [
             (safe_linkedin_url, "LinkedIn", "in", "linkedin"),
             (safe_twitter_url, "Twitter/X", "𝕏", "twitter"),
             (safe_facebook_url, "Facebook", "f", "facebook"),
             (safe_instagram_url, "Instagram", "IG", "instagram"),
         ]
+        social_links: list[tuple[str, str, str]] = []
         for url, label, badge, platform in social_map:
             if url:
                 tracked: str = (
                     f"{request.host_url.rstrip('/')}/track/click/{tracking_code}/{platform}"
                 )
-                social_parts.append(
-                    f'<a href="{tracked}" title="{label}" '
-                    f'style="display:inline-block;background:{safe_accent_color};color:#ffffff;'
-                    f"font-size:11px;font-weight:bold;text-decoration:none;"
-                    f'padding:3px 7px;border-radius:4px;margin-right:4px;">'
-                    f"{badge}</a>"
-                )
-        social_html: str = ""
-        if social_parts:
-            social_html = (
-                '<div style="margin-top:4px;">' + "".join(social_parts) + "</div>"
-            )
+                social_links.append((tracked, label, badge))
+        social_html: str = SignatureService._build_social_table(
+            social_links, bg_color=safe_accent_color, text_color="#ffffff"
+        )
 
         # --- Logo ---
         logo_html: str = ""
@@ -964,24 +1018,14 @@ class SignatureService:
                     )
                     + "</div>"
                 )
-            solid_social_parts: list[str] = []
+            solid_links: list[tuple[str, str, str]] = []
             for url, label, badge, platform in social_map:
                 if url:
                     tracked = f"{request.host_url.rstrip('/')}/track/click/{tracking_code}/{platform}"
-                    solid_social_parts.append(
-                        f'<a href="{tracked}" title="{label}" '
-                        f'style="display:inline-block;background:#ffffff;color:{safe_accent_color};'
-                        f"font-size:11px;font-weight:bold;text-decoration:none;"
-                        f'padding:3px 7px;border-radius:4px;margin-right:4px;">'
-                        f"{badge}</a>"
-                    )
-            solid_social_html: str = ""
-            if solid_social_parts:
-                solid_social_html = (
-                    '<div style="margin-top:4px;">'
-                    + "".join(solid_social_parts)
-                    + "</div>"
-                )
+                    solid_links.append((tracked, label, badge))
+            solid_social_html: str = SignatureService._build_social_table(
+                solid_links, bg_color="#ffffff", text_color=safe_accent_color
+            )
             content_td = (
                 f'<td style="background:{safe_accent_color};padding:18px 20px;'
                 f'border-radius:8px;vertical-align:top;">'
