@@ -118,32 +118,32 @@ chat._
 
 ## Recently Completed (this section gets replaced, not appended, next session)
 
-**Session: Celery + Redis explored for resume purposes, then fully reverted (2026-08-05)**
+**Session: Docker Scout scan + cryptography CVE fix (2026-08-05, cont.)**
 
-- Explored adding Celery + Redis purely for resume/interview signal (not
-  fixing anything broken). Built a complete, locally-verified integration
-  (Redis via Render's free Key Value tier, `app/celery_app.py`,
-  `app/tasks.py`, all 5 email call sites switched to `.delay(...)`, a
-  test fixture keeping `pytest` off real Redis) — 91 tests passed.
-- Hit a real cost wall trying to run it live: Render's free compute tier
-  covers web services, Postgres, and Key Value, but **not** background
-  workers ($7+/month on any plan) — verified directly against Render's
-  own pricing and docs after an earlier wrong assumption in this same
-  session.
-- Tested a free workaround (running the worker as a thread inside the
-  existing free web service) and found it **unsafe**: it silently kills
-  the whole process, since Celery's worker assumes it owns the entire
-  process including OS signal handling. See `CHANGELOG.md` 2026-08-05 for
-  the full technical writeup.
-- Decided to fully revert rather than ship a half-integration: deleted
-  `app/celery_app.py`/`app/tasks.py`, restored the original direct
-  email-sending code everywhere, removed the test fixture and the
-  `celery`/`redis` dependencies. Tests clean, deployed, confirmed working
-  — app is functionally identical to before this session.
-- A free, unused `signature-redis` Key Value instance may still exist on
-  the Render dashboard — costs nothing either way, safe to delete or keep.
-- Older completed sessions (click-count scanner-filtering exploration,
-  social icon table fix) have moved to `CHANGELOG.md`.
+- Ran `docker scout cves` against `signature-app:latest`: 46 vulnerabilities
+  across 12 packages. Confirmed 11 of those packages (`perl`, `tar`,
+  `util-linux`, `glibc`, `systemd`, `coreutils`, `sqlite3`, `shadow`, `apt`,
+  `diffutils`, `openssl`) are unfixed Debian-trixie base-image CVEs with no
+  patched version available yet — not actionable, not reachable through
+  this app's code.
+- The one real, fixable item was `cryptography 48.0.1`: two HIGH CVEs
+  (CVE-2026-69249, CVE-2026-69247) and one MEDIUM (CVE-2026-69248), all
+  fixed by 49.0.0/50.0.0. Bumped `requirements.txt` to
+  `cryptography>=50.0.0`.
+- Verified locally before rebuilding Docker: 91 tests passed, `ruff check .`
+  clean, `ty check .` clean.
+- Rebuilt the image and re-scanned: package count 161 → 170 (expected, from
+  the dependency bump), vulnerabilities 46 → 43 — exactly the three
+  `cryptography` CVEs cleared, nothing else changed or regressed.
+- Deployed via push to `main`, CI green.
+- Remaining 43 vulnerabilities are all unfixed Debian base-image CVEs —
+  tracked in `CHANGELOG.md`, not blocking anything, revisit only if Debian
+  ships patches or a base-image change is considered later.
+
+Older completed sessions (Celery/Redis exploration and revert, click-count
+scanner-filtering exploration, social icon table fix) have moved to
+`CHANGELOG.md`.
+
 ---
 
 ## Next Up

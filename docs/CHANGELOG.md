@@ -12,6 +12,25 @@ backfilled accurately instead of guessed at.*
 
 ---
 
+## 2026-08-05 (cont.): Bumped cryptography 48.0.1 → 50.0.0, clearing 3 CVEs
+Docker Scout flagged 46 vulnerabilities in `signature-app:latest`; nearly
+all of them (`perl`, `tar`, `util-linux`, `glibc`, `systemd`, `coreutils`,
+`sqlite3`, `shadow`, `apt`, `diffutils`, `openssl`) were unfixed
+Debian-trixie base-image CVEs with no available patched version — not
+actionable, and not reachable via this app's code paths. The one real,
+fixable item was `cryptography 48.0.1`: CVE-2026-69249 (HIGH, fixed in
+49.0.0), CVE-2026-69247 (HIGH, fixed in 50.0.0), and CVE-2026-69248
+(MEDIUM, fixed in 49.0.0). Bumped `requirements.txt` to
+`cryptography>=50.0.0`. Verified locally before touching Docker: 91 tests
+passed, `ruff check .` clean, `ty check .` clean. Rebuilt the image and
+re-scanned — package count went 161 → 170 from the dependency bump, and
+vulnerability count dropped 46 → 43, exactly the three `cryptography`
+CVEs cleared with nothing else changed. Deployed via push to `main`
+(CI green). Remaining 43 vulnerabilities are all unfixed Debian
+base-image CVEs, tracked but not actionable until Debian ships patches.
+
+---
+
 ## 2026-08-05: Celery + Redis explored for resume purposes, fully reverted
 Explored adding Celery and Redis to the project — motivation was purely
 resume/interview signal (entry-level backend role), not fixing a bug or
