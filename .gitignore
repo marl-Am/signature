@@ -76,3 +76,7 @@ file_paths.txt
 file_paths.txt
 
 signs-of-llm-generated-code.md
+
+# Celery and Redis old files
+celery_app.py
+tasks.py
