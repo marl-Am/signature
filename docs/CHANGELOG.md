@@ -12,6 +12,112 @@ backfilled accurately instead of guessed at.*
 
 ---
 
+## 2026-08-05: Celery + Redis explored for resume purposes, fully reverted
+Explored adding Celery and Redis to the project — motivation was purely
+resume/interview signal (entry-level backend role), not fixing a bug or
+gap. Built a complete, working local integration in small verified steps:
+a Redis instance via Render's Key Value service (confirmed genuinely free
+at the Starter/25MB tier, directly from `render.com/pricing`); a minimal
+`app/celery_app.py` pointing at it; `app/tasks.py` with three task
+wrappers around the existing `email_service.py` functions, using deferred
+imports inside each task specifically so the existing
+`tests/conftest.py` `mock_email_sends` patches would keep working
+unchanged; all five call sites that send email
+(`user_service.register_user`, `auth.register`, `auth.forgot_password`,
+`auth.resend_verification`, `profile.change_email`) switched from calling
+`email_service.send_*` directly to `app.tasks.send_*_task.delay(...)`;
+and a `celery_eager_mode` autouse pytest fixture (`task_always_eager`) so
+the test suite never opens a real connection to Redis. All 91 tests
+passed with the full integration in place, `ruff` and `ty` clean.
+
+Hit a real, verified cost wall trying to make it run live in production:
+Render's free compute tier covers web services, Postgres, and Key Value
+(Redis) — but **not** background workers, which start at $7/month on any
+plan, confirmed directly against `render.com/pricing` and
+`render.com/docs/free`. (An earlier claim in this same session that
+background workers had a free tier too was wrong — based on misreading a
+pricing table row that covered three service types together; corrected
+once the person hit it directly in their own Render dashboard.)
+
+Investigated a free workaround: running the Celery worker as a background
+thread inside the existing free web service process, instead of a
+separate paid worker service. Tested directly rather than assuming it
+would work, and found it genuinely unsafe: `celery_app.Worker(...).start()`
+called from a non-main thread silently kills the entire host process the
+moment it starts — Celery's worker assumes it owns the whole process,
+including installing OS signal handlers, which only works on Python's
+main thread. Confirmed reproducible in a sandbox test (banner prints,
+then the whole interpreter exits mid-script with no exception surfaced).
+The one variant that did work safely, `celery.contrib.testing.worker.
+start_worker`, is an internal Celery testing helper, not intended or
+appropriate for production use — so not something to build the real
+feature on.
+
+With no free way to run it live, and running only in local dev not being
+a real deliverable, decided to fully revert rather than ship a half
+integration: deleted `app/celery_app.py` and `app/tasks.py`, restored the
+original direct (non-async) email-sending code at all five call sites,
+removed the `celery_eager_mode` fixture from `tests/conftest.py`, removed
+`celery` and `redis` from `requirements.txt`, removed `REDIS_URL` from
+both `.env` and the Render web service's environment variables. `pytest`
+(91 passed), `ruff check .`, `ty check .` all clean; deployed and
+confirmed working — the app is functionally identical to before this
+session. The `app/__init__.py` `ProxyFix` change explored in the earlier
+click-count session (2026-08-03) was never applied to the repo either
+(see that entry) — unrelated to this revert, just confirming it's not
+something to look for. A free `signature-redis` Key Value instance may still exist on
+the Render dashboard, unused but costing nothing; left as an open,
+no-action-needed decision for the person to delete or keep.
+
+---
+
+## 2026-08-03: Click-count scanner filtering explored, not deployed; ProxyFix hop-count corrected on paper
+Investigated the click-count inflation issue (see Open Issues): identified
+the root cause as Microsoft Defender for Office 365 Safe Links performing a
+pre-delivery "preliminary scan" that visits every link in an email using a
+browser-like User-Agent specifically designed to blend in, meaning the
+existing `_PROXY_SIGNATURES` User-Agent substring list (which already
+catches Proofpoint and Barracuda) cannot catch it — the only reliable
+signal is the request's source IP. Drafted a fix: a new
+`app/services/ip_range_service.py` that fetches and caches Microsoft's
+publicly published Office 365 IP ranges (`endpoints.office.com`), used from
+`tracking.py`'s `click()` route to log-and-exclude matching clicks
+separately from the existing proxy-UA exclusion; a corresponding autouse
+pytest fixture to keep the outbound HTTP call out of CI; and a `ProxyFix`
+addition to `app/__init__.py`; since this app sits behind Render's reverse
+proxy and `request.remote_addr` would otherwise show Render's own IP for
+every request, not the real client. **None of this was applied to the
+repo** — the person found the change too complex to take on confidently,
+and asked for a plain-language explanation instead of the code.
+
+That review surfaced a real mistake in the drafted `ProxyFix` config: it
+was set to `x_for=2, x_proto=2`, assuming a two-hop chain (Cloudflare, then
+Render's load balancer). That two-hop chain only exists once a custom
+domain is routed through a customer's own Cloudflare account — Render's
+default `*.onrender.com` subdomain (what this app's live URL actually is;
+no custom domain is configured yet) talks directly to Render's load
+balancer with no Cloudflare involved at all. Confirmed via Render's own
+docs and a real user report describing this exact gap as a bypass path
+around a separately-configured Cloudflare zone. The correct setting for
+this app's current deployment is `x_for=1, x_proto=1` — trusting only
+Render's own hop. Had the original `x_for=2` version shipped, it would
+have let an attacker prepend a fake IP in `X-Forwarded-For` and have it
+trusted as the real client address, since the real hop count (1) was
+lower than what was configured (2). No code was affected in production;
+this was caught and corrected before anything was deployed. If a custom
+domain + Cloudflare is added later, this hop count needs to be revisited.
+
+Separately, closed three open issues by decision rather than code change:
+old relative tracking URLs (resolved — old signatures using them were
+deleted), the clipboard-copy regression test (declined — the underlying
+bug is already fixed and browser-automation tooling wasn't judged worth
+adding just for this), and the remaining low-priority audit styling notes
+(`record_failed_login()`/`record_successful_login()` committing directly
+to the DB, `tracking.py`'s hardcoded platform-mapping dict, and
+`app/__init__.py`'s monolithic `create_app()`) — accepted as-is.
+
+---
+
 ## 2026-08-02 (cont. 6): Table-based social icon layout fixes Outlook icon-joining bug
 Fixed the social-icon "connected" rendering in Outlook diagnosed in the
 previous session (cont. 4): confirmed via Firefox Inspector that

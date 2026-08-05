@@ -22,18 +22,12 @@ chat._
 - Free tier: 1 signature, 3 fonts (Arial, Calibri, Times New Roman),
   fixed accent color, classic layout only, watermark included.
 - Pro tier: unlimited signatures, all 11 fonts, custom accent color, all 9
-  layout templates (added `solid` and `split` this session), no watermark,
-  priority support.
+  layout templates, no watermark, priority support.
 - Test suite: 91 tests, all passing. `ruff check .` clean. `ty check .`
-  clean. Confirmed locally after every audit fix this session (`user.py`,
-  `tracking.py`, `signatures.py`).
-- CI: GitHub Actions, runs on every push to `main`. **Actually verified
-  green via `gh run list` as of 2026-08-02** — a prior session's claim
-  that CI was "confirmed passing" was wrong; CI had silently been failing
-  on every push since the `SECRET_KEY` guard was merged (see
-  `CHANGELOG.md` 2026-08-02 for the root cause and fix). Lesson: check
-  `gh run list` after every push going forward, don't just trust a local
-  green run.
+  clean.
+- CI: GitHub Actions, runs on every push to `main`, verified green via
+  `gh run list` (not just a local pass — see `CHANGELOG.md` 2026-08-02 for
+  why that distinction matters here).
 - Landing page's testimonials section (fake client quotes) has been replaced
   with a live interactive signature demo (Alpine.js, `x-text` bindings only —
   no HTML injection surface) paired with a labeled "sample data" analytics
@@ -41,22 +35,11 @@ chat._
 - Tailwind CSS is now compiled at Docker build time via a dedicated Node
   stage in the `Dockerfile`, not loaded from the CDN's in-browser JIT
   compiler. Node/npm never ship in the final runtime image.
-- Outlook/Apple Mail install instructions on the preview page were checked
-  against current Microsoft/Apple docs and updated where Microsoft's own UI
-  rollout has created two possible menu paths. **Outlook end-to-end
-  delivery (install → send → receive → opens/clicks tracking) is now
-  fully tested and confirmed working**, following a real bug fix (see
-  Recently Completed). Apple Mail testing is still outstanding.
-- **The full pass-1 code audit (`docs/AUDIT_FINDINGS.md`) is now fully
-  triaged and closed out**, and every fix from this session is confirmed
-  live in CI (not just locally) — see Recently Completed and
-  `CHANGELOG.md` for the complete history.
-- **Outlook delivery is now fully tested end-to-end and confirmed working
-  in production**: pixel opens record correctly, SVG logos are rejected
-  with a clear user-facing message (both the backend guard and the flash
-  message are live and confirmed on the deployed site), and click tracking
-  works as expected outside of known scanner-inflation noise (see Open
-  Issues).
+- **Outlook and Gmail delivery are both fully tested end-to-end and
+  confirmed working in production**: opens, click tracking, SVG-logo
+  rejection, and social icons all render/record correctly on the deployed
+  site (social icons fixed most recently — no longer merge into one block
+  in Outlook). Apple Mail delivery has not been tested yet.
 - `SECRET_KEY` and `BREVO_FROM_EMAIL` production guards deployed and
   confirmed live: email verification, email change, password change, and
   account deletion all tested working on the production site.
@@ -71,10 +54,20 @@ chat._
       visit every link in a real browser before/on open, adding phantom
       clicks with no reliable self-identifying signal (unlike the
       Gmail-proxy case, already handled). Known industry-wide limitation,
-      not fixed — a burst-detection heuristic was considered and
+      still not fixed. A burst-detection heuristic was considered and
       deliberately deferred, since a fast genuine human clicking several
       links back-to-back would look identical, and getting it wrong risks
-      undercounting real engagement.
+      undercounting real engagement. **An IP-range-matching approach
+      (checking click source IP against Microsoft's published Office 365
+      ranges, to catch Outlook Safe Links' pre-delivery scan bot) was
+      designed and code was drafted in a prior session, but was NOT
+      applied to this repo** — it required a `ProxyFix` change in
+      `app/__init__.py` that turned out to be wrong for this app's actual
+      deployment (assumed a Cloudflare hop that doesn't exist without a
+      custom domain — see `CHANGELOG.md` 2026-08-02 cont. 7 for the full
+      writeup) and was judged too complex to be worth the risk right now.
+      Revisit later if desired; the changelog entry has the corrected
+      reasoning so it isn't re-derived from scratch.
 - [ ] Apple Mail delivery test still outstanding — Outlook and Gmail are
       now both validated end-to-end (opens, clicks, rendering); Apple
       Mail has not been tested yet.
@@ -93,10 +86,6 @@ chat._
       API key is valid. Same underlying blocker as the existing "Brevo
       domain authentication decision" below — real fix is the custom
       domain purchase, not a code change.
-- [ ] Consider a regression test or manual QA checklist item for the
-      clipboard-copy background bug (fixed in an earlier session)
-- [ ] Existing signatures created before a certain point have old relative
-      tracking URLs (data issue, not a code bug)
 - [ ] `font_family`'s Pro-only set intentionally isn't validated beyond the
       allow-list check — no further action needed, just noting the design
       is deliberate
@@ -129,23 +118,32 @@ chat._
 
 ## Recently Completed (this section gets replaced, not appended, next session)
 
-**Session: table-based social icon fix (2026-08-02, cont.)**
+**Session: Celery + Redis explored for resume purposes, then fully reverted (2026-08-05)**
 
-- Fixed the social-icon "connected" rendering in Outlook, diagnosed the
-  previous session but not yet fixed at that point (see `CHANGELOG.md` for
-  the full root-cause writeup): replaced the inline-block `<a>` tags with
-  `margin-right:4px` with a new shared `_build_social_table()` helper that
-  renders each icon as its own `<td>` cell, separated by a dedicated
-  zero-width spacer `<td>` instead of margin. Applied to both social-icon
-  call sites in `signature_service.py` (the shared block used by 8 of the
-  9 layouts, and the `solid` layout's separate white-background variant).
-- `pytest` (91 passed), `ruff check .`, `ty check .` all clean locally
-  before deploy.
-- Deployed and confirmed live via `gh run list` (green). **Verified in
-  both Outlook and Gmail on the actual deployed site**: icons render as
-  separate rounded badges, no longer joined into one solid-color block.
-- Older completed sessions (live Outlook delivery test, incomplete-commit
-  production 500 fix, audit triage) have moved to `CHANGELOG.md`.
+- Explored adding Celery + Redis purely for resume/interview signal (not
+  fixing anything broken). Built a complete, locally-verified integration
+  (Redis via Render's free Key Value tier, `app/celery_app.py`,
+  `app/tasks.py`, all 5 email call sites switched to `.delay(...)`, a
+  test fixture keeping `pytest` off real Redis) — 91 tests passed.
+- Hit a real cost wall trying to run it live: Render's free compute tier
+  covers web services, Postgres, and Key Value, but **not** background
+  workers ($7+/month on any plan) — verified directly against Render's
+  own pricing and docs after an earlier wrong assumption in this same
+  session.
+- Tested a free workaround (running the worker as a thread inside the
+  existing free web service) and found it **unsafe**: it silently kills
+  the whole process, since Celery's worker assumes it owns the entire
+  process including OS signal handling. See `CHANGELOG.md` 2026-08-05 for
+  the full technical writeup.
+- Decided to fully revert rather than ship a half-integration: deleted
+  `app/celery_app.py`/`app/tasks.py`, restored the original direct
+  email-sending code everywhere, removed the test fixture and the
+  `celery`/`redis` dependencies. Tests clean, deployed, confirmed working
+  — app is functionally identical to before this session.
+- A free, unused `signature-redis` Key Value instance may still exist on
+  the Render dashboard — costs nothing either way, safe to delete or keep.
+- Older completed sessions (click-count scanner-filtering exploration,
+  social icon table fix) have moved to `CHANGELOG.md`.
 ---
 
 ## Next Up
