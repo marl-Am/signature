@@ -1,5 +1,5 @@
 # app/__init__.py
-from typing import Type
+from typing import Any, Type, cast
 
 from dotenv import load_dotenv
 from flask import Flask, render_template
@@ -7,6 +7,7 @@ from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import CSRFProtect
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app.config import Config, DevelopmentConfig
 
@@ -29,6 +30,23 @@ def create_app(config_class: Type[Config] = DevelopmentConfig) -> Flask:
             every existing call site (wsgi.py) keeps working unchanged.
     """
     app = Flask(__name__, static_folder="static")
+
+    # Render's load balancer is the only proxy hop in front of this app
+    # (no Cloudflare — this runs on the plain .onrender.com subdomain).
+    # x_for=1, x_proto=1 trusts exactly that one hop when reading the real
+    # client IP from X-Forwarded-For. Do NOT raise this without also adding
+    # a real second hop (e.g. a custom domain routed through Cloudflare) —
+    # trusting more hops than actually exist lets a client fake its own IP.
+    #
+    # cast() here is deliberate: ProxyFix wraps wsgi_app in a new callable
+    # that satisfies the same (environ, start_response) -> Iterable[bytes]
+    # contract at runtime, but Werkzeug's stubs type wsgi_app as a bound
+    # method specifically, so static analysis can't verify the match.
+
+    # app.wsgi_app = cast(  # type: ignore[method-assign]
+    #     "WSGIApplication", ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
+    # )
+    app.wsgi_app = cast(Any, ProxyFix(app.wsgi_app, x_for=1, x_proto=1))
 
     # Load config object — caller decides which environment this is.
     app.config.from_object(config_class)

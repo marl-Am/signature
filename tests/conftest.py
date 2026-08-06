@@ -25,6 +25,7 @@ from app import create_app, db as _db
 from app.config import TestingConfig
 from app.models.user import User
 
+from app.services import ip_range_service
 
 @pytest.fixture()
 def app() -> Generator[Flask, None, None]:
@@ -132,3 +133,18 @@ def get_user_by_email(app: Flask, email: str) -> User:
     user = User.query.filter_by(email=email.lower()).first()
     assert user is not None, f"expected user {email} to exist"
     return user
+
+# ---------------------------------------------------------------------------
+# Test microsoft endpoints
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def _no_office365_ip_fetch(monkeypatch):
+    """
+    Keep tests from making a real network call to endpoints.office.com.
+    is_office365_ip() will return False for every IP unless a specific
+    test overrides this with its own monkeypatch.
+    """
+    monkeypatch.setattr(ip_range_service, "_cached_networks", [])
+    monkeypatch.setattr(ip_range_service, "_cache_fetched_at", 0.0)
+    monkeypatch.setattr(ip_range_service, "_fetch_networks", lambda: [])

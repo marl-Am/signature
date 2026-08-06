@@ -25,6 +25,8 @@ from app import db
 from app.models.signature import Signature
 from app.models.analytics import SignatureOpen, SignatureClick
 
+from app.services.ip_range_service import is_office365_ip
+
 logger = logging.getLogger(__name__)
 
 tracking_bp = Blueprint("tracking", __name__, url_prefix="/track")
@@ -60,6 +62,17 @@ _PROXY_SIGNATURES: tuple[str, ...] = (
 )
 
 
+def _is_scanner_request(user_agent: str) -> bool:
+    """
+    True if this request looks like a security-scanner pre-visit rather
+    than a real recipient — either a known proxy/scanner User-Agent, or a
+    source IP inside Microsoft's published Office 365 Safe Links ranges.
+    """
+    if any(proxy in user_agent for proxy in _PROXY_SIGNATURES):
+        return True
+    return is_office365_ip(request.remote_addr or "")
+
+
 @tracking_bp.route("/pixel/<string:tracking_code>.gif")
 def pixel(tracking_code: str) -> Response:
     """
@@ -77,7 +90,7 @@ def pixel(tracking_code: str) -> Response:
 
     if signature is not None:
         ua: str = request.headers.get("User-Agent", "")
-        if not any(proxy in ua for proxy in _PROXY_SIGNATURES):
+        if not _is_scanner_request(ua):
             try:
                 signature.increment_opens()
                 db.session.add(
@@ -153,7 +166,7 @@ def click(tracking_code: str, platform: str) -> Union[Response, tuple[str, int]]
 
     try:
         ua: str = request.headers.get("User-Agent", "")
-        if not any(proxy in ua for proxy in _PROXY_SIGNATURES):
+        if not _is_scanner_request(ua):
             signature.increment_clicks()
             db.session.add(
                 SignatureClick(
