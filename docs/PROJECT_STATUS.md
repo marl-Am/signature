@@ -23,7 +23,7 @@ chat._
   fixed accent color, classic layout only, watermark included.
 - Pro tier: unlimited signatures, all 11 fonts, custom accent color, all 9
   layout templates, no watermark, priority support.
-- Test suite: 91 tests, all passing. `ruff check .` clean. `ty check .`
+- Test suite: 102 tests, all passing. `ruff check .` clean. `ty check .`
   clean.
 - CI: GitHub Actions, runs on every push to `main`, verified green via
   `gh run list` (not just a local pass — see `CHANGELOG.md` 2026-08-02 for
@@ -60,18 +60,28 @@ chat._
       now both validated end-to-end (opens, clicks, rendering); Apple
       Mail has not been tested yet.
 
-- [ ] **Total Opens always 0 for Gmail recipients** — confirmed via
-      controlled test (2026-08-06): Outlook→Gmail showed 0 opens even
-      after "Show images" was clicked; Gmail→Outlook correctly
-      incremented opens by 1. Root cause: Gmail proxies every image load
-      (automatic prefetch AND genuine recipient opens) through Google's
-      own image-caching proxy, User-Agent containing `GoogleImageProxy`.
-      That string is already in `_PROXY_SIGNATURES`, added specifically
-      to filter Gmail's automated prefetching — but it can't distinguish
-      that from a real "Show images" click, since both produce an
-      identical request. Not yet investigated for a fix; removing
-      `GoogleImageProxy` outright would undo the original prefetch-
-      filtering it was added for.
+- [x] ~~Total Opens always 0 for Gmail recipients~~ — **Fixed and deployed
+      2026-08-07.** Root cause confirmed via live production logs: a
+      genuine Gmail open carries a User-Agent containing
+      `GoogleImageProxy`, which was on the proxy-exclusion list and
+      silently zeroing out every real open. Removed. Live-tested both
+      directions: Outlook→Gmail and Gmail→Outlook each showed 1 open / 5
+      clicks correctly. Added `tests/test_tracking.py` (11 tests)
+      covering this and the pixel/click routes generally, which had no
+      direct test coverage before. Side note (not a bug): Gmail-proxied
+      opens will always show "Desktop" as device and a fixed generic
+      location, since Gmail's proxy masks the real device/IP — inherent
+      to how the proxy works, not fixable from our side.
+
+- [ ] **CTR can exceed 100%** — surfaced during the Gmail-opens test: 1
+      open + 5 clicks (one per platform link) produced a Click-Through
+      Rate of 500%. Not a tracking bug — `total_clicks` and `total_opens`
+      are both accurate — but a metric-design question in
+      `analytics_service.py`'s CTR formula (`total_clicks / total_opens ×
+      100`), which assumes at most one click per open. Needs a decision
+      next session: cap CTR at 100%, redefine it as "clicks per open"
+      without a percentage framing, or count unique opens-with-any-click
+      instead of raw click volume in the numerator.
 
 - [ ] Proton Mail blocks the tracking pixel outright (its own
       tracker-blocking feature) — this is a deliberate recipient privacy
@@ -119,30 +129,34 @@ chat._
 
 ## Recently Completed (this section gets replaced, not appended, next session)
 
-**Session: Office 365 Safe Links click-inflation fix (2026-08-06)**
+**Session: Fixed Gmail opens showing as 0 (2026-08-07)**
 
-- Implemented and deployed the IP-range-matching fix drafted 2026-08-03
-  (previously undeployed due to a `ProxyFix` hop-count mistake, now
-  corrected to `x_for=1, x_proto=1` for this app's actual single-hop
-  Render deployment).
-- Added `app/services/ip_range_service.py`, wired into `tracking.py` via
-  a new `_is_scanner_request()` helper alongside the existing
-  `_PROXY_SIGNATURES` UA check.
-- 91 tests passed, `ruff`/`ty` clean, manually verified `is_office365_ip()`
-  against real IPs before deploy.
-- Live-tested Outlook↔Gmail click tracking: 5/5 correct, no inflation.
-- Surfaced a new, separate bug during testing: Gmail recipients always
-  show 0 opens, root-caused to `GoogleImageProxy` filtering out real
-  opens along with automated prefetch. Added as a new Open Issue —
-  not yet investigated.
+- Root-caused via live Render log capture (added temporary diagnostic
+  logging to `pixel()`): a genuine Gmail open carries a User-Agent ending
+  in "(via ggpht.com GoogleImageProxy)" — that exact string was on
+  `_PROXY_SIGNATURES`, silently excluding every real Gmail open.
+- Confirmed via a controlled unopened-email test that Gmail isn't
+  currently prefetching this app's pixel in the background, so removing
+  the exclusion carries no known regression risk.
+- Removed `"GoogleImageProxy"` from `_PROXY_SIGNATURES` in `tracking.py`.
+- Added `tests/test_tracking.py` (11 new tests, 91 → 102 total) — the
+  pixel/click routes had zero direct test coverage before, including the
+  2026-08-06 Office 365 Safe Links fix.
+- Live-tested both directions: Outlook→Gmail and Gmail→Outlook each
+  showed 1 open / 5 clicks correctly, no inflation.
+- Surfaced a new, unrelated metric-design issue: CTR can exceed 100% when
+  a recipient clicks multiple links per open. Added as a new Open Issue,
+  to address next session.
 
-Older completed sessions (cryptography CVE fix, Celery/Redis exploration
-and revert) have moved to `CHANGELOG.md`.
+Older completed sessions (cryptography CVE fix, Office 365 Safe Links
+click-inflation fix) have moved to `CHANGELOG.md`.
 
 ---
 
 ## Next Up
 
+- [ ] Decide on the CTR formula fix (cap at 100%, reframe as "clicks per
+      open", or count unique opens-with-a-click) and implement it.
 - [ ] Pay for a real custom domain and set up Brevo domain authentication.
 - [ ] Run an end-to-end Apple Mail delivery test (Outlook and Gmail are
       now both confirmed working).

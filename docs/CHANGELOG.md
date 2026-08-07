@@ -12,6 +12,39 @@ backfilled accurately instead of guessed at.*
 
 ---
 
+## 2026-08-07: Fixed Gmail opens showing as 0 (GoogleImageProxy over-filtering)
+Root-caused via live Render log capture: a genuine Gmail open request
+carries a User-Agent ending in "(via ggpht.com GoogleImageProxy)" —
+confirmed directly from production traffic, not just secondhand research.
+That exact string had been on `_PROXY_SIGNATURES` since before this
+session, originally intended to filter Gmail's automated background
+prefetching, but it was silently excluding every real Gmail open too.
+Confirmed via a controlled unopened-email test that Gmail is not
+currently prefetching this app's tracking pixel in the background — no
+request arrived for an email left unread for 5+ minutes — so removing the
+exclusion carries no known regression risk today. Removed
+`"GoogleImageProxy"` from `_PROXY_SIGNATURES` in `tracking.py`. Left
+`"Nexus 5 Build/MRA58N"` in place (unrelated, older Gmail signature).
+Added `tests/test_tracking.py` (11 new tests, 91 → 102 total) — the
+`pixel()`/`click()` routes and all scanner/proxy filtering had zero direct
+test coverage before this session, including the Office 365 Safe Links
+fix from 2026-08-06. New tests cover: valid/unknown tracking codes, known
+proxy UA exclusion, the Office 365 IP-range check (mocked), and a
+dedicated regression test asserting the real GoogleImageProxy UA is now
+counted. Verified locally (102 passed, `ruff`/`ty` clean) and live in
+both directions: fresh signature, Outlook → Gmail, opened on a phone —
+Total Opens correctly read 1 (previously stuck at 0), Total Clicks read 5
+with no inflation; Gmail → Outlook also confirmed 1 open / 5 clicks.
+Temporary `PIXEL HIT DEBUG` logging added during investigation left in
+place for now, in case Gmail's prefetch behavior changes later and needs
+to be caught live. Also surfaced a separate, unrelated metric-design
+question: CTR (`total_clicks / total_opens × 100`) can exceed 100% when a
+recipient clicks multiple platform links per open (e.g. 1 open, 5 clicks
+→ 500%) — not a bug, but flagged as an Open Issue to decide the intended
+formula.
+
+---
+
 ## 2026-08-06: Office 365 Safe Links click-inflation fix deployed
 Implemented the IP-range-matching fix drafted on 2026-08-03 (previously
 undeployed — see that entry for the earlier `ProxyFix` hop-count mistake).
