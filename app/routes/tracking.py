@@ -22,9 +22,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.wrappers import Response
 
 from app import db
+from app.models.analytics import SignatureClick, SignatureOpen
 from app.models.signature import Signature
-from app.models.analytics import SignatureOpen, SignatureClick
-
 from app.services.ip_range_service import is_office365_ip
 
 logger = logging.getLogger(__name__)
@@ -53,7 +52,6 @@ _PLATFORM_FIELD: dict[str, str] = {
 # scanners. Requests from these are silently ignored — the GIF/redirect still
 # fires so the client never sees an error, but no analytics row is written.
 _PROXY_SIGNATURES: tuple[str, ...] = (
-    "GoogleImageProxy",
     "Apple Mail Privacy Protection",
     "Applebot",
     "Proofpoint",
