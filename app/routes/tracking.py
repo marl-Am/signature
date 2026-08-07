@@ -90,7 +90,7 @@ def pixel(tracking_code: str) -> Response:
 
     if signature is not None:
         ua: str = request.headers.get("User-Agent", "")
-        logger.info(
+        logger.warning(
             "PIXEL HIT DEBUG — signature_id=%s ua=%r referer=%r remote_addr=%s",
             signature.id,
             ua,
