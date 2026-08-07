@@ -49,28 +49,29 @@ chat._
 ## Open Issues
 
 
-- [ ] **Click counts inflated by automated link-scanners** — confirmed via
-      raw `signature_clicks` rows that some providers' security scanners
-      visit every link in a real browser before/on open, adding phantom
-      clicks with no reliable self-identifying signal (unlike the
-      Gmail-proxy case, already handled). Known industry-wide limitation,
-      still not fixed. A burst-detection heuristic was considered and
-      deliberately deferred, since a fast genuine human clicking several
-      links back-to-back would look identical, and getting it wrong risks
-      undercounting real engagement. **An IP-range-matching approach
-      (checking click source IP against Microsoft's published Office 365
-      ranges, to catch Outlook Safe Links' pre-delivery scan bot) was
-      designed and code was drafted in a prior session, but was NOT
-      applied to this repo** — it required a `ProxyFix` change in
-      `app/__init__.py` that turned out to be wrong for this app's actual
-      deployment (assumed a Cloudflare hop that doesn't exist without a
-      custom domain — see `CHANGELOG.md` 2026-08-02 cont. 7 for the full
-      writeup) and was judged too complex to be worth the risk right now.
-      Revisit later if desired; the changelog entry has the corrected
-      reasoning so it isn't re-derived from scratch.
+- [x] ~~Click counts inflated by automated link-scanners~~ — **Fixed and
+      deployed 2026-08-06.** IP-range check against Microsoft's published
+      Office 365 ranges now filters Safe Links pre-scan clicks, alongside
+      the existing User-Agent-based Proofpoint/Barracuda filtering. Live
+      Outlook↔Gmail click test showed 5/5 correct link clicks with no
+      inflation. Note: fix only prevents new phantom clicks going forward
+      — does not retroactively correct already-inflated historical counts.
 - [ ] Apple Mail delivery test still outstanding — Outlook and Gmail are
       now both validated end-to-end (opens, clicks, rendering); Apple
       Mail has not been tested yet.
+
+- [ ] **Total Opens always 0 for Gmail recipients** — confirmed via
+      controlled test (2026-08-06): Outlook→Gmail showed 0 opens even
+      after "Show images" was clicked; Gmail→Outlook correctly
+      incremented opens by 1. Root cause: Gmail proxies every image load
+      (automatic prefetch AND genuine recipient opens) through Google's
+      own image-caching proxy, User-Agent containing `GoogleImageProxy`.
+      That string is already in `_PROXY_SIGNATURES`, added specifically
+      to filter Gmail's automated prefetching — but it can't distinguish
+      that from a real "Show images" click, since both produce an
+      identical request. Not yet investigated for a fix; removing
+      `GoogleImageProxy` outright would undo the original prefetch-
+      filtering it was added for.
 
 - [ ] Proton Mail blocks the tracking pixel outright (its own
       tracker-blocking feature) — this is a deliberate recipient privacy
@@ -118,31 +119,25 @@ chat._
 
 ## Recently Completed (this section gets replaced, not appended, next session)
 
-**Session: Docker Scout scan + cryptography CVE fix (2026-08-05, cont.)**
+**Session: Office 365 Safe Links click-inflation fix (2026-08-06)**
 
-- Ran `docker scout cves` against `signature-app:latest`: 46 vulnerabilities
-  across 12 packages. Confirmed 11 of those packages (`perl`, `tar`,
-  `util-linux`, `glibc`, `systemd`, `coreutils`, `sqlite3`, `shadow`, `apt`,
-  `diffutils`, `openssl`) are unfixed Debian-trixie base-image CVEs with no
-  patched version available yet — not actionable, not reachable through
-  this app's code.
-- The one real, fixable item was `cryptography 48.0.1`: two HIGH CVEs
-  (CVE-2026-69249, CVE-2026-69247) and one MEDIUM (CVE-2026-69248), all
-  fixed by 49.0.0/50.0.0. Bumped `requirements.txt` to
-  `cryptography>=50.0.0`.
-- Verified locally before rebuilding Docker: 91 tests passed, `ruff check .`
-  clean, `ty check .` clean.
-- Rebuilt the image and re-scanned: package count 161 → 170 (expected, from
-  the dependency bump), vulnerabilities 46 → 43 — exactly the three
-  `cryptography` CVEs cleared, nothing else changed or regressed.
-- Deployed via push to `main`, CI green.
-- Remaining 43 vulnerabilities are all unfixed Debian base-image CVEs —
-  tracked in `CHANGELOG.md`, not blocking anything, revisit only if Debian
-  ships patches or a base-image change is considered later.
+- Implemented and deployed the IP-range-matching fix drafted 2026-08-03
+  (previously undeployed due to a `ProxyFix` hop-count mistake, now
+  corrected to `x_for=1, x_proto=1` for this app's actual single-hop
+  Render deployment).
+- Added `app/services/ip_range_service.py`, wired into `tracking.py` via
+  a new `_is_scanner_request()` helper alongside the existing
+  `_PROXY_SIGNATURES` UA check.
+- 91 tests passed, `ruff`/`ty` clean, manually verified `is_office365_ip()`
+  against real IPs before deploy.
+- Live-tested Outlook↔Gmail click tracking: 5/5 correct, no inflation.
+- Surfaced a new, separate bug during testing: Gmail recipients always
+  show 0 opens, root-caused to `GoogleImageProxy` filtering out real
+  opens along with automated prefetch. Added as a new Open Issue —
+  not yet investigated.
 
-Older completed sessions (Celery/Redis exploration and revert, click-count
-scanner-filtering exploration, social icon table fix) have moved to
-`CHANGELOG.md`.
+Older completed sessions (cryptography CVE fix, Celery/Redis exploration
+and revert) have moved to `CHANGELOG.md`.
 
 ---
 

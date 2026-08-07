@@ -12,6 +12,49 @@ backfilled accurately instead of guessed at.*
 
 ---
 
+## 2026-08-06: Office 365 Safe Links click-inflation fix deployed
+Implemented the IP-range-matching fix drafted on 2026-08-03 (previously
+undeployed — see that entry for the earlier `ProxyFix` hop-count mistake).
+Added `app/services/ip_range_service.py`, which fetches and caches
+Microsoft's published Office 365 IP ranges from `endpoints.office.com` and
+exposes `is_office365_ip()`. `tracking.py` now uses a new
+`_is_scanner_request()` helper that checks both the existing
+`_PROXY_SIGNATURES` User-Agent list and the new IP-range check, since Safe
+Links deliberately uses a browser-like User-Agent and can only be caught by
+source IP. Added `ProxyFix` to `app/__init__.py` with the corrected
+`x_for=1, x_proto=1` (this app has one proxy hop — Render's load balancer —
+no Cloudflare, since no custom domain is configured); required a
+`typing.cast(Any, ...)` on the `wsgi_app` reassignment to satisfy `ty`,
+since Werkzeug's stubs type `wsgi_app` as a bound method and can't verify
+`ProxyFix`'s wrapper satisfies the same runtime contract. Added an autouse
+`conftest.py` fixture keeping the Microsoft endpoint fetch out of test
+runs. Verified locally: 91 tests passed, `ruff` and `ty` clean, and
+`is_office365_ip()` manually confirmed against one real Microsoft IP
+(`40.92.0.1` → True) and one unrelated IP (`8.8.8.8` → False) before
+deploy. Deployed via push to `main`, CI green.
+
+Live-tested end-to-end with a real signature: sent Outlook → Gmail and
+Gmail → Outlook, clicked all 5 platform links each way — Link Clicks
+counted correctly with no inflation in both directions. Note: this
+specific test didn't route through an actual Office 365 recipient mailbox,
+so it confirms normal click accuracy but hasn't yet directly exercised the
+Safe Links-filtering code path itself; that needs a test with an Office
+365-hosted recipient specifically.
+
+Also surfaced a separate, likely pre-existing bug during this same test:
+**Total Opens stays at 0 for Gmail recipients regardless of whether they
+open the email**, because Gmail routes all image loads (both automatic
+prefetch and genuine "Show images" clicks) through Google's own
+image-caching proxy, whose User-Agent contains `GoogleImageProxy` — a
+string already on `_PROXY_SIGNATURES` specifically to filter Gmail's
+background prefetching. The filter can't currently distinguish a real
+Gmail open from an automated one, since both produce an identical request.
+Confirmed via a controlled test: Outlook → Gmail showed 0 opens; Gmail →
+Outlook correctly incremented opens by 1. Tracked as a new Open Issue —
+investigation not yet started.
+
+---
+
 ## 2026-08-05 (cont.): Bumped cryptography 48.0.1 → 50.0.0, clearing 3 CVEs
 Docker Scout flagged 46 vulnerabilities in `signature-app:latest`; nearly
 all of them (`perl`, `tar`, `util-linux`, `glibc`, `systemd`, `coreutils`,
