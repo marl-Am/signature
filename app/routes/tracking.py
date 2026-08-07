@@ -90,6 +90,13 @@ def pixel(tracking_code: str) -> Response:
 
     if signature is not None:
         ua: str = request.headers.get("User-Agent", "")
+        logger.info(
+            "PIXEL HIT DEBUG — signature_id=%s ua=%r referer=%r remote_addr=%s",
+            signature.id,
+            ua,
+            request.headers.get("Referer", ""),
+            request.remote_addr,
+        )
         if not _is_scanner_request(ua):
             try:
                 signature.increment_opens()
