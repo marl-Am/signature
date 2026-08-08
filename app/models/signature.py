@@ -91,6 +91,25 @@ class Signature(db.Model):
         """String representation for debugging"""
         return f"<Signature {self.name} (User: {self.user_id})>"
 
+    @property
+    def link_count(self) -> int:
+        """
+        Number of trackable links configured on this signature (out of a
+        possible 5: website, LinkedIn, Twitter, Facebook, Instagram).
+
+        Used on the analytics detail page to give CTR context — a CTR of
+        100% means something different for a signature with 1 link versus
+        one with all 5.
+        """
+        link_fields: tuple[str | None, ...] = (
+            self.website,
+            self.linkedin_url,
+            self.twitter_url,
+            self.facebook_url,
+            self.instagram_url,
+        )
+        return sum(1 for field in link_fields if field)
+
     def increment_opens(self) -> None:
         """
         Increment open counter (called by tracking pixel endpoint)
