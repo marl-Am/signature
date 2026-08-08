@@ -65,6 +65,7 @@ class SignatureDetail(TypedDict):
     total_opens: int
     total_clicks: int
     ctr: float
+    link_count: int
     last_opened_at: datetime | None
     created_at: datetime | None
     daily_last_30: list[DailyPoint]
@@ -77,13 +78,27 @@ class SignatureDetail(TypedDict):
 class AnalyticsService:
 
     @staticmethod
+    def _calculate_ctr(clicks: int, opens: int) -> float:
+        """
+        Click-through rate as a percentage, capped at 100.
+
+        A recipient can click more than one link per open (e.g. multiple
+        platform icons in one signature), which would otherwise push CTR
+        past 100% and misrepresent it as a rate. Capping treats "clicked
+        at least once" as full engagement rather than trying to average
+        multiple clicks into a single-click-per-open model.
+        """
+        if opens <= 0:
+            return 0.0
+        return round(min(clicks / opens * 100, 100.0), 1)
+
+    @staticmethod
     def get_summary() -> AnalyticsSummary:
         """
         Return all analytics data scoped to the current logged-in user.
         """
         user_id: int = current_user.id
 
-        
         signatures: list[Signature] = (
             Signature.query.filter_by(user_id=user_id)
             .order_by(Signature.created_at.desc())
@@ -102,21 +117,13 @@ class AnalyticsService:
                 top_platform=None,
             )
 
-        
         total_opens: int = sum(s.total_opens for s in signatures)
         total_clicks: int = sum(s.total_clicks for s in signatures)
-        overall_ctr: float = (
-            round((total_clicks / total_opens) * 100, 1) if total_opens > 0 else 0.0
-        )
+        overall_ctr: float = AnalyticsService._calculate_ctr(total_clicks, total_opens)
 
-        
         per_signature: list[SignatureStat] = []
         for sig in signatures:
-            ctr = (
-                round((sig.total_clicks / sig.total_opens) * 100, 1)
-                if sig.total_opens > 0
-                else 0.0
-            )
+            ctr = AnalyticsService._calculate_ctr(sig.total_clicks, sig.total_opens)
             per_signature.append(
                 SignatureStat(
                     id=sig.id,
@@ -130,7 +137,6 @@ class AnalyticsService:
                 )
             )
 
-        
         cutoff: datetime = datetime.now(timezone.utc) - timedelta(days=29)
 
         opens_by_day: list[tuple[str, int]] = (
@@ -174,7 +180,6 @@ class AnalyticsService:
                 )
             )
 
-        
         top_row = (
             db.session.query(
                 SignatureClick.platform,
@@ -208,12 +213,7 @@ class AnalyticsService:
             id=signature_id, user_id=user_id
         ).first_or_404()
 
-        ctr: float = (
-            round((sig.total_clicks / sig.total_opens) * 100, 1)
-            if sig.total_opens > 0
-            else 0.0
-        )
-
+        ctr: float = AnalyticsService._calculate_ctr(sig.total_clicks, sig.total_opens)
 
         cutoff: datetime = datetime.now(timezone.utc) - timedelta(days=29)
 
@@ -283,7 +283,6 @@ class AnalyticsService:
             for row in platform_rows
         ]
 
-
         all_opens_ua: list = (
             db.session.query(SignatureOpen.user_agent)
             .filter(SignatureOpen.signature_id == signature_id)
@@ -299,7 +298,6 @@ class AnalyticsService:
             else None
         )
 
-
         recent_open_rows: list = (
             SignatureOpen.query.filter_by(signature_id=signature_id)
             .order_by(SignatureOpen.opened_at.desc())
@@ -313,7 +311,6 @@ class AnalyticsService:
             )
             for row in recent_open_rows
         ]
-
 
         recent_click_rows: list = (
             SignatureClick.query.filter_by(signature_id=signature_id)
@@ -337,6 +334,7 @@ class AnalyticsService:
             total_opens=sig.total_opens,
             total_clicks=sig.total_clicks,
             ctr=ctr,
+            link_count=sig.link_count,
             last_opened_at=sig.last_opened_at,
             created_at=sig.created_at,
             daily_last_30=daily_last_30,
