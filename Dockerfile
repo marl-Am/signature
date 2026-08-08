@@ -82,4 +82,9 @@ EXPOSE 5000
 
 # Shell form is required here so ${PORT} is expanded at container start,
 # not baked in at build time.
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 3 --timeout 30 wsgi:app"]
+# --no-control-socket: gunicorn 25.1+ enables a control socket by default
+# (for the gunicornc CLI), defaulting to a file under $HOME. This app never
+# uses that feature, and appuser has no home directory (--no-create-home
+# above), which was producing a harmless but noisy "Permission denied:
+# '/home/appuser'" line in the Render logs on every boot.
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 3 --timeout 30 --no-control-socket wsgi:app"]
