@@ -12,6 +12,32 @@ backfilled accurately instead of guessed at.*
 
 ---
 
+## 2026-08-08: CTR capped at 100%, link count added, gunicorn control-socket fix
+Resolved the CTR-can-exceed-100% metric-design question flagged in the
+2026-08-07 entry. Chose to cap at 100% rather than reframe as "clicks per
+open" or count unique opens-with-a-click, since a signature has at most 5
+trackable links, making the cap the simplest correct read. Added
+`AnalyticsService._calculate_ctr(clicks, opens)` as the single shared
+formula, replacing three separate inline calculations in `get_summary()`
+(overall and per-signature) and `get_signature_detail()`. Also added
+`Signature.link_count`, a property counting how many of `website`,
+`linkedin_url`, `twitter_url`, `facebook_url`, `instagram_url` are
+actually filled in, and surfaced it on `analytics/detail.html` under the
+CTR card so a 100% reading has immediate context.
+
+Separately, root-caused and fixed a recurring but non-fatal Render log
+error: `Control server error: [Errno 13] Permission denied:
+'/home/appuser'` on every boot. Cause: gunicorn 25.1+ added a control
+socket (for the `gunicornc` CLI) enabled by default, which tries to
+create a file under `$HOME`; the app's `Dockerfile` runs as `appuser`
+with `--no-create-home`, so no home directory exists at all. The app
+itself was never affected — the error appeared after gunicorn had
+already bound successfully and the service came up live — but it added
+log noise on every deploy. Fixed by adding `--no-control-socket` to the
+gunicorn `CMD` in `Dockerfile`, since this app doesn't use the runtime
+control feature. Deployed and confirmed: the log line no longer appears
+on subsequent Render boots.
+
 ## 2026-08-07: Fixed Gmail opens showing as 0 (GoogleImageProxy over-filtering)
 Root-caused via live Render log capture: a genuine Gmail open request
 carries a User-Agent ending in "(via ggpht.com GoogleImageProxy)" —

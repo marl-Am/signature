@@ -73,16 +73,6 @@ chat._
       location, since Gmail's proxy masks the real device/IP — inherent
       to how the proxy works, not fixable from our side.
 
-- [ ] **CTR can exceed 100%** — surfaced during the Gmail-opens test: 1
-      open + 5 clicks (one per platform link) produced a Click-Through
-      Rate of 500%. Not a tracking bug — `total_clicks` and `total_opens`
-      are both accurate — but a metric-design question in
-      `analytics_service.py`'s CTR formula (`total_clicks / total_opens ×
-      100`), which assumes at most one click per open. Needs a decision
-      next session: cap CTR at 100%, redefine it as "clicks per open"
-      without a percentage framing, or count unique opens-with-any-click
-      instead of raw click volume in the numerator.
-
 - [ ] Proton Mail blocks the tracking pixel outright (its own
       tracker-blocking feature) — this is a deliberate recipient privacy
       choice, not a bug, and not something to build around. Noted here
@@ -127,29 +117,28 @@ chat._
 
 ---
 
-## Recently Completed (this section gets replaced, not appended, next session)
+**Session: CTR formula capped, link count added, gunicorn control-socket fix (2026-08-08)**
 
-**Session: Fixed Gmail opens showing as 0 (2026-08-07)**
+- Capped CTR at 100% in `analytics_service.py` via a new shared
+  `_calculate_ctr()` helper, replacing three separate inline formulas
+  (`overall_ctr`, per-signature `ctr`, and detail `ctr`). Chosen over
+  "clicks per open" or unique-opens-with-a-click framing since at most
+  5 trackable links exist per signature, so capping was the simplest
+  correct fix.
+- Added `Signature.link_count` (counts filled-in `website`,
+  `linkedin_url`, `twitter_url`, `facebook_url`, `instagram_url`
+  fields) and surfaced it on the analytics detail page under the CTR
+  card, so a 100% reading has context.
+- Fixed noisy (non-fatal) Render log error: gunicorn 25.1+ enables a
+  control socket by default, defaulting to a file under `$HOME`; since
+  `appuser` has no home directory (`--no-create-home` in the
+  Dockerfile) this logged `Control server error: Permission denied:
+  '/home/appuser'` on every boot without affecting the running app.
+  Added `--no-control-socket` to the gunicorn `CMD` in `Dockerfile`.
+  Confirmed gone from Render logs post-deploy.
 
-- Root-caused via live Render log capture (added temporary diagnostic
-  logging to `pixel()`): a genuine Gmail open carries a User-Agent ending
-  in "(via ggpht.com GoogleImageProxy)" — that exact string was on
-  `_PROXY_SIGNATURES`, silently excluding every real Gmail open.
-- Confirmed via a controlled unopened-email test that Gmail isn't
-  currently prefetching this app's pixel in the background, so removing
-  the exclusion carries no known regression risk.
-- Removed `"GoogleImageProxy"` from `_PROXY_SIGNATURES` in `tracking.py`.
-- Added `tests/test_tracking.py` (11 new tests, 91 → 102 total) — the
-  pixel/click routes had zero direct test coverage before, including the
-  2026-08-06 Office 365 Safe Links fix.
-- Live-tested both directions: Outlook→Gmail and Gmail→Outlook each
-  showed 1 open / 5 clicks correctly, no inflation.
-- Surfaced a new, unrelated metric-design issue: CTR can exceed 100% when
-  a recipient clicks multiple links per open. Added as a new Open Issue,
-  to address next session.
-
-Older completed sessions (cryptography CVE fix, Office 365 Safe Links
-click-inflation fix) have moved to `CHANGELOG.md`.
+Older completed sessions (Gmail-opens fix, cryptography CVE fix, Office
+365 Safe Links click-inflation fix) have moved to `CHANGELOG.md`.
 
 ---
 
@@ -157,9 +146,6 @@ click-inflation fix) have moved to `CHANGELOG.md`.
 
 - [ ] Decide on the CTR formula fix (cap at 100%, reframe as "clicks per
       open", or count unique opens-with-a-click) and implement it.
-- [ ] Pay for a real custom domain and set up Brevo domain authentication.
-- [ ] Run an end-to-end Apple Mail delivery test (Outlook and Gmail are
-      now both confirmed working).
 ---
 
 ## How This Project Talks to Claude Now
