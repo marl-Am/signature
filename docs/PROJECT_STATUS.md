@@ -23,8 +23,8 @@ chat._
   fixed accent color, classic layout only, watermark included.
 - Pro tier: unlimited signatures, all 11 fonts, custom accent color, all 9
   layout templates, no watermark, priority support.
-- Test suite: 102 tests, all passing. `ruff check .` clean. `ty check .`
-  clean.
+- Test suite: 108 tests (102 unit + 6 Playwright e2e), all passing.
+  `ruff check .` clean. `ty check .` clean.
 - CI: GitHub Actions, runs on every push to `main`, verified green via
   `gh run list` (not just a local pass — see `CHANGELOG.md` 2026-08-02 for
   why that distinction matters here).
@@ -56,9 +56,6 @@ chat._
       Outlook↔Gmail click test showed 5/5 correct link clicks with no
       inflation. Note: fix only prevents new phantom clicks going forward
       — does not retroactively correct already-inflated historical counts.
-- [ ] Apple Mail delivery test still outstanding — Outlook and Gmail are
-      now both validated end-to-end (opens, clicks, rendering); Apple
-      Mail has not been tested yet.
 
 - [x] ~~Total Opens always 0 for Gmail recipients~~ — **Fixed and deployed
       2026-08-07.** Root cause confirmed via live production logs: a
@@ -117,35 +114,50 @@ chat._
 
 ---
 
-**Session: CTR formula capped, link count added, gunicorn control-socket fix (2026-08-08)**
+## Recently Completed (this section gets replaced, not appended, next session)
 
-- Capped CTR at 100% in `analytics_service.py` via a new shared
-  `_calculate_ctr()` helper, replacing three separate inline formulas
-  (`overall_ctr`, per-signature `ctr`, and detail `ctr`). Chosen over
-  "clicks per open" or unique-opens-with-a-click framing since at most
-  5 trackable links exist per signature, so capping was the simplest
-  correct fix.
-- Added `Signature.link_count` (counts filled-in `website`,
-  `linkedin_url`, `twitter_url`, `facebook_url`, `instagram_url`
-  fields) and surfaced it on the analytics detail page under the CTR
-  card, so a 100% reading has context.
-- Fixed noisy (non-fatal) Render log error: gunicorn 25.1+ enables a
-  control socket by default, defaulting to a file under `$HOME`; since
-  `appuser` has no home directory (`--no-create-home` in the
-  Dockerfile) this logged `Control server error: Permission denied:
-  '/home/appuser'` on every boot without affecting the running app.
-  Added `--no-control-socket` to the gunicorn `CMD` in `Dockerfile`.
-  Confirmed gone from Render logs post-deploy.
+**Session: Playwright e2e test suite added and verified in CI (2026-09-02)**
 
-Older completed sessions (Gmail-opens fix, cryptography CVE fix, Office
-365 Safe Links click-inflation fix) have moved to `CHANGELOG.md`.
+- Built a 5-test Playwright suite under `tests/e2e/`: login (valid +
+  invalid credentials), signature creation, cross-account access control
+  (confirms `analytics_service.py`'s user_id-filtered ownership check
+  returns 404 rather than leaking another user's signature), downgrade
+  locks Pro-only layout options in the UI, and a regression test for the
+  previously-fixed stored-XSS vulnerability in
+  `SignatureService._sanitize_accent_color`.
+- Added `tests/e2e/conftest.py` with fixtures (`user_a`, `user_b`,
+  `pro_user`, `signature_b`) that create and tear down real DB rows,
+  plus `set_subscription_tier()` to simulate a Stripe downgrade webhook
+  without a real Stripe round-trip.
+- Added `playwright` and `pytest-playwright` to `requirements.txt`.
+- Updated `.github/workflows/ci.yml`'s `e2e` job to run against a
+  disposable Postgres service container (`postgres:16`, ephemeral,
+  destroyed after each run) instead of any persistent database — chosen
+  specifically so CI never touches the Neon `dev` branch, real Postgres
+  engine kept (not SQLite) to preserve the parity WORKFLOW.md already
+  established. Added a migrations step (`flask db upgrade`) since the
+  container starts empty, fixed a readiness-loop bug where a server
+  startup failure would silently pass instead of failing loudly, added
+  `timeout-minutes` to both jobs, and added `permissions: contents: read`
+  at workflow level.
+- Root cause of the first two failed CI runs: `tests/e2e/` and the
+  updated `requirements.txt` had never actually been committed —
+  existed locally only. Not a code or workflow defect; committing both
+  resolved it. Confirmed green via `gh run list`: all 108 tests
+  (102 unit + 6 e2e) passing in CI.
+
+Older completed sessions (CTR cap, link count, gunicorn control-socket
+fix; Gmail-opens fix; cryptography CVE fix; Office 365 Safe Links fix)
+have moved to `CHANGELOG.md`.
 
 ---
 
 ## Next Up
 
-- [ ] Decide on the CTR formula fix (cap at 100%, reframe as "clicks per
-      open", or count unique opens-with-a-click) and implement it.
+- [ ] Run an end-to-end Apple Mail delivery test — worth checking
+      `tracking.py`'s existing `"Apple Mail Privacy Protection"` UA
+      filter actually matches what Apple's proxy sends in practice.
+- [ ] Pay for a real custom domain and set up Brevo domain authentication.
 ---
 
 ## How This Project Talks to Claude Now

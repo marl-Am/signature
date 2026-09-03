@@ -12,6 +12,43 @@ backfilled accurately instead of guessed at.*
 
 ---
 
+## 2026-09-02: Playwright e2e test suite, CI hardening, disposable Postgres for CI
+Added a 5-test Playwright suite under `tests/e2e/` covering login
+(valid/invalid credentials), signature creation and confirmation, an IDOR
+regression test for cross-account signature access (pairs with the
+ownership filtering already in `analytics_service.py` and
+`SignatureService.get_signature_by_id`), a downgrade-locks-paid-feature
+test that simulates a Stripe webhook tier change without a real Stripe
+call, and a regression test for the previously-fixed stored-XSS
+vulnerability in `_sanitize_accent_color` (malformed accent_color values
+attempting to break out of a style="" attribute now correctly fall back
+to the default rather than being interpolated raw).
+
+Added `tests/e2e/conftest.py`: fixtures that create and tear down real
+database rows (`user_a`, `user_b`, `pro_user`, `signature_b`), plus a
+`set_subscription_tier()` helper. Added `playwright==1.62.0` and
+`pytest-playwright==0.9.0` to `requirements.txt`.
+
+Updated `.github/workflows/ci.yml`'s `e2e` job to spin up a disposable
+`postgres:16` service container scoped to the job's lifetime, rather than
+connecting to the Neon `dev` branch — real Postgres engine preserved
+(avoiding the SQLite naive/aware-datetime parity issue documented in
+`user.py`), but with zero dependency on, or risk to, any persistent
+database. Added a `flask db upgrade` step for the empty container, fixed
+a readiness-loop bug that would have silently passed even if the Flask
+server never started, added job-level `timeout-minutes` to prevent a
+hung Playwright run from sitting on a runner for hours, and added
+`permissions: contents: read` at the workflow level.
+
+Two initial CI runs failed with `playwright: command not found` — root
+cause was that `tests/e2e/` and the updated `requirements.txt` had only
+ever existed locally, never committed. Not a workflow or dependency
+defect. Committing both resolved it; confirmed via `gh run list`: all
+108 tests (102 existing unit tests + 6 new e2e tests) passing in CI
+against the disposable container.
+
+---
+
 ## 2026-08-08: CTR capped at 100%, link count added, gunicorn control-socket fix
 Resolved the CTR-can-exceed-100% metric-design question flagged in the
 2026-08-07 entry. Chose to cap at 100% rather than reframe as "clicks per
