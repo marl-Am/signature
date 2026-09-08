@@ -127,7 +127,6 @@ ty check .
 - [x] Stripe integration (Checkout + Webhooks, test mode)
 - [x] Deployed to production (Render + Neon Postgres + Brevo)
 - [x] End-to-end delivery validated in Gmail (create → copy → paste → send → receive)
-- [ ] End-to-end delivery validated in Outlook and Apple Mail
 - [ ] Custom domain (currently running on Render's free `*.onrender.com` subdomain by deliberate choice, pending budget)
 - [ ] Stripe moved out of test mode (pending business verification, deferred until there's a real onboarding plan)
 
